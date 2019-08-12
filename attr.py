@@ -4,8 +4,6 @@ class Attr:
 	def __init__(self, value=None, parent=None):
 		self._value_ = value
 		self._parent_ = parent
-		#print('Attr instance id: {}'.format(id(self)))
-		#self.__initialised = True
 
 	def __eq__(self, other):
 		return self._value_ == other
@@ -165,7 +163,6 @@ class Attr:
 		return sys.getsizeof(self._value_)
 	
 	def __setattr__(self, name, value):
-		#print('Set attr. Name: {}; Value: {}; Is Attr: {}'.format(name, value, isinstance(value, Attr)))
 		if name[:1] == '_':
 			if len(name) == 1:
 				setattr(self, '_value_', value)
@@ -174,24 +171,19 @@ class Attr:
 		else:
 			super().__setattr__(name, Attr(value, self))
 	def __getattr__(self, name):
-		#print('Get attr. Name: {}; Self value: {}'.format(name, self._value_))
 		valueAttr = getattr(self._value_, name, None)
-		#print('Var name: {}; Var class: {}'.format(valueAttr, valueAttr.__class__.__name__))
 		if 'method' in valueAttr.__class__.__name__ or 'function' in valueAttr.__class__.__name__:
-			#print('Return function/method')
 			return valueAttr
 		elif name == '_':
 
 			return self._value_
 		else:
-			#print('Set new')
 			setattr(self, name, None)
 			return getattr(self, name)
 	
 	def __len__(self):
 		return len(self._value_)
 	def __getitem__(self, key):
-		#print('calling __getitem__')
 		return self._value_[key]
 	def __setitem__(self, key, value):
 		self._value_[key] = value
@@ -213,33 +205,3 @@ class Attr:
 		if len(sys.argv) > 1:
 			if self._value_ is not value: self._value_ = value
 			if self._parent_ is not parent: self._parent_ = parent'''
-		
-
-'''
-a = Attr()
-a.b.c.d.e.f.g = ['a', 'b']
-print(a)
-print(a.b.c.d.e.f.g)
-print(type(a.b.c.d.e.f.g))
-print(type(a.b.c.d.e.f.g()))
-print(a._test)
-print(a._test())
-print(type(a._test))
-print(type(a._test()))
-a.b.funct = lambda x: 'lambda'+str(x)
-print(a.b.funct)
-print(a.b.funct())
-print(a.b.funct()(247))
-print(type(a.b.funct))
-print(type(a.b.funct()))
-print(type(a.b.funct()(247)))'''
-'''
-mm = Attr()
-mm.tt = '_'
-print(mm.tt, type(mm.tt))
-#mm.ll = [2, 2, 1, 2, 7, 6]
-mm.ll = ['a', 'b', 'b', 'a']
-for n in mm.ll:
-	print(n)
-print(mm.ll, type(mm.ll))
-print(mm.tt.join(mm.ll))'''
