@@ -4,9 +4,9 @@ from time import sleep
 from random import randrange
 
 #from tkinter import *
-from tkinter import Tk, Menu, Frame, LabelFrame,  Button, Label, Message, \
+from tkinter import Tk, Menu, Frame, LabelFrame, Label, Message, \
 Checkbutton, Entry, Text, IntVar, StringVar, messagebox, END, Toplevel
-from tkinter.ttk import Button, Style, Notebook, Progressbar, Combobox
+from tkinter.ttk import Button, Style, Notebook, Progressbar, Combobox, Sizegrip
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.scrolledtext import ScrolledText
 
@@ -23,8 +23,10 @@ class MainWindow(Frame):
 		self.elements()
 		self.WindowBind()
 		self.UpdateVar(True)
+		self.update()
 		self.pack(fill='both', expand=True)
-		WindowGeo(self.parent, self.parent, width=800, height=500)
+		self.update()
+		WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
 	
 	def properties(self):
 		self.filePath = None
@@ -44,14 +46,17 @@ class MainWindow(Frame):
 		self.menus()
 		
 		#Tabs
-		self.NbTabs = Notebook(self, padding=(0, 10, 0, 10))
+		self.NbTabs = Notebook(self)
 		self.tabs()
-		self.NbTabs.pack(expand=True, fill='both')
+		self.NbTabs.pack(fill='both', expand=True)
 		
 		#Footer
-		self.footer = Frame(self, relief='groove', borderwidth=1, height=30)
+
+		Frame(self, height=5).pack()
+
+		self.footer = Frame(self, relief='groove', borderwidth=1, height=25)
+		self.footer.pack_propagate(False)
 		self.footer.pack(fill='x')
-		
 		self.footerElements()
 	
 	def menus(self):
@@ -72,11 +77,11 @@ class MainWindow(Frame):
 		#"General" tab
 		self.GeneralTab = Frame(self.NbTabs)
 		
-		self.GeneralTab.rowconfigure(0, pad=3)
-		self.GeneralTab.rowconfigure(1, pad=3, weight=1)
+		self.GeneralTab.rowconfigure(0)
+		self.GeneralTab.rowconfigure(1, weight=1)
 		
-		self.GeneralTab.columnconfigure(0, pad=3, weight=1, uniform='a')
-		self.GeneralTab.columnconfigure(1, pad=3, weight=1, uniform='a')
+		self.GeneralTab.columnconfigure(0, weight=1, uniform='a')
+		self.GeneralTab.columnconfigure(1, weight=1, uniform='a')
 		
 		self.GeneralTabElements()
 		self.NbTabs.add(self.GeneralTab, text="General")
@@ -84,12 +89,12 @@ class MainWindow(Frame):
 		#"Tools" tab
 		self.ToolsTab = Frame(self.NbTabs)
 
-		self.ToolsTab.rowconfigure(0, pad=3, weight=1, uniform='b')
-		self.ToolsTab.rowconfigure(1, pad=3, weight=1, uniform='b')
-		self.ToolsTab.rowconfigure(2, pad=3)
+		self.ToolsTab.rowconfigure(0, weight=1, uniform='b')
+		self.ToolsTab.rowconfigure(1, weight=1, uniform='b')
+		self.ToolsTab.rowconfigure(2)
 		
-		self.ToolsTab.columnconfigure(0, pad=3, weight=1, uniform='b')
-		self.ToolsTab.columnconfigure(1, pad=3, weight=1, uniform='b')
+		self.ToolsTab.columnconfigure(0, weight=1, uniform='b')
+		self.ToolsTab.columnconfigure(1, weight=1, uniform='b')
 
 		self.ToolsTabElements()
 		self.NbTabs.add(self.ToolsTab, text="Tools")
@@ -119,16 +124,14 @@ class MainWindow(Frame):
 		self.FileMetaFrame = LabelFrame(self.GeneralTab, text="Metadata")
 		self.FileMetaFrame.grid(row=1, column=0, padx=lfp, pady=lfp, sticky='nsew')
 		
-		self.FileMetaMess = Message(self.FileMetaFrame, text="No flie was found.")
-		self.FileMetaMess.bind("<Configure>", lambda e: self.FileMetaMess.configure(width=e.width-10))
+		self.FileMetaMess = FlexMessage(self.FileMetaFrame, text="No flie was found.")
 		self.FileMetaMess.pack(fill='both', expand=True, padx=padx, pady=padx)
 		
 		#More infomation frame
 		self.FileInfoFrame = LabelFrame(self.GeneralTab, text="Infomations")
 		self.FileInfoFrame.grid(row=1, column=1, padx=lfp, pady=lfp, sticky='nsew')
 		
-		self.FileInfoMess = Message(self.FileInfoFrame, text="No flie was found.")
-		self.FileInfoMess.bind("<Configure>", lambda e: self.FileInfoMess.configure(width=e.width-10))
+		self.FileInfoMess = FlexMessage(self.FileInfoFrame, text="No flie was found.")
 		self.FileInfoMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 	
 	def ToolsTabElements(self):
@@ -139,65 +142,80 @@ class MainWindow(Frame):
 		self.FlipToolFrame = LabelFrame(self.ToolsTab, text="Flipping")
 		self.FlipToolFrame.grid(row=0, column=0, sticky='nsew', padx=fpadx, pady=fpady)
 		
-		self.FlipToolMess = Message(self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
-		self.FlipToolMess.bind("<Configure>", lambda e: self.FlipToolMess.configure(width=e.width-10))
+		self.FlipToolMess = FlexMessage(self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
 		self.FlipToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
 		self.var.tool.flip.vertical = IntVar()
-		self.FilpToolCheckV = Checkbutton(self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical)
+		self.FilpToolCheckV = FlexCheckbutton(self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical, multiline=False)
 		self.FilpToolCheckV.pack(side='left', padx=padx, pady=pady)
 		
 		self.var.tool.flip.horizontal = IntVar()
-		self.FilpToolCheckH = Checkbutton(self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal)
+		self.FilpToolCheckH = FlexCheckbutton(self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal, multiline=False)
 		self.FilpToolCheckH.pack(side='left', padx=padx, pady=pady)
 
 		#Instrument tool
 		self.InstToolFrame = LabelFrame(self.ToolsTab, text="Note's instrument")
 		self.InstToolFrame.grid(row=0, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 		
-		self.InstToolMess = Message(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
-		self.InstToolMess.bind("<Configure>", lambda e: self.InstToolMess.configure(width=e.width-10))
+		self.InstToolMess = FlexMessage(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
 		self.InstToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
 		self.var.tool.inst = ["Harp (piano)" ,"Double Bass" ,"Bass Drum" ,"Snare Drum" ,"Click" ,"Guitar" ,"Flute" ,"Bell" ,"Chime" ,"Xylophone"]
 		self.var.tool.inst.opt = ["(not applied)"] + self.var.tool.inst + ["Random"]
 		self.InstToolCombox = Combobox(self.InstToolFrame, state='readonly', values=self.var.tool.inst.opt._)
+		self.InstToolCombox.bind("<Return>", lambda e: self.InstToolCombox.event_generate('<Down>'))
 		self.InstToolCombox.current(0)
 		self.InstToolCombox.pack(side='left', fill='both' ,expand=True, padx=padx, pady=pady)
 
+		#Reduce tool
+		self.ReduceToolFrame = LabelFrame(self.ToolsTab, text="Reducing")
+		self.ReduceToolFrame.grid(row=1, column=0, sticky='nsew', padx=fpadx, pady=fpady)
+
+		self.ReduceToolMess = FlexMessage(self.ReduceToolFrame, anchor='w', text="Delete as many note as possible to reduce file size.")
+		self.ReduceToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
+
+		self.var.tool.reduce.opt1 = IntVar()
+		self.CompactToolChkOpt1 = FlexCheckbutton(self.ReduceToolFrame, text="Delete duplicate notes", variable=self.var.tool.reduce.opt1, anchor='w')
+		self.CompactToolChkOpt1.pack(padx=padx, pady=pady)
+
+		self.var.tool.reduce.opt2 = IntVar()
+		self.CompactToolChkOpt2 = FlexCheckbutton(self.ReduceToolFrame, text=" In every tick, delete all notes except the first note", variable=self.var.tool.reduce.opt2, anchor='w')
+		self.CompactToolChkOpt2.pack(padx=padx, pady=pady)
+
+		self.var.tool.reduce.opt3 = IntVar()
+		self.CompactToolChkOpt3 = FlexCheckbutton(self.ReduceToolFrame, text=" In every tick, delete all notes except the last note", variable=self.var.tool.reduce.opt3, anchor='w')
+		self.CompactToolChkOpt3.pack(padx=padx, pady=(pady, 10))
+
+
 		#Compact tool
 		self.CompactToolFrame = LabelFrame(self.ToolsTab, text="Compacting")
-		self.CompactToolFrame.grid(row=1, column=0, sticky='nsew', padx=fpadx, pady=fpady)
+		self.CompactToolFrame.grid(row=1, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 
-		self.CompactToolMess = Message(self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
-		self.CompactToolMess.bind("<Configure>", lambda e: self.CompactToolMess.configure(width=e.width-10))
+		self.CompactToolMess = FlexMessage(self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
 		self.CompactToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 
 		self.var.tool.compact = IntVar()
-		self.CompactToolCheck = Checkbutton(self.CompactToolFrame, text="Compact notes"+" "*40, variable=self.var.tool.compact, command=self.toggleCompactToolOpt)
-		self.CompactToolCheck.pack(anchor='w', padx=padx, pady=pady)
+		self.CompactToolCheck = FlexCheckbutton(self.CompactToolFrame, text="Compact notes", variable=self.var.tool.compact, command=self.toggleCompactToolOpt, anchor='w')
+		self.CompactToolCheck.pack(padx=padx, pady=pady)
 
 		self.var.tool.compact.opt1 = IntVar()
-		self.CompactToolOpt1 = Checkbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)", variable=self.var.tool.compact.opt1, state='disabled', justify='left')
-		self.CompactToolOpt1.bind("<Configure>", lambda e: self.CompactToolOpt1.configure(wraplength=e.width-20))
-		self.CompactToolOpt1.select()
-		#print(dir(self.CompactToolOpt1))
-		self.CompactToolOpt1.pack(anchor='w', padx=padx*5, pady=pady)
+		self.CompactToolChkOpt1 = FlexCheckbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)", variable=self.var.tool.compact.opt1, state='disabled', anchor='w')
+		self.CompactToolChkOpt1.select()
+		self.CompactToolChkOpt1.pack(padx=padx*5, pady=pady)
 		
 		#'Apply' botton
-		self.ToolsTabButton = Button(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
+		self.ToolsTabButton = FlexButton(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
 		self.ToolsTabButton.grid(row=2, column=1, sticky='se', padx=fpadx, pady=fpady)
-	
-	def RawTabElements(self):
-		self.txt = ScrolledText(self.RawTab)
-		self.txt.pack(side='left', fill='both', expand=1, padx=10, pady=10)
 	
 	def footerElements(self):
 		self.footerLabel = Label(self.footer, text="Footer")
 		self.footerLabel.pack(side='left', fill='x')
 		self.var.footerLabel = 0
 		
-		self.progressbar = Progressbar(self.footer,orient="horizontal",length=300,mode="determinate")		#self.progressbar.pack(side='right')
+		self.sizegrip = Sizegrip(self.footer)
+		self.sizegrip.pack(side='right')
+
+		self.progressbar = Progressbar(self.footer, orient="horizontal", length=300 ,mode="determinate")
 		self.progressbar["value"] = 0
 		self.progressbar["maximum"] = 100
 		#self.progressbar.start()
@@ -255,9 +273,10 @@ class MainWindow(Frame):
 	
 	def toggleCompactToolOpt(self, id=1):
 		if id >= 1:
-			self.CompactToolOpt1["state"] = "disable" if self.var.tool.compact.get() == 0 else "normal"
+			self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get() == 0 else "normal"
 
 	def OnApplyTool(self):
+		self.ToolsTabButton['state'] = 'disabled'
 		self.UpdateProgBar(0)
 		data = self.inputFileData
 		self.UpdateProgBar(20)
@@ -276,6 +295,7 @@ class MainWindow(Frame):
 		self.UpdateProgBar(100)
 		self.RaiseFooter('Applied')
 		self.UpdateProgBar(-1)
+		self.ToolsTabButton['state'] = 'normal'
 	
 	def UpdateVar(self, repeat=False):
 		#print("Started updating….")
@@ -339,8 +359,7 @@ class AboutWindow(Toplevel):
 		logo = Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
-		description = Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
-		description.bind("<Configure>", lambda e: description.configure(width=e.width-10))
+		description = FlexMessage(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -357,16 +376,52 @@ class AboutWindow(Toplevel):
 		self.bind("<FocusOut>", self.Alarm)
 		self.bind('<Escape>', lambda _: self.destroy())
 
-		WindowGeo(self, parent, 400, 250, dialog=True)
+		WindowGeo(self, parent, 400, 250)
 
 	def Alarm(self, event):
 		print(dir(event))
 		self.focus_force()
 		self.bell()
 
+class FlexMessage(Message):
+	def __init__(self, *args, **kwargs):
+		Message.__init__(self, *args, **kwargs)
+		self.bind("<Configure>", lambda e: self.configure(width=e.width-10))
 
-def WindowGeo(obj, parent, width, height, dialog=False):
+class FlexButton(Button):
+	def __init__(self, *args, **kwargs):
+		Button.__init__(self, *args, **kwargs)
+		self.bind("<Return>", lambda e: self.invoke())
+
+class FlexCheckbutton(Checkbutton):
+	def __init__(self, *args, **kwargs):
+		okwargs = dict(kwargs)
+		if 'multiline' in kwargs:
+			self.multiline = kwargs['multiline']
+			del okwargs['multiline']
+		else:
+			self.multiline = True
+
+		Checkbutton.__init__(self, *args, **okwargs)
 		
+		self.text = kwargs['text']
+		if 'anchor' in kwargs:
+			self.anchor = kwargs['anchor']
+		else:
+			self.anchor = 'w'
+		self['anchor'] = self.anchor
+
+		if 'justify' in kwargs:
+			self.justify = kwargs['justify']
+		else: self.justify = 'left'
+		self['justify'] = self.justify
+
+		if self.multiline:
+			self.bind("<Configure>", lambda event: self.configure(width=event.width-10, justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999) )
+		self.bind("<Return>", lambda _: self.toggle())
+		self.bind("<Return>", lambda _: self.invoke())
+
+def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):		
 	#print(parent.winfo_screenwidth(), parent.winfo_screenheight())
 
 	ScreenWidth = root.winfo_screenwidth()
@@ -384,7 +439,7 @@ def WindowGeo(obj, parent, width, height, dialog=False):
 
 	obj.geometry("{}x{}+{}+{}".format(WindowWidth, WindowHeight, WinPosX, WinPosY))
 	obj.update()
-	obj.minsize(obj.winfo_width(), obj.winfo_height())
+	obj.minsize(mwidth or obj.winfo_width(), mheight or obj.winfo_height())
 
 def flipNotes(data, vertically=0, horizontally=0):
 	vertically, horizontally = bool(vertically), bool(horizontally)
