@@ -63,9 +63,11 @@ class MainWindow(tk.Frame):
 		self.fileMenu = tk.Menu(self.menuBar, tearoff=False)
 		self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 		
-		self.fileMenu.add_command(label="Open", command = lambda: self.OnBrowseFile(True))
-		self.fileMenu.add_command(label="Save", command=self.OnSaveFile)
-		self.fileMenu.add_command(label="Save as new file", command = lambda: self.OnSaveFile(True))
+		self.fileMenu.add_command(label="Open", accelerator="Ctrl+O", command = lambda: self.OnBrowseFile(True))
+		self.fileMenu.add_command(label="Save", accelerator="Ctrl+S", command=self.OnSaveFile)
+		self.fileMenu.add_command(label="Save as new file", accelerator="Ctrl+Shift+S", command = lambda: self.OnSaveFile(True))
+		self.fileMenu.add_separator()
+		self.fileMenu.add_command(label="Quit", accelerator="Esc", command=self.parent.destroy)
 
 		self.helpMenu = tk.Menu(self.menuBar, tearoff=False)
 		self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
@@ -223,13 +225,26 @@ class MainWindow(tk.Frame):
 		self.parent.bind('<Escape>', lambda _: self.parent.destroy())
 		self.parent.bind('<Control-o>', lambda _: self.OnBrowseFile(True))
 		self.parent.bind('<Control-s>', self.OnSaveFile)
+		self.parent.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
+		self.parent.bind('<Control-Shift-S>', lambda _: self.OnSaveFile(True))
 		#Bind class
 		self.bind_class("Message" ,"<Configure>", lambda e: e.widget.configure(width=e.width-10))
 		self.bind_class("TButton", "<Return>", lambda e: e.widget.invoke())
 		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.toggle())
 		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.invoke())
 		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
+		self.bind_class("Entry" ,"<Button-3>", self.popupmenus)
 		
+	def popupmenus(self, event):
+		w = event.widget
+		self.popupMenu = tk.Menu(self, tearoff=False)
+		self.popupMenu.add_command(label="Select all", accelerator="Ctrl+A", command=lambda: w.event_generate("<Control-a>"))
+		self.popupMenu.add_separator()
+		self.popupMenu.add_command(label="Cut", accelerator="Ctrl+X", command=lambda: w.event_generate("<Control-x>"))
+		self.popupMenu.add_command(label="Copy", accelerator="Ctrl+C", command=lambda: w.event_generate("<Control-c>"))
+		self.popupMenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: w.event_generate("<Control-v>"))
+		self.popupMenu.tk.call("tk_popup", self.popupMenu, event.x_root, event.y_root)
+
 	def OnBrowseFile(self, doOpen=False):
 		types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
 		filename = askopenfilename(filetypes = types)
@@ -383,7 +398,7 @@ class AboutWindow(tk.Toplevel):
 		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,25", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
