@@ -51,7 +51,6 @@ class MainWindow(tk.Frame):
 		self.NbTabs.pack(fill='both', expand=True)
 		
 		#Footer
-
 		tk.Frame(self, height=5).pack()
 
 		self.footer = tk.Frame(self, relief='groove', borderwidth=1, height=25)
@@ -112,10 +111,10 @@ class MainWindow(tk.Frame):
 		self.OpenFileEntry = tk.Entry(self.OpenFileFrame)
 		self.OpenFileEntry.pack(side='left', fill='x', padx=padx, expand=True)
 		
-		self.BrowseFileButton = FlexButton(self.OpenFileFrame, text="Browse", command = lambda: self.OnBrowseFile() )
+		self.BrowseFileButton = ttk.Button(self.OpenFileFrame, text="Browse", command = lambda: self.OnBrowseFile() )
 		self.BrowseFileButton.pack(side='left', padx=padx, pady=pady)
 		
-		self.OpenFileButton = FlexButton(self.OpenFileFrame, text="Open", command = lambda: self.OnOpenFile('', True) )
+		self.OpenFileButton = ttk.Button(self.OpenFileFrame, text="Open", command = lambda: self.OnOpenFile('', True) )
 		self.OpenFileButton.pack(side='left', padx=padx, pady=pady)
 		
 		lfp = 10
@@ -124,14 +123,14 @@ class MainWindow(tk.Frame):
 		self.FileMetaFrame = tk.LabelFrame(self.GeneralTab, text="Metadata")
 		self.FileMetaFrame.grid(row=1, column=0, padx=lfp, pady=lfp, sticky='nsew')
 		
-		self.FileMetaMess = FlexMessage(self.FileMetaFrame, text="No flie was found.")
+		self.FileMetaMess = tk.Message(self.FileMetaFrame, text="No flie was found.")
 		self.FileMetaMess.pack(fill='both', expand=True, padx=padx, pady=padx)
 		
 		#More infomation frame
 		self.FileInfoFrame = tk.LabelFrame(self.GeneralTab, text="Infomations")
 		self.FileInfoFrame.grid(row=1, column=1, padx=lfp, pady=lfp, sticky='nsew')
 		
-		self.FileInfoMess = FlexMessage(self.FileInfoFrame, text="No flie was found.")
+		self.FileInfoMess = tk.Message(self.FileInfoFrame, text="No flie was found.")
 		self.FileInfoMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 	
 	def ToolsTabElements(self):
@@ -142,28 +141,27 @@ class MainWindow(tk.Frame):
 		self.FlipToolFrame = tk.LabelFrame(self.ToolsTab, text="Flipping")
 		self.FlipToolFrame.grid(row=0, column=0, sticky='nsew', padx=fpadx, pady=fpady)
 		
-		self.FlipToolMess = FlexMessage(self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
+		self.FlipToolMess = tk.Message(self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
 		self.FlipToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
 		self.var.tool.flip.vertical = tk.IntVar()
-		self.FilpToolCheckV = FlexCheckbutton(self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical, multiline=False)
+		self.FilpToolCheckV = tk.Checkbutton(self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical)
 		self.FilpToolCheckV.pack(side='left', padx=padx, pady=pady)
 		
 		self.var.tool.flip.horizontal = tk.IntVar()
-		self.FilpToolCheckH = FlexCheckbutton(self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal, multiline=False)
+		self.FilpToolCheckH = tk.Checkbutton(self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal)
 		self.FilpToolCheckH.pack(side='left', padx=padx, pady=pady)
 
 		#Instrument tool
 		self.InstToolFrame = tk.LabelFrame(self.ToolsTab, text="Note's instrument")
 		self.InstToolFrame.grid(row=0, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 		
-		self.InstToolMess = FlexMessage(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
+		self.InstToolMess = tk.Message(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
 		self.InstToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
 		self.var.tool.inst = ["Harp (piano)" ,"Double Bass" ,"Bass Drum" ,"Snare Drum" ,"Click" ,"Guitar" ,"Flute" ,"Bell" ,"Chime" ,"Xylophone"]
 		self.var.tool.inst.opt = ["(not applied)"] + self.var.tool.inst + ["Random"]
 		self.InstToolCombox = ttk.Combobox(self.InstToolFrame, state='readonly', values=self.var.tool.inst.opt._)
-		self.InstToolCombox.bind("<Return>", lambda e: self.InstToolCombox.event_generate('<Down>'))
 		self.InstToolCombox.current(0)
 		self.InstToolCombox.pack(side='left', fill='both' ,expand=True, padx=padx, pady=pady)
 
@@ -171,7 +169,7 @@ class MainWindow(tk.Frame):
 		self.ReduceToolFrame = tk.LabelFrame(self.ToolsTab, text="Reducing")
 		self.ReduceToolFrame.grid(row=1, column=0, sticky='nsew', padx=fpadx, pady=fpady)
 
-		self.ReduceToolMess = FlexMessage(self.ReduceToolFrame, anchor='w', text="Delete as many note as possible to reduce file size.")
+		self.ReduceToolMess = tk.Message(self.ReduceToolFrame, anchor='w', text="Delete as many note as possible to reduce file size.")
 		self.ReduceToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 
 		self.var.tool.reduce.opt1 = tk.IntVar()
@@ -190,7 +188,7 @@ class MainWindow(tk.Frame):
 		self.CompactToolFrame = tk.LabelFrame(self.ToolsTab, text="Compacting")
 		self.CompactToolFrame.grid(row=1, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 
-		self.CompactToolMess = FlexMessage(self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
+		self.CompactToolMess = tk.Message(self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
 		self.CompactToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 
 		self.var.tool.compact = tk.IntVar()
@@ -203,7 +201,7 @@ class MainWindow(tk.Frame):
 		self.CompactToolChkOpt1.pack(padx=padx*5, pady=pady)
 		
 		#'Apply' botton
-		self.ToolsTabButton = FlexButton(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
+		self.ToolsTabButton = ttk.Button(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
 		self.ToolsTabButton.grid(row=2, column=1, sticky='se', padx=fpadx, pady=fpady)
 	
 	def footerElements(self):
@@ -221,10 +219,16 @@ class MainWindow(tk.Frame):
 		#self.progressbar.stop()
 	
 	def WindowBind(self):
-		#Buttons
-		self.master.bind('<Escape>', lambda _: self.parent.destroy())
-		self.master.bind('<Control-o>', lambda _: self.OnBrowseFile(True))
-		self.master.bind('<Control-s>', self.OnSaveFile)
+		#Keys
+		self.parent.bind('<Escape>', lambda _: self.parent.destroy())
+		self.parent.bind('<Control-o>', lambda _: self.OnBrowseFile(True))
+		self.parent.bind('<Control-s>', self.OnSaveFile)
+		#Bind class
+		self.bind_class("Message" ,"<Configure>", lambda e: e.widget.configure(width=e.width-10))
+		self.bind_class("TButton", "<Return>", lambda e: e.widget.invoke())
+		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.toggle())
+		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.invoke())
+		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
 		
 	def OnBrowseFile(self, doOpen=False):
 		types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
@@ -379,10 +383,10 @@ class AboutWindow(tk.Toplevel):
 		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
-		description = FlexMessage(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
-		githubLink = FlexButton(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
+		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
 		githubLink.pack(padx=10, pady=10)
 
 		self.lift()
@@ -402,16 +406,6 @@ class AboutWindow(tk.Toplevel):
 		print(dir(event))
 		self.focus_force()
 		self.bell()
-
-class FlexMessage(tk.Message):
-	def __init__(self, *args, **kwargs):
-		tk.Message.__init__(self, *args, **kwargs)
-		self.bind("<Configure>", lambda e: self.configure(width=e.width-10))
-
-class FlexButton(ttk.Button):
-	def __init__(self, *args, **kwargs):
-		ttk.Button.__init__(self, *args, **kwargs)
-		self.bind("<Return>", lambda e: self.invoke())
 
 class FlexCheckbutton(tk.Checkbutton):
 	def __init__(self, *args, **kwargs):
@@ -438,8 +432,6 @@ class FlexCheckbutton(tk.Checkbutton):
 
 		if self.multiline:
 			self.bind("<Configure>", lambda event: self.configure(width=event.width-10, justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999) )
-		self.bind("<Return>", lambda _: self.toggle())
-		self.bind("<Return>", lambda _: self.invoke())
 
 def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	ScreenWidth = root.winfo_screenwidth()
@@ -482,7 +474,7 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 					c += 1
 					if note['tick'] == PrevNote['tick']:
 						LocalLayer += 1
-						Inner   Layer = max(InnerLayer, LocalLayer)
+						InnerLayer = max(InnerLayer, LocalLayer)
 						note['layer'] = LocalLayer + OuterLayer
 					else:
 						LocalLayer = 0
