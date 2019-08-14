@@ -1,23 +1,23 @@
 import sys, operator, webbrowser
 
-from time import sleep
-from random import randrange
+import tkinter as tk
+import tkinter.ttk as ttk
 
-#from tkinter import *
-from tkinter import Tk, Menu, Frame, LabelFrame, Label, Message, \
-Checkbutton, Entry, Text, IntVar, StringVar, messagebox, END, Toplevel
-from tkinter.ttk import Button, Style, Notebook, Progressbar, Combobox, Sizegrip
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.scrolledtext import ScrolledText
+
+from time import sleep
+from random import randrange
+from pprint import pprint
 
 from attr import Attr
 from nbsio import opennbs, writenbs
 
 #sys.stdout = open('main_log.txt', 'w')
 
-class MainWindow(Frame):
+class MainWindow(tk.Frame):
 	def __init__(self, parent):
-		Frame.__init__(self, parent)
+		tk.Frame.__init__(self, parent)
 		self.parent = parent
 		self.properties()
 		self.elements()
@@ -37,45 +37,45 @@ class MainWindow(Frame):
 	
 	def elements(self):
 		self.parent.title("NBS Tool")
-		self.style = Style()
+		self.style = ttk.Style()
 		self.style.theme_use("default")
 		
 		#Menu bar
-		self.menuBar = Menu(self)
+		self.menuBar = tk.Menu(self)
 		self.parent.config(menu=self.menuBar)
 		self.menus()
 		
 		#Tabs
-		self.NbTabs = Notebook(self)
+		self.NbTabs = ttk.Notebook(self)
 		self.tabs()
 		self.NbTabs.pack(fill='both', expand=True)
 		
 		#Footer
 
-		Frame(self, height=5).pack()
+		tk.Frame(self, height=5).pack()
 
-		self.footer = Frame(self, relief='groove', borderwidth=1, height=25)
+		self.footer = tk.Frame(self, relief='groove', borderwidth=1, height=25)
 		self.footer.pack_propagate(False)
 		self.footer.pack(fill='x')
 		self.footerElements()
 	
 	def menus(self):
 		# 'File' menu
-		self.fileMenu = Menu(self.menuBar, tearoff=False)
+		self.fileMenu = tk.Menu(self.menuBar, tearoff=False)
 		self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 		
 		self.fileMenu.add_command(label="Open", command = lambda: self.OnBrowseFile(True))
 		self.fileMenu.add_command(label="Save", command=self.OnSaveFile)
 		self.fileMenu.add_command(label="Save as new file", command = lambda: self.OnSaveFile(True))
 
-		self.helpMenu = Menu(self.menuBar, tearoff=False)
+		self.helpMenu = tk.Menu(self.menuBar, tearoff=False)
 		self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
 		self.helpMenu.add_command(label="About", command=lambda: AboutWindow(self))
 
 	def tabs(self):
 		#"General" tab
-		self.GeneralTab = Frame(self.NbTabs)
+		self.GeneralTab = tk.Frame(self.NbTabs)
 		
 		self.GeneralTab.rowconfigure(0)
 		self.GeneralTab.rowconfigure(1, weight=1)
@@ -87,7 +87,7 @@ class MainWindow(Frame):
 		self.NbTabs.add(self.GeneralTab, text="General")
 		
 		#"Tools" tab
-		self.ToolsTab = Frame(self.NbTabs)
+		self.ToolsTab = tk.Frame(self.NbTabs)
 
 		self.ToolsTab.rowconfigure(0, weight=1, uniform='b')
 		self.ToolsTab.rowconfigure(1, weight=1, uniform='b')
@@ -103,32 +103,32 @@ class MainWindow(Frame):
 		padx, pady = 5, 5
 
 		#"Open file" frame
-		self.OpenFileFrame = Frame(self.GeneralTab, relief='ridge', borderwidth=1)
+		self.OpenFileFrame = tk.Frame(self.GeneralTab, relief='ridge', borderwidth=1)
 		self.OpenFileFrame.grid(row=0, columnspan=2, sticky='ew')
 		
-		self.OpenFileLabel = Label(self.OpenFileFrame, text="Open file:", anchor='w', width=8)
+		self.OpenFileLabel = tk.Label(self.OpenFileFrame, text="Open file:", anchor='w', width=8)
 		self.OpenFileLabel.pack(side='left', padx=padx, pady=pady)
 		
-		self.OpenFileEntry = Entry(self.OpenFileFrame)
+		self.OpenFileEntry = tk.Entry(self.OpenFileFrame)
 		self.OpenFileEntry.pack(side='left', fill='x', padx=padx, expand=True)
 		
-		self.BrowseFileButton = Button(self.OpenFileFrame, text="Browse", command = lambda: self.OnBrowseFile() )
+		self.BrowseFileButton = FlexButton(self.OpenFileFrame, text="Browse", command = lambda: self.OnBrowseFile() )
 		self.BrowseFileButton.pack(side='left', padx=padx, pady=pady)
 		
-		self.OpenFileButton = Button(self.OpenFileFrame, text="Open", command = lambda: self.OnOpenFile('', True) )
+		self.OpenFileButton = FlexButton(self.OpenFileFrame, text="Open", command = lambda: self.OnOpenFile('', True) )
 		self.OpenFileButton.pack(side='left', padx=padx, pady=pady)
 		
 		lfp = 10
 		
 		#File metadata frame
-		self.FileMetaFrame = LabelFrame(self.GeneralTab, text="Metadata")
+		self.FileMetaFrame = tk.LabelFrame(self.GeneralTab, text="Metadata")
 		self.FileMetaFrame.grid(row=1, column=0, padx=lfp, pady=lfp, sticky='nsew')
 		
 		self.FileMetaMess = FlexMessage(self.FileMetaFrame, text="No flie was found.")
 		self.FileMetaMess.pack(fill='both', expand=True, padx=padx, pady=padx)
 		
 		#More infomation frame
-		self.FileInfoFrame = LabelFrame(self.GeneralTab, text="Infomations")
+		self.FileInfoFrame = tk.LabelFrame(self.GeneralTab, text="Infomations")
 		self.FileInfoFrame.grid(row=1, column=1, padx=lfp, pady=lfp, sticky='nsew')
 		
 		self.FileInfoMess = FlexMessage(self.FileInfoFrame, text="No flie was found.")
@@ -139,22 +139,22 @@ class MainWindow(Frame):
 		padx, pady = 5, 0
 
 		#Flip tool
-		self.FlipToolFrame = LabelFrame(self.ToolsTab, text="Flipping")
+		self.FlipToolFrame = tk.LabelFrame(self.ToolsTab, text="Flipping")
 		self.FlipToolFrame.grid(row=0, column=0, sticky='nsew', padx=fpadx, pady=fpady)
 		
 		self.FlipToolMess = FlexMessage(self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
 		self.FlipToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
-		self.var.tool.flip.vertical = IntVar()
+		self.var.tool.flip.vertical = tk.IntVar()
 		self.FilpToolCheckV = FlexCheckbutton(self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical, multiline=False)
 		self.FilpToolCheckV.pack(side='left', padx=padx, pady=pady)
 		
-		self.var.tool.flip.horizontal = IntVar()
+		self.var.tool.flip.horizontal = tk.IntVar()
 		self.FilpToolCheckH = FlexCheckbutton(self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal, multiline=False)
 		self.FilpToolCheckH.pack(side='left', padx=padx, pady=pady)
 
 		#Instrument tool
-		self.InstToolFrame = LabelFrame(self.ToolsTab, text="Note's instrument")
+		self.InstToolFrame = tk.LabelFrame(self.ToolsTab, text="Note's instrument")
 		self.InstToolFrame.grid(row=0, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 		
 		self.InstToolMess = FlexMessage(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
@@ -162,43 +162,42 @@ class MainWindow(Frame):
 		
 		self.var.tool.inst = ["Harp (piano)" ,"Double Bass" ,"Bass Drum" ,"Snare Drum" ,"Click" ,"Guitar" ,"Flute" ,"Bell" ,"Chime" ,"Xylophone"]
 		self.var.tool.inst.opt = ["(not applied)"] + self.var.tool.inst + ["Random"]
-		self.InstToolCombox = Combobox(self.InstToolFrame, state='readonly', values=self.var.tool.inst.opt._)
+		self.InstToolCombox = ttk.Combobox(self.InstToolFrame, state='readonly', values=self.var.tool.inst.opt._)
 		self.InstToolCombox.bind("<Return>", lambda e: self.InstToolCombox.event_generate('<Down>'))
 		self.InstToolCombox.current(0)
 		self.InstToolCombox.pack(side='left', fill='both' ,expand=True, padx=padx, pady=pady)
 
 		#Reduce tool
-		self.ReduceToolFrame = LabelFrame(self.ToolsTab, text="Reducing")
+		self.ReduceToolFrame = tk.LabelFrame(self.ToolsTab, text="Reducing")
 		self.ReduceToolFrame.grid(row=1, column=0, sticky='nsew', padx=fpadx, pady=fpady)
 
 		self.ReduceToolMess = FlexMessage(self.ReduceToolFrame, anchor='w', text="Delete as many note as possible to reduce file size.")
 		self.ReduceToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 
-		self.var.tool.reduce.opt1 = IntVar()
+		self.var.tool.reduce.opt1 = tk.IntVar()
 		self.CompactToolChkOpt1 = FlexCheckbutton(self.ReduceToolFrame, text="Delete duplicate notes", variable=self.var.tool.reduce.opt1, anchor='w')
 		self.CompactToolChkOpt1.pack(padx=padx, pady=pady)
 
-		self.var.tool.reduce.opt2 = IntVar()
+		self.var.tool.reduce.opt2 = tk.IntVar()
 		self.CompactToolChkOpt2 = FlexCheckbutton(self.ReduceToolFrame, text=" In every tick, delete all notes except the first note", variable=self.var.tool.reduce.opt2, anchor='w')
 		self.CompactToolChkOpt2.pack(padx=padx, pady=pady)
 
-		self.var.tool.reduce.opt3 = IntVar()
+		self.var.tool.reduce.opt3 = tk.IntVar()
 		self.CompactToolChkOpt3 = FlexCheckbutton(self.ReduceToolFrame, text=" In every tick, delete all notes except the last note", variable=self.var.tool.reduce.opt3, anchor='w')
 		self.CompactToolChkOpt3.pack(padx=padx, pady=(pady, 10))
 
-
 		#Compact tool
-		self.CompactToolFrame = LabelFrame(self.ToolsTab, text="Compacting")
+		self.CompactToolFrame = tk.LabelFrame(self.ToolsTab, text="Compacting")
 		self.CompactToolFrame.grid(row=1, column=1, sticky='nsew', padx=fpadx, pady=fpady)
 
 		self.CompactToolMess = FlexMessage(self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
 		self.CompactToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 
-		self.var.tool.compact = IntVar()
+		self.var.tool.compact = tk.IntVar()
 		self.CompactToolCheck = FlexCheckbutton(self.CompactToolFrame, text="Compact notes", variable=self.var.tool.compact, command=self.toggleCompactToolOpt, anchor='w')
 		self.CompactToolCheck.pack(padx=padx, pady=pady)
 
-		self.var.tool.compact.opt1 = IntVar()
+		self.var.tool.compact.opt1 = tk.IntVar()
 		self.CompactToolChkOpt1 = FlexCheckbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)", variable=self.var.tool.compact.opt1, state='disabled', anchor='w')
 		self.CompactToolChkOpt1.select()
 		self.CompactToolChkOpt1.pack(padx=padx*5, pady=pady)
@@ -208,14 +207,14 @@ class MainWindow(Frame):
 		self.ToolsTabButton.grid(row=2, column=1, sticky='se', padx=fpadx, pady=fpady)
 	
 	def footerElements(self):
-		self.footerLabel = Label(self.footer, text="Footer")
+		self.footerLabel = tk.Label(self.footer, text="Footer")
 		self.footerLabel.pack(side='left', fill='x')
 		self.var.footerLabel = 0
 		
-		self.sizegrip = Sizegrip(self.footer)
+		self.sizegrip = ttk.Sizegrip(self.footer)
 		self.sizegrip.pack(side='right')
 
-		self.progressbar = Progressbar(self.footer, orient="horizontal", length=300 ,mode="determinate")
+		self.progressbar = ttk.Progressbar(self.footer, orient="horizontal", length=300 ,mode="determinate")
 		self.progressbar["value"] = 0
 		self.progressbar["maximum"] = 100
 		#self.progressbar.start()
@@ -230,7 +229,7 @@ class MainWindow(Frame):
 	def OnBrowseFile(self, doOpen=False):
 		types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
 		filename = askopenfilename(filetypes = types)
-		self.OpenFileEntry.delete(0,END)
+		self.OpenFileEntry.delete(0,'end')
 		self.OpenFileEntry.insert(0, filename)
 		if doOpen:
 			self.OnOpenFile(filename, None)
@@ -279,19 +278,40 @@ class MainWindow(Frame):
 		self.ToolsTabButton['state'] = 'disabled'
 		self.UpdateProgBar(0)
 		data = self.inputFileData
-		self.UpdateProgBar(20)
-		applied = flipNotes(data, self.var.tool.flip.vertical.get(), self.var.tool.flip.horizontal.get())
-		self.UpdateProgBar(40)
+		ticklen = data['headers']['length']
+		layerlen = data['maxLayer']
 		instOpti = self.InstToolCombox.current()
-		if instOpti > 0:
-			for note in applied['notes']:
-				note['inst'] = randrange(len(self.var.tool.inst)) if instOpti > len(self.var.tool.inst) else instOpti-1
-		self.UpdateProgBar(60)
-		if self.var.tool.compact.get() == 1: applied = compactNotes(applied, self.var.tool.compact.opt1.get(), groupPerc=0)
-		self.UpdateProgBar(80)
-		applied['notes'] = sorted(applied['notes'], key = operator.itemgetter('tick', 'layer') )
+		self.UpdateProgBar(30)
+		for i, note in enumerate(data['notes']):
+			#Flip
+			if bool(self.var.tool.flip.horizontal.get()): note['tick'] = ticklen - note['tick']
+			if bool(self.var.tool.flip.vertical.get()): note['layer'] = layerlen - note['layer']
 
-		self.inputFileData = applied
+			#Instrument change
+			if instOpti > 0:
+				note['inst'] = randrange(len(self.var.tool.inst)) if instOpti > len(self.var.tool.inst) else instOpti-1
+		self.UpdateProgBar(50)
+		#Reduce
+		if bool(self.var.tool.reduce.opt2.get()) and bool(self.var.tool.reduce.opt3.get()):
+			data['notes'] = [note for i, note in enumerate(data['notes']) if note == data['notes'][-1] or note['tick'] != data['notes'][i-1]['tick'] or note['tick'] != data['notes'][i+1]['tick']]
+		elif bool(self.var.tool.reduce.opt2.get()):
+			data['notes'] = [note for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]['tick']]
+		elif bool(self.var.tool.reduce.opt3.get()):
+			data['notes'] = [data['notes'][i-1] for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]['tick']]
+			self.UpdateProgBar(60)
+		if bool(self.var.tool.reduce.opt1.get()):
+			data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'inst', 'key', 'layer') )
+			data['notes'] = [note for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]['tick'] or note['inst'] != data['notes'][i-1]['inst'] or note['key'] != data['notes'][i-1]['key']]
+			data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
+
+		self.UpdateProgBar(70)
+		#Compact
+		if bool(self.var.tool.compact.get()): data = compactNotes(data, self.var.tool.compact.opt1.get(), groupPerc=0)
+		self.UpdateProgBar(80)
+		#Sort notes
+		data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
+		self.UpdateProgBar(90)
+		self.inputFileData = data
 		self.UpdateProgBar(100)
 		self.RaiseFooter('Applied')
 		self.UpdateProgBar(-1)
@@ -349,20 +369,20 @@ class MainWindow(Frame):
 			self.footerLabel.pack_forget()
 			self.footerLabel.update()
 
-class AboutWindow(Toplevel):
+class AboutWindow(tk.Toplevel):
 	def __init__(self, parent):
-		Toplevel.__init__(self)
+		tk.Toplevel.__init__(self)
 		self.parent = parent
 		self.alarmTime = 0
 		self.title("About this application...")
 
-		logo = Label(self, text="NBSTool", font=("Arial", 44))
+		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
 		description = FlexMessage(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,1", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
-		githubLink = Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
+		githubLink = FlexButton(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
 		githubLink.pack(padx=10, pady=10)
 
 		self.lift()
@@ -383,17 +403,17 @@ class AboutWindow(Toplevel):
 		self.focus_force()
 		self.bell()
 
-class FlexMessage(Message):
+class FlexMessage(tk.Message):
 	def __init__(self, *args, **kwargs):
-		Message.__init__(self, *args, **kwargs)
+		tk.Message.__init__(self, *args, **kwargs)
 		self.bind("<Configure>", lambda e: self.configure(width=e.width-10))
 
-class FlexButton(Button):
+class FlexButton(ttk.Button):
 	def __init__(self, *args, **kwargs):
-		Button.__init__(self, *args, **kwargs)
+		ttk.Button.__init__(self, *args, **kwargs)
 		self.bind("<Return>", lambda e: self.invoke())
 
-class FlexCheckbutton(Checkbutton):
+class FlexCheckbutton(tk.Checkbutton):
 	def __init__(self, *args, **kwargs):
 		okwargs = dict(kwargs)
 		if 'multiline' in kwargs:
@@ -402,7 +422,7 @@ class FlexCheckbutton(Checkbutton):
 		else:
 			self.multiline = True
 
-		Checkbutton.__init__(self, *args, **okwargs)
+		tk.Checkbutton.__init__(self, *args, **okwargs)
 		
 		self.text = kwargs['text']
 		if 'anchor' in kwargs:
@@ -421,21 +441,15 @@ class FlexCheckbutton(Checkbutton):
 		self.bind("<Return>", lambda _: self.toggle())
 		self.bind("<Return>", lambda _: self.invoke())
 
-def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):		
-	#print(parent.winfo_screenwidth(), parent.winfo_screenheight())
-
+def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	ScreenWidth = root.winfo_screenwidth()
 	ScreenHeight = root.winfo_screenheight()
 	
 	WindowWidth = width or obj.winfo_reqwidth()
 	WindowHeight = height or obj.winfo_reqheight()
 	
-	#print(WindowWidth, WindowHeight)
-
 	WinPosX = int(ScreenWidth / 2 - WindowWidth / 2)
 	WinPosY = int(ScreenHeight / 2.3 - WindowHeight / 2)
-
-	#print(WinPosX, WinPosY)
 
 	obj.geometry("{}x{}+{}+{}".format(WindowWidth, WindowHeight, WinPosX, WinPosY))
 	obj.update()
@@ -462,35 +476,35 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 			#print('Instrument: {}'.format(inst))
 			InnerLayer = LocalLayer = c = 0
 			#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-			lastNote = {'layer':-1, 'tick':-1}
+			PrevNote = {'layer':-1, 'tick':-1}
 			for note in r['notes']:
 				if note['inst'] == inst:
 					c += 1
-					if note['tick'] == lastNote['tick']:
+					if note['tick'] == PrevNote['tick']:
 						LocalLayer += 1
-						InnerLayer = max(InnerLayer, LocalLayer)
+						Inner   Layer = max(InnerLayer, LocalLayer)
 						note['layer'] = LocalLayer + OuterLayer
 					else:
 						LocalLayer = 0
 						note['layer'] = LocalLayer + OuterLayer
-						lastNote = note
+						PrevNote = note
 					#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
 			OuterLayer += InnerLayer + 1
 			#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
 	else:
-		lastNote = {'layer':-1, 'tick':-1}
+		PrevNote = {'layer':-1, 'tick':-1}
 		layer = 0
 		for note in r['notes']:
-			if note['tick'] == lastNote['tick']:
+			if note['tick'] == PrevNote['tick']:
 				layer += 1
 				note['layer'] = layer
 			else:
 				layer = 0
 				note['layer'] = layer
-				lastNote = note
+				PrevNote = note
 	return r
 
-root = Tk()
+root = tk.Tk()
 app = MainWindow(root)
 root.mainloop()
 
