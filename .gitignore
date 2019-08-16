@@ -331,3 +331,11 @@ ASALocalRun/
 
 ## Ignore .nbs files.
 *.nbs
+
+## Ignore other files/folders.
+*.ico
+*.spec
+*.bat
+version.*
+build/
+dist/
