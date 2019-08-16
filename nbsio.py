@@ -244,20 +244,3 @@ def writenbs(filename, data):
 if __name__ == "__main__":
 	import sys
 	opennbs(sys.argv[1], sys.argv[2])
-	'''
-	a = opennbs('Chạy ngay đi – Sơn Tùng M-TP.nbs')
-	b = opennbs('Chạy ngay đi – Sơn Tùng M-TP.nbssaved.nbs')
-	#b = opennbs('Bước chân thần kỳ – OPlus.nbs')
-
-	for i in range(10):
-		print('='*40)
-		pprint(a['notes'][i])
-		pprint(b['notes'][i])
-		print('='*40)
-		print('note {0} in a = note {0} in b: {1}'.format(i, a['notes'][i] == b['notes'][i]))
-		
-	print('='*40)
-	#print(a['headers'] == b['headers'])
-	#print(a['notes'] == b['notes'])
-	print(a == b)
-	'''
