@@ -1,8 +1,9 @@
-import sys, operator, webbrowser
+import sys, os, operator, webbrowser, traceback
 
 import tkinter as tk
 import tkinter.ttk as ttk
 
+import tkinter.messagebox as tkmsgbox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.scrolledtext import ScrolledText
 
@@ -67,7 +68,7 @@ class MainWindow(tk.Frame):
 		self.fileMenu.add_command(label="Save", accelerator="Ctrl+S", command=self.OnSaveFile)
 		self.fileMenu.add_command(label="Save as new file", accelerator="Ctrl+Shift+S", command = lambda: self.OnSaveFile(True))
 		self.fileMenu.add_separator()
-		self.fileMenu.add_command(label="Quit", accelerator="Esc", command=self.parent.destroy)
+		self.fileMenu.add_command(label="Quit", accelerator="Esc", command=self.onClose)
 
 		self.helpMenu = tk.Menu(self.menuBar, tearoff=False)
 		self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
@@ -99,7 +100,7 @@ class MainWindow(tk.Frame):
 
 		self.ToolsTabElements()
 		self.NbTabs.add(self.ToolsTab, text="Tools")
-	
+		
 	def GeneralTabElements(self):
 		padx, pady = 5, 5
 
@@ -222,7 +223,7 @@ class MainWindow(tk.Frame):
 	
 	def WindowBind(self):
 		#Keys
-		self.parent.bind('<Escape>', lambda _: self.parent.destroy())
+		self.parent.bind('<Escape>', self.onClose)
 		self.parent.bind('<Control-o>', lambda _: self.OnBrowseFile(True))
 		self.parent.bind('<Control-s>', self.OnSaveFile)
 		self.parent.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
@@ -245,6 +246,10 @@ class MainWindow(tk.Frame):
 		self.popupMenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: w.event_generate("<Control-v>"))
 		self.popupMenu.tk.call("tk_popup", self.popupMenu, event.x_root, event.y_root)
 
+	def onClose(self, event):
+		self.parent.quit()
+		self.parent.destroy()
+
 	def OnBrowseFile(self, doOpen=False):
 		types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
 		filename = askopenfilename(filetypes = types)
@@ -260,11 +265,10 @@ class MainWindow(tk.Frame):
 			try:
 				data = opennbs(fileName)
 			except Exception as ex:
-				template = "An exception of type {0} occurred.\nArguments: {1!r}"
-				message = template.format(type(ex).__name__, ex.args)
-				print(message)
-				self.RaiseFooter(type(ex).__name__, 'red')
+				self.RaiseFooter(type(ex).__name__, 'darkred')
 				self.UpdateProgBar(-1)
+				print('='*40+"\n ERROR!"+"\n"+'='*40)
+				print(traceback.format_exc())
 				return
 			if data is not None:
 				self.UpdateProgBar(40)
@@ -398,7 +402,7 @@ class AboutWindow(tk.Toplevel):
 		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,25", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,26", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -511,8 +515,17 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 				PrevNote = note
 	return r
 
+#Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
+def resource_path(relative_path):
+	try:
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+	return os.path.join(base_path, relative_path)
+
+
 root = tk.Tk()
 app = MainWindow(root)
+root.iconbitmap(resource_path('icon.ico'))
 root.mainloop()
-
 print("The app was closed.")
