@@ -1,4 +1,4 @@
-import sys, os, operator, webbrowser, traceback
+import sys, os, operator, webbrowser, copy
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -7,9 +7,11 @@ import tkinter.messagebox as tkmsgbox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from tkinter.scrolledtext import ScrolledText
 
-from time import sleep
-from random import randrange
+from time import sleep, time
 from pprint import pprint
+from random import randrange
+
+from midiutil import MIDIFile
 
 from attr import Attr
 from nbsio import opennbs, writenbs
@@ -23,7 +25,6 @@ class MainWindow(tk.Frame):
 		self.properties()
 		self.elements()
 		self.WindowBind()
-		self.UpdateVar(True)
 		self.update()
 		self.pack(fill='both', expand=True)
 		self.update()
@@ -39,7 +40,8 @@ class MainWindow(tk.Frame):
 	def elements(self):
 		self.parent.title("NBS Tool")
 		self.style = ttk.Style()
-		self.style.theme_use("default")
+		#self.style.theme_use("default")
+		self.style.theme_use("vista")
 		
 		#Menu bar
 		self.menuBar = tk.Menu(self)
@@ -100,6 +102,12 @@ class MainWindow(tk.Frame):
 
 		self.ToolsTabElements()
 		self.NbTabs.add(self.ToolsTab, text="Tools")
+
+		#"Export" tab
+		self.ExportTab = tk.Frame(self.NbTabs)
+
+		self.ExportTabElements()
+		self.NbTabs.add(self.ExportTab, text="Export")
 		
 	def GeneralTabElements(self):
 		padx, pady = 5, 5
@@ -207,6 +215,64 @@ class MainWindow(tk.Frame):
 		self.ToolsTabButton = ttk.Button(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
 		self.ToolsTabButton.grid(row=2, column=1, sticky='se', padx=fpadx, pady=fpady)
 	
+	def ExportTabElements(self):
+		fpadx, fpady = 10, 10
+		padx, pady = 5, 5
+		
+		#Upper frame
+		self.ExpConfigFrame = tk.LabelFrame(self.ExportTab, text="Option")
+		self.ExpConfigFrame.pack(fill='both', expand=True, padx=fpadx, pady=fpady)
+		
+		#"Select mode" frame
+		self.ExpConfigGrp1 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		self.ExpConfigGrp1.pack(fill='both', padx=fpadx)
+
+		self.ExpConfigLabel = tk.Label(self.ExpConfigGrp1, text="Export the song as a:", anchor='w')
+		self.ExpConfigLabel.pack(side='left', fill='x', padx=padx, pady=pady)
+
+		self.var.export.mode = tk.IntVar()
+		self.ExpConfigMode1 = tk.Radiobutton(self.ExpConfigGrp1, text="File", variable=self.var.export.mode, value=1)
+		self.ExpConfigMode1.pack(side='left', padx=padx, pady=pady)
+		self.ExpConfigMode1.select()
+		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0, state='disabled')
+		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
+
+		self.var.export.types = [('MIDI files', '.mid'), ('Nokia Composer Format', '.txt')]
+		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.types])
+		self.ExpConfigCombox.current(0)
+		self.ExpConfigCombox.bind("<<ComboboxSelected>>", self.toggleExpOptiGrp)
+		self.ExpConfigCombox.pack(side='left', fill='x', padx=padx, pady=pady)
+
+		ttk.Separator(self.ExpConfigFrame, orient="horizontal").pack(fill='x', expand=False, padx=padx*3, pady=pady)
+		
+		#"Midi export options" frame
+		self.ExpOptiGrp1 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		#self.ExpOptiGrp1.pack(fill='both', expand=True, padx=fpadx)
+
+		self.var.export.midi.opt1 = tk.IntVar()
+		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=0)
+		self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
+		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=1)
+		self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
+		
+		#"Nokia export options" frame
+		self.ExpOptiGrp2 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		#self.ExpOptiGrp2.pack(fill='both', expand=True, padx=fpadx)
+		
+		self.toggleExpOptiGrp()
+		
+		self.ExpOutputFrame = tk.LabelFrame(self.ExportTab, text="Output")
+		self.ExpOutputFrame.pack(fill='both', padx=fpadx, pady=(0, fpady))
+
+		self.ExpOutputLabel = tk.Label(self.ExpOutputFrame, text="File path:", anchor='w', width=8)
+		self.ExpOutputLabel.pack(side='left', fill='x', padx=padx, pady=pady)
+		
+		self.ExpOutputEntry = tk.Entry(self.ExpOutputFrame)
+		self.ExpOutputEntry.pack(side='left', fill='x', padx=padx, expand=True)
+		
+		self.ExtBrowseButton = ttk.Button(self.ExpOutputFrame, text="Browse", command = self.OnBrowseExt() )
+		self.ExtBrowseButton.pack(side='left', padx=padx, pady=pady)
+
 	def footerElements(self):
 		self.footerLabel = tk.Label(self.footer, text="Footer")
 		self.footerLabel.pack(side='left', fill='x')
@@ -228,11 +294,13 @@ class MainWindow(tk.Frame):
 		self.parent.bind('<Control-s>', self.OnSaveFile)
 		self.parent.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
 		self.parent.bind('<Control-Shift-S>', lambda _: self.OnSaveFile(True))
+
 		#Bind class
 		self.bind_class("Message" ,"<Configure>", lambda e: e.widget.configure(width=e.width-10))
-		self.bind_class("TButton", "<Return>", lambda e: e.widget.invoke())
-		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.toggle())
-		self.bind_class("Checkbutton", "<Return>", lambda e: e.widget.invoke())
+		
+		for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
+			self.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate('<space>', when='tail'))
+
 		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
 		self.bind_class("Entry" ,"<Button-3>", self.popupmenus)
 		
@@ -251,7 +319,7 @@ class MainWindow(tk.Frame):
 		self.parent.destroy()
 
 	def OnBrowseFile(self, doOpen=False):
-		types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
+		types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
 		filename = askopenfilename(filetypes = types)
 		self.OpenFileEntry.delete(0,'end')
 		self.OpenFileEntry.insert(0, filename)
@@ -284,7 +352,7 @@ class MainWindow(tk.Frame):
 	def OnSaveFile(self, saveAsNewFile=False):
 		if self.inputFileData is not None:
 			if saveAsNewFile is True:
-				types = [('Note Block Studio file', '*.nbs'), ('All files', '*')]
+				types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
 				filename = asksaveasfilename(filetypes = types)
 			else: filename = self.filePath
 			self.UpdateProgBar(50)
@@ -305,7 +373,7 @@ class MainWindow(tk.Frame):
 		layerlen = data['maxLayer']
 		instOpti = self.InstToolCombox.current()
 		self.UpdateProgBar(30)
-		for i, note in enumerate(data['notes']):
+		for note in data['notes']:
 			#Flip
 			if bool(self.var.tool.flip.horizontal.get()): note['tick'] = ticklen - note['tick']
 			if bool(self.var.tool.flip.vertical.get()): note['layer'] = layerlen - note['layer']
@@ -333,14 +401,59 @@ class MainWindow(tk.Frame):
 		self.UpdateProgBar(80)
 		#Sort notes
 		data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
+		
+		#==================
+		start = time()
+		usedInsts = [[], []]
+		maxLayer = 0
+		data['hasPerc'] = False
+		for i, note in enumerate(data['notes']):
+			tick, inst, layer = note['tick'], note['inst'], note['layer']
+			if inst in (2, 3, 4):
+				data['hasPerc'] = note['isPerc'] = True
+				if inst not in usedInsts[1]: usedInsts[1].append(inst)
+			else:
+				note['isPerc'] = False
+				if inst not in usedInsts[0]: usedInsts[0].append(inst)
+			duraKey = None
+			for idx, note in enumerate(data['notes']):
+				if note['layer'] == layer: duraKey = idx
+			if duraKey is not None:
+				if i > 0: data['notes'][-1]['duration'] = tick - data['notes'][duraKey]['tick']
+			maxLayer = max(layer, maxLayer)
+		data['notes'][-1]['duration'] = 8
+		data['headers']['length'] = tick + 1
+		data['maxLayer'] = maxLayer
+		data['usedInsts'] = usedInsts
+		note = tick = inst = layer = isPerc = hasPerc = duraKey = usedInsts = maxLayer
+		end = time()
+		print(end - start)
+		
 		self.UpdateProgBar(90)
-		self.inputFileData = data
+		self.UpdateVar()
 		self.UpdateProgBar(100)
 		self.RaiseFooter('Applied')
 		self.UpdateProgBar(-1)
 		self.ToolsTabButton['state'] = 'normal'
 	
-	def UpdateVar(self, repeat=False):
+	def toggleExpOptiGrp(self ,event=None):
+		asFile = bool(self.var.export.mode.get())
+		type = self.ExpConfigCombox.current() + 1
+		show = 'ExpOptiGrp'+str(type)
+		i = 0
+		fpadx = 10
+		if asFile:
+			for type in self.var.export.types:
+				i += 1
+				name = 'ExpOptiGrp'+str(i)
+				if name == show:
+					getattr(self, name).pack(fill='both', expand=True, padx=fpadx)
+				else:
+					getattr(self, name).pack_forget()
+		else:
+			pass
+	
+	def UpdateVar(self):
 		#print("Started updating….")
 		#Update general tab
 		data = self.inputFileData
@@ -361,7 +474,7 @@ class MainWindow(tk.Frame):
 				self.FileInfoMess.configure(text=text)
 				
 				self.UpdateProgBar(100)
-				self.last.inputFileData = data
+				self.last.inputFileData = copy.deepcopy(data)
 				#print("Updated class properties…", data == self.last.inputFileData)
 			
 			self.UpdateProgBar(-1)
@@ -369,10 +482,12 @@ class MainWindow(tk.Frame):
 			self.ToolsTabButton['state'] = 'disabled'
 
 		self.update_idletasks()
-		if repeat: self.after(1000, lambda: self.UpdateVar(True))
 	
-	def UpdateProgBar(self, value, time=0.05):
-		if value == -1:
+	def OnBrowseExt(self):
+		pass
+
+	def UpdateProgBar(self, value, time=0):
+		if value == -1 or time <= 0:
 			self.progressbar.pack_forget()
 		else:
 			self.progressbar["value"] = value
@@ -402,7 +517,7 @@ class AboutWindow(tk.Toplevel):
 		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
 		logo.pack(padx=30, pady=10)
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,26", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,32", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -480,8 +595,8 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 	sepInst, groupPerc = bool(sepInst), bool(groupPerc)
 	r = data
 	if sepInst:
-		print(r['usedInsts'])
-		print(r['usedInsts'][0]+r['usedInsts'][1])
+		#print(r['usedInsts'])
+		#print(r['usedInsts'][0]+r['usedInsts'][1])
 		OuterLayer = 0
 		for inst in r['usedInsts'][0]+r['usedInsts'][1]:
 			#print('Instrument: {}'.format(inst))

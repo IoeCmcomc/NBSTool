@@ -123,7 +123,7 @@ def readnbs(filename):
 					#logJumps[1].append(layerJumps)
 					#0=Piano (air), 1=Double Bass (wood), 2=Bass Drum (stone), 3=Snare Drum (sand), 4=Click (glass), 5=Guitar (wool), 6=Flute (Clay), 7=Bell (Block of Gold), 8=Chime (Packed Ice), 9=Xylophone (Bone Block)
 					inst = readNumeric(f, BYTE)
-					key = readNumeric(f, BYTE)+21
+					key = readNumeric(f, BYTE)#+21
 					#print(tick, layer, inst, key)
 					if inst in (2, 3, 4):
 						hasPerc = isPerc = True
@@ -223,7 +223,7 @@ def writenbs(filename, data):
 					writeNumeric(f, SHORT, note['layer'] - layer)
 					layer = note['layer']
 					writeNumeric(f, BYTE, note['inst'])
-					writeNumeric(f, BYTE, note['key']-21)
+					writeNumeric(f, BYTE, note['key'])#-21
 			writeNumeric(f, SHORT, 0)
 			writeNumeric(f, SHORT, 0)
 			#Layers
