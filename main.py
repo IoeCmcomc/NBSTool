@@ -207,9 +207,14 @@ class MainWindow(tk.Frame):
 		self.CompactToolCheck.pack(padx=padx, pady=pady)
 
 		self.var.tool.compact.opt1 = tk.IntVar()
-		self.CompactToolChkOpt1 = FlexCheckbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)", variable=self.var.tool.compact.opt1, state='disabled', anchor='w')
+		self.CompactToolChkOpt1 = FlexCheckbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)", variable=self.var.tool.compact.opt1, state='disabled', command=lambda: self.toggleCompactToolOpt(2), anchor='w')
 		self.CompactToolChkOpt1.select()
 		self.CompactToolChkOpt1.pack(padx=padx*5, pady=pady)
+
+		self.var.tool.compact.opt1_1 = tk.IntVar()
+		self.CompactToolChkOpt1_1 = FlexCheckbutton(self.CompactToolFrame, text="Group percussions into one layer", variable=self.var.tool.compact.opt1_1, state='disabled', anchor='w')
+		self.CompactToolChkOpt1_1.select()
+		self.CompactToolChkOpt1_1.pack(padx=padx*5*2, pady=pady)
 		
 		#'Apply' botton
 		self.ToolsTabButton = ttk.Button(self.ToolsTab, text="Apply", state='disabled', command = self.OnApplyTool )
@@ -270,8 +275,11 @@ class MainWindow(tk.Frame):
 		self.ExpOutputEntry = tk.Entry(self.ExpOutputFrame)
 		self.ExpOutputEntry.pack(side='left', fill='x', padx=padx, expand=True)
 		
-		self.ExtBrowseButton = ttk.Button(self.ExpOutputFrame, text="Browse", command = self.OnBrowseExt() )
-		self.ExtBrowseButton.pack(side='left', padx=padx, pady=pady)
+		self.ExpBrowseButton = ttk.Button(self.ExpOutputFrame, text="Browse", command = self.OnBrowseExp )
+		self.ExpBrowseButton.pack(side='left', padx=padx, pady=pady)
+
+		self.ExpSaveButton = ttk.Button(self.ExpOutputFrame, text="Export", command = self.OnExport )
+		self.ExpSaveButton.pack(side='left', padx=padx, pady=pady)
 
 	def footerElements(self):
 		self.footerLabel = tk.Label(self.footer, text="Footer")
@@ -362,8 +370,11 @@ class MainWindow(tk.Frame):
 			self.UpdateProgBar(-1)
 	
 	def toggleCompactToolOpt(self, id=1):
-		if id >= 1:
-			self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get() == 0 else "normal"
+		if id <= 2:
+			a = ((self.var.tool.compact.opt1.get() == 0) or (self.var.tool.compact.get() == 0))
+			self.CompactToolChkOpt1_1["state"] = "disable" if a is True else "normal"
+			if id <= 1:
+				self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get() == 0 else "normal"
 
 	def OnApplyTool(self):
 		self.ToolsTabButton['state'] = 'disabled'
@@ -397,7 +408,7 @@ class MainWindow(tk.Frame):
 
 		self.UpdateProgBar(70)
 		#Compact
-		if bool(self.var.tool.compact.get()): data = compactNotes(data, self.var.tool.compact.opt1.get(), groupPerc=0)
+		if bool(self.var.tool.compact.get()): data = compactNotes(data, self.var.tool.compact.opt1.get(), self.var.tool.compact.opt1_1.get())
 		self.UpdateProgBar(80)
 		#Sort notes
 		data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
@@ -483,8 +494,22 @@ class MainWindow(tk.Frame):
 
 		self.update_idletasks()
 	
-	def OnBrowseExt(self):
-		pass
+	def OnBrowseExp(self):
+		curr = self.var.export.types[self.ExpConfigCombox.current()]
+		print(curr)
+		types = [curr]+[('All files', '*')]
+		print(types)
+		self.exportFilePath = asksaveasfilename(filetypes = types)
+		self.ExpOutputEntry.delete(0,'end')
+		self.ExpOutputEntry.insert(0, self.exportFilePath)
+		
+	def OnExport(self):
+		if self.exportFilePath is not None:
+			asFile = bool(self.var.export.mode.get())
+			type = self.ExpConfigCombox.current()
+			if asFile:
+				if type == 0:
+					exportMIDI()
 
 	def UpdateProgBar(self, value, time=0):
 		if value == -1 or time <= 0:
@@ -593,16 +618,20 @@ def flipNotes(data, vertically=0, horizontally=0):
 
 def compactNotes(data, sepInst=1, groupPerc=0):
 	sepInst, groupPerc = bool(sepInst), bool(groupPerc)
+	print("sepInst: {}; groupPerc: {}".format(sepInst, groupPerc))
 	r = data
+	PrevNote = {'layer':-1, 'tick':-1}
 	if sepInst:
 		#print(r['usedInsts'])
 		#print(r['usedInsts'][0]+r['usedInsts'][1])
 		OuterLayer = 0
-		for inst in r['usedInsts'][0]+r['usedInsts'][1]:
+		iter = r['usedInsts'][0]
+		if not groupPerc: iter += r['usedInsts'][1]
+		print(iter)
+		for inst in iter:
 			#print('Instrument: {}'.format(inst))
 			InnerLayer = LocalLayer = c = 0
 			#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-			PrevNote = {'layer':-1, 'tick':-1}
 			for note in r['notes']:
 				if note['inst'] == inst:
 					c += 1
@@ -617,8 +646,21 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 					#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
 			OuterLayer += InnerLayer + 1
 			#print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
+		if groupPerc:
+			InnerLayer = LocalLayer = c = 0
+			for note in r['notes']:
+				if note['inst'] in r['usedInsts'][1]:
+					c += 1
+					if note['tick'] == PrevNote['tick']:
+						LocalLayer += 1
+						InnerLayer = max(InnerLayer, LocalLayer)
+						note['layer'] = LocalLayer + OuterLayer
+					else:
+						LocalLayer = 0
+						note['layer'] = LocalLayer + OuterLayer
+						PrevNote = note
+			#OuterLayer += InnerLayer + 1
 	else:
-		PrevNote = {'layer':-1, 'tick':-1}
 		layer = 0
 		for note in r['notes']:
 			if note['tick'] == PrevNote['tick']:
@@ -629,6 +671,10 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 				note['layer'] = layer
 				PrevNote = note
 	return r
+
+def exportMIDI(self):
+	pass
+
 
 #Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
 def resource_path(relative_path):
