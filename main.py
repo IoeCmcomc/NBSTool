@@ -1,3 +1,23 @@
+# This file is a part of:
+#‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+#  ███▄▄▄▄   ▀█████████▄     ▄████████     ███      ▄██████▄   ▄██████▄   ▄█       
+#  ███▀▀▀██▄   ███    ███   ███    ███ ▀█████████▄ ███    ███ ███    ███ ███       
+#  ███   ███   ███    ███   ███    █▀     ▀███▀▀██ ███    ███ ███    ███ ███       
+#  ███   ███  ▄███▄▄▄██▀    ███            ███   ▀ ███    ███ ███    ███ ███       
+#  ███   ███ ▀▀███▀▀▀██▄  ▀███████████     ███     ███    ███ ███    ███ ███       
+#  ███   ███   ███    ██▄          ███     ███     ███    ███ ███    ███ ███       
+#  ███   ███   ███    ███    ▄█    ███     ███     ███    ███ ███    ███ ███▌    ▄ 
+#   ▀█   █▀  ▄█████████▀   ▄████████▀     ▄████▀    ▀██████▀   ▀██████▀  █████▄▄██ 
+#__________________________________________________________________________________
+# NBSTool is a tool to work with .nbs (Note Block Studio) files.
+# Author: IoeCmcomc (https://github.com/IoeCmcomc)
+# Programming language: Python
+# License: MIT license
+# Version: 0,50
+# Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
+#‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+
 import sys, os, operator, webbrowser, copy
 
 import tkinter as tk
@@ -12,6 +32,7 @@ from pprint import pprint
 from random import randrange
 
 from midiutil import MIDIFile
+from PIL import Image, ImageTk
 
 from attr import Attr
 from nbsio import opennbs, writenbs
@@ -52,6 +73,7 @@ class MainWindow(tk.Frame):
 		#Tabs
 		self.NbTabs = ttk.Notebook(self)
 		self.tabs()
+		self.NbTabs.enable_traversal()
 		self.NbTabs.pack(fill='both', expand=True)
 		
 		#Footer
@@ -524,13 +546,14 @@ class AboutWindow(tk.Toplevel):
 	def __init__(self, parent):
 		tk.Toplevel.__init__(self)
 		self.parent = parent
-		self.alarmTime = 0
 		self.title("About this application...")
 
-		logo = tk.Label(self, text="NBSTool", font=("Arial", 44))
-		logo.pack(padx=30, pady=10)
+		self.logo = ImageTk.PhotoImage(Image.open(resource_path('icon.ico')).resize((128 ,128), Image.ANTIALIAS))
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,32", justify='center')
+		logolabel = tk.Label(self, text="NBSTool", font=("Arial", 44), image=self.logo, compound='left')
+		logolabel.pack(padx=30, pady=(10*2, 10))
+
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,50", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -547,10 +570,11 @@ class AboutWindow(tk.Toplevel):
 		self.bind("<FocusOut>", self.Alarm)
 		self.bind('<Escape>', lambda _: self.destroy())
 
-		WindowGeo(self, parent, 400, 250)
+		self.iconbitmap(resource_path("icon.ico"))
+
+		WindowGeo(self, parent, 500, 300)
 
 	def Alarm(self, event):
-		print(dir(event))
 		self.focus_force()
 		self.bell()
 
@@ -798,14 +822,12 @@ def exportMIDI(data, filepath, byLayer=False):
 		pitch = note['key']+21
 		duration = 2 if note['duration'] == 0 else note['duration'] / timeSign
 		track = note['layer']
-		'''
+
 		if note['isPerc']:
-			channel = 9
 			for a, b, c in percussions:
-				print("Perc")
-				if c == note['key']+21 and b == note['inst']: note['key'] = c-21	
-		else:
-			channel = 1'''
+				if c == note['key']+21 and b == note['inst']:
+					print("Replaced")
+					note['key'] = c-21
 
 		if byLayer:
 			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
@@ -828,6 +850,6 @@ def resource_path(relative_path):
 
 root = tk.Tk()
 app = MainWindow(root)
-root.iconbitmap(resource_path('icon.ico'))
+root.iconbitmap(resource_path("icon.ico"))
 root.mainloop()
 print("The app was closed.")
