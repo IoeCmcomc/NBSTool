@@ -7,57 +7,6 @@ BYTE = Struct('<b')
 SHORT = Struct('<h')
 INT = Struct('<i')
 
-percussions = [
-#(percussion_key, instrument, key)
-(35, 2, 64),
-(36, 2, 60),
-(37, 4, 60),
-(38, 3, 62),
-#(39, 4, 60),
-(40, 3, 58),
-#(41, 2, 60),
-(42, 3, 76),
-(43, 2, 67),
-#(44, 3, 76),
-(45, 2, 69),
-(46, 2, 72),
-(47, 2, 74),
-(48, 2, 77),
-(49, 2, 71),
-(50, 3, 77),
-(51, 3, 78),
-(52, 3, 62),
-(53, 3, 67),
-(54, 3, 72),
-(55, 3, 73),
-(56, 4, 55),
-#(57, 3, 67),
-(58, 4, 56),
-#(59, 3, 67),
-(60, 4, 63),
-(61, 4, 57),
-(62, 4, 62),
-(63, 2, 76),
-(64, 3, 69),
-#(65, 3, 67),
-#(66, 3, 62),
-#(67, 4, 62),
-(68, 4, 58),
-(69, 4, 74),
-(70, 4, 77),
-(73, 3, 71),
-(74, 4, 65),
-(75, 4, 72),
-(76, 4, 64),
-(77, 4, 59),
-(80, 4, 71),
-(81, 4, 76),
-(82, 3, 78)
-]
-
-#pprint(percussions)
-
-
 def readNumeric(f, fmt):
 	return fmt.unpack(f.read(fmt.size))[0]
 
@@ -96,7 +45,7 @@ def readnbs(filename):
 			headers['author'] = readString(f) #Author
 			headers['orig_author'] = readString(f) #OriginalAuthor
 			headers['description'] = readString(f) #Description 
-			headers['tempo'] = readNumeric(f, SHORT) #Tempo
+			headers['tempo'] = readNumeric(f, SHORT)/100 #Tempo
 			headers['auto-saving'] = readNumeric(f, BYTE) == 1 #Auto-saving enabled
 			headers['auto-saving_time'] = readNumeric(f, BYTE) #Auto-saving duration
 			headers['time_sign'] = readNumeric(f, BYTE) #Time signature
@@ -133,15 +82,15 @@ def readnbs(filename):
 						if inst not in usedInsts[0]: usedInsts[0].append(inst)
 					duraKey = None
 					for idx, note in enumerate(notes):
-						if note['inst'] == inst: duraKey = idx
+						if note['layer'] == layer: duraKey = idx
 					#print("duraKey: {0}".format(duraKey))
 					if duraKey is not None:
 						#print( "{0} - {1} = {2}".format(tick, notes[duraKey]['tick'], tick - notes[duraKey]['tick']) )
-						if notes: notes[-1]['duration'] = tick - notes[duraKey]['tick']
-					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc})
+						if notes: notes[duraKey]['duration'] = tick - notes[duraKey]['tick']
+					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc, 'duration':8})
 				#pprint(logJumps)
 				maxLayer = max(layer, maxLayer)
-			notes[-1]['duration'] = 8
+			#notes[-1]['duration'] = 8
 			if headers['length'] is None: headers['length'] = tick + 1
 			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = None
 			#Layers
@@ -196,7 +145,7 @@ def writenbs(filename, data):
 			writeString(f, headers['author']) #Author
 			writeString(f, headers['orig_author']) #OriginalAuthor
 			writeString(f, headers['description']) #Description 
-			writeNumeric(f, SHORT, headers['tempo']) #Tempo
+			writeNumeric(f, SHORT, headers['tempo']*100) #Tempo
 			writeNumeric(f, BYTE, headers['auto-saving']) #Auto-saving enabled
 			writeNumeric(f, BYTE, headers['auto-saving_time']) #Auto-saving duration
 			writeNumeric(f, BYTE, headers['time_sign']) #Time signature

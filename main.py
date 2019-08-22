@@ -36,6 +36,7 @@ class MainWindow(tk.Frame):
 		self.last = Attr()
 		self.last.inputFileData = None
 		self.var = Attr()
+		self.exportFilePath = None
 	
 	def elements(self):
 		self.parent.title("NBS Tool")
@@ -242,7 +243,7 @@ class MainWindow(tk.Frame):
 		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0, state='disabled')
 		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
 
-		self.var.export.types = [('MIDI files', '.mid'), ('Nokia Composer Format', '.txt')]
+		self.var.export.types = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt')]
 		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.types])
 		self.ExpConfigCombox.current(0)
 		self.ExpConfigCombox.bind("<<ComboboxSelected>>", self.toggleExpOptiGrp)
@@ -255,9 +256,9 @@ class MainWindow(tk.Frame):
 		#self.ExpOptiGrp1.pack(fill='both', expand=True, padx=fpadx)
 
 		self.var.export.midi.opt1 = tk.IntVar()
-		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=0)
+		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
 		self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
-		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=1)
+		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
 		self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
 		
 		#"Nokia export options" frame
@@ -282,12 +283,12 @@ class MainWindow(tk.Frame):
 		self.ExpSaveButton.pack(side='left', padx=padx, pady=pady)
 
 	def footerElements(self):
-		self.footerLabel = tk.Label(self.footer, text="Footer")
+		self.footerLabel = tk.Label(self.footer, text="Ready")
 		self.footerLabel.pack(side='left', fill='x')
 		self.var.footerLabel = 0
 		
 		self.sizegrip = ttk.Sizegrip(self.footer)
-		self.sizegrip.pack(side='right')
+		self.sizegrip.pack(side='right', anchor='se')
 
 		self.progressbar = ttk.Progressbar(self.footer, orient="horizontal", length=300 ,mode="determinate")
 		self.progressbar["value"] = 0
@@ -329,10 +330,12 @@ class MainWindow(tk.Frame):
 	def OnBrowseFile(self, doOpen=False):
 		types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
 		filename = askopenfilename(filetypes = types)
-		self.OpenFileEntry.delete(0,'end')
-		self.OpenFileEntry.insert(0, filename)
-		if doOpen:
-			self.OnOpenFile(filename, None)
+		if self.filePath is None or bool(filename):
+			self.filePath = filename
+			self.OpenFileEntry.delete(0,'end')
+			self.OpenFileEntry.insert(0, filename)
+			if doOpen:
+				self.OnOpenFile(filename, None)
 
 	def OnOpenFile(self, fileName, fromEntry=False):
 		if fromEntry: fileName = self.OpenFileEntry.get()
@@ -347,15 +350,13 @@ class MainWindow(tk.Frame):
 				print(traceback.format_exc())
 				return
 			if data is not None:
-				self.UpdateProgBar(40)
+				self.UpdateProgBar(80)
 				self.inputFileData = data
-				self.filePath = fileName
 		
 			self.UpdateVar()
 			self.RaiseFooter('Opened')
 			self.UpdateProgBar(100)
 		self.UpdateProgBar(-1)
-			#print(self.inputFileData)
 	
 	def OnSaveFile(self, saveAsNewFile=False):
 		if self.inputFileData is not None:
@@ -383,7 +384,7 @@ class MainWindow(tk.Frame):
 		ticklen = data['headers']['length']
 		layerlen = data['maxLayer']
 		instOpti = self.InstToolCombox.current()
-		self.UpdateProgBar(30)
+		self.UpdateProgBar(20)
 		for note in data['notes']:
 			#Flip
 			if bool(self.var.tool.flip.horizontal.get()): note['tick'] = ticklen - note['tick']
@@ -392,7 +393,7 @@ class MainWindow(tk.Frame):
 			#Instrument change
 			if instOpti > 0:
 				note['inst'] = randrange(len(self.var.tool.inst)) if instOpti > len(self.var.tool.inst) else instOpti-1
-		self.UpdateProgBar(50)
+		self.UpdateProgBar(30)
 		#Reduce
 		if bool(self.var.tool.reduce.opt2.get()) and bool(self.var.tool.reduce.opt3.get()):
 			data['notes'] = [note for i, note in enumerate(data['notes']) if note == data['notes'][-1] or note['tick'] != data['notes'][i-1]['tick'] or note['tick'] != data['notes'][i+1]['tick']]
@@ -406,41 +407,18 @@ class MainWindow(tk.Frame):
 			data['notes'] = [note for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]['tick'] or note['inst'] != data['notes'][i-1]['inst'] or note['key'] != data['notes'][i-1]['key']]
 			data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
 
-		self.UpdateProgBar(70)
+		self.UpdateProgBar(50)
 		#Compact
 		if bool(self.var.tool.compact.get()): data = compactNotes(data, self.var.tool.compact.opt1.get(), self.var.tool.compact.opt1_1.get())
-		self.UpdateProgBar(80)
+		self.UpdateProgBar(60)
 		#Sort notes
 		data['notes'] = sorted(data['notes'], key = operator.itemgetter('tick', 'layer') )
 		
-		#==================
-		start = time()
-		usedInsts = [[], []]
-		maxLayer = 0
-		data['hasPerc'] = False
-		for i, note in enumerate(data['notes']):
-			tick, inst, layer = note['tick'], note['inst'], note['layer']
-			if inst in (2, 3, 4):
-				data['hasPerc'] = note['isPerc'] = True
-				if inst not in usedInsts[1]: usedInsts[1].append(inst)
-			else:
-				note['isPerc'] = False
-				if inst not in usedInsts[0]: usedInsts[0].append(inst)
-			duraKey = None
-			for idx, note in enumerate(data['notes']):
-				if note['layer'] == layer: duraKey = idx
-			if duraKey is not None:
-				if i > 0: data['notes'][-1]['duration'] = tick - data['notes'][duraKey]['tick']
-			maxLayer = max(layer, maxLayer)
-		data['notes'][-1]['duration'] = 8
-		data['headers']['length'] = tick + 1
-		data['maxLayer'] = maxLayer
-		data['usedInsts'] = usedInsts
-		note = tick = inst = layer = isPerc = hasPerc = duraKey = usedInsts = maxLayer
-		end = time()
-		print(end - start)
+		self.UpdateProgBar(60)
+		data = DataPostprocess(data)
 		
-		self.UpdateProgBar(90)
+		
+		self.UpdateProgBar(80)
 		self.UpdateVar()
 		self.UpdateProgBar(100)
 		self.RaiseFooter('Applied')
@@ -468,6 +446,7 @@ class MainWindow(tk.Frame):
 		#print("Started updating….")
 		#Update general tab
 		data = self.inputFileData
+		self.UpdateProgBar(20)
 		if data is not None:
 			self.ToolsTabButton['state'] = 'normal'
 			if data != self.last.inputFileData:
@@ -475,7 +454,7 @@ class MainWindow(tk.Frame):
 				headers = data['headers']
 				
 				self.UpdateProgBar(60)
-				text = "File version: {}\nFirst custom inst index: {}\nSong length: {}\nSong height: {}\nSong name: {}\nSong author: {}\nComposer: {}\nSong description: {}\nTempo: {}\nAuto-saving: {}\nTime signature: {}\nMinutes spent: {}\n'left' clicks: {}\nRight clicks: {}\nBlocks added: {}\nBlocks removed: {}\nMIDI/Schematic file name: {}".format \
+				text = "File version: {}\nFirst custom inst index: {}\nSong length: {}\nSong height: {}\nSong name: {}\nSong author: {}\nComposer: {}\nSong description: {}\nTempo: {} TPS\nAuto-saving: {}\nTime signature: {}/4\nMinutes spent: {}\nLeft clicks: {}\nRight clicks: {}\nBlocks added: {}\nBlocks removed: {}\nMIDI/Schematic file name: {}".format \
 				( headers['file_version'], headers['vani_inst'], headers['length'], headers['height'], headers['name'], headers['orig_author'], headers['author'], headers['description'], headers['tempo'], "Enabled (save every {} minutes(s)".format(headers['auto-saving_time']) if headers['auto-saving'] else "Disabled", headers['time_sign'], headers['minutes_spent'], headers['left_clicks'], headers['right_clicks'], headers['block_added'], headers['block_removed'], headers['import_name'] )
 				self.FileMetaMess.configure(text=text)
 				
@@ -486,6 +465,7 @@ class MainWindow(tk.Frame):
 				
 				self.UpdateProgBar(100)
 				self.last.inputFileData = copy.deepcopy(data)
+				self.RaiseFooter('Updated')
 				#print("Updated class properties…", data == self.last.inputFileData)
 			
 			self.UpdateProgBar(-1)
@@ -495,23 +475,31 @@ class MainWindow(tk.Frame):
 		self.update_idletasks()
 	
 	def OnBrowseExp(self):
-		curr = self.var.export.types[self.ExpConfigCombox.current()]
-		print(curr)
-		types = [curr]+[('All files', '*')]
-		print(types)
-		self.exportFilePath = asksaveasfilename(filetypes = types)
-		self.ExpOutputEntry.delete(0,'end')
-		self.ExpOutputEntry.insert(0, self.exportFilePath)
+		if self.filePath is not None:
+			curr = (self.var.export.types[self.ExpConfigCombox.current()],)
+			print(curr)
+			fext = curr[0][1][1:]
+			print(fext)
+			self.exportFilePath = asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr)
+			if self.exportFilePath is not None and not self.exportFilePath.lower().endswith(fext): self.exportFilePath += fext
+			self.ExpOutputEntry.delete(0,'end')
+			self.ExpOutputEntry.insert(0, self.exportFilePath)
 		
 	def OnExport(self):
 		if self.exportFilePath is not None:
+			self.UpdateProgBar(20)
 			asFile = bool(self.var.export.mode.get())
 			type = self.ExpConfigCombox.current()
 			if asFile:
 				if type == 0:
-					exportMIDI()
+					exportMIDI(self.inputFileData, self.exportFilePath, self.var.export.midi.opt1.get())
 
-	def UpdateProgBar(self, value, time=0):
+				self.UpdateProgBar(100)
+				self.RaiseFooter('Exported')
+				self.UpdateProgBar(-1)
+		
+
+	def UpdateProgBar(self, value, time=0.001):
 		if value == -1 or time <= 0:
 			self.progressbar.pack_forget()
 		else:
@@ -616,18 +604,14 @@ def flipNotes(data, vertically=0, horizontally=0):
 			if vertically: note['layer'] = layerlen - note['layer']
 	return data
 
-def compactNotes(data, sepInst=1, groupPerc=0):
+def compactNotes(data, sepInst=1, groupPerc=1):
 	sepInst, groupPerc = bool(sepInst), bool(groupPerc)
-	print("sepInst: {}; groupPerc: {}".format(sepInst, groupPerc))
 	r = data
 	PrevNote = {'layer':-1, 'tick':-1}
 	if sepInst:
-		#print(r['usedInsts'])
-		#print(r['usedInsts'][0]+r['usedInsts'][1])
 		OuterLayer = 0
 		iter = r['usedInsts'][0]
 		if not groupPerc: iter += r['usedInsts'][1]
-		print(iter)
 		for inst in iter:
 			#print('Instrument: {}'.format(inst))
 			InnerLayer = LocalLayer = c = 0
@@ -659,7 +643,8 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 						LocalLayer = 0
 						note['layer'] = LocalLayer + OuterLayer
 						PrevNote = note
-			#OuterLayer += InnerLayer + 1
+			OuterLayer += InnerLayer + 1
+		r['maxLayer'] = OuterLayer - 1
 	else:
 		layer = 0
 		for note in r['notes']:
@@ -672,8 +657,164 @@ def compactNotes(data, sepInst=1, groupPerc=0):
 				PrevNote = note
 	return r
 
-def exportMIDI(self):
-	pass
+def DataPostprocess(data):
+	start = time()
+	usedInsts = [[], []]
+	maxLayer = 0
+	data['hasPerc'] = False
+	for i, note in enumerate(data['notes']):
+		tick, inst, layer = note['tick'], note['inst'], note['layer']
+		if inst in (2, 3, 4):
+			data['hasPerc'] = note['isPerc'] = True
+			if inst not in usedInsts[1]: usedInsts[1].append(inst)
+		else:
+			note['isPerc'] = False
+			if inst not in usedInsts[0]: usedInsts[0].append(inst)
+		duraKey = None
+		for idx, note in enumerate(data['notes']):
+			if note['layer'] == layer: duraKey = idx
+		if duraKey is not None:
+			if i > 0: data['notes'][duraKey]['duration'] = tick - data['notes'][duraKey]['tick']
+		else:
+			note['duration'] = 8
+		maxLayer = max(layer, maxLayer)
+	data['headers']['length'] = tick + 1
+	data['maxLayer'] = maxLayer
+	data['usedInsts'] = usedInsts
+	note = tick = inst = layer = isPerc = hasPerc = duraKey = usedInsts = maxLayer
+	end = time()
+	return data
+
+def exportMIDI(data, filepath, byLayer=False):
+	data = copy.deepcopy(data)
+	byLayer = bool(byLayer)
+
+	if not byLayer:
+		data = compactNotes(data)
+		data = DataPostprocess(data)
+
+	UniqInstEachLayer = {}
+	for note in data['notes']:
+		if note['layer'] not in UniqInstEachLayer:
+			if note['isPerc']: UniqInstEachLayer[note['layer']] = [-1, None]
+			else: UniqInstEachLayer[note['layer']] = [note['inst'], None]
+		else:
+			if not note['isPerc']: note['inst'] = UniqInstEachLayer[note['layer']][0]
+	pprint(UniqInstEachLayer)
+
+	lenTrack = data['maxLayer'] + 1
+
+	for i in range(lenTrack):
+		if i not in UniqInstEachLayer: UniqInstEachLayer[i] = [0, None]
+
+	print(lenTrack, len(UniqInstEachLayer))
+
+	MIDI = MIDIFile(lenTrack)
+
+	percussions = [
+	#(percussion_key, instrument, key)
+	(35, 2, 64),
+	(36, 2, 60),
+	(37, 4, 60),
+	(38, 3, 62),
+	#(39, 4, 60),
+	(40, 3, 58),
+	#(41, 2, 60),
+	(42, 3, 76),
+	(43, 2, 67),
+	#(44, 3, 76),
+	(45, 2, 69),
+	(46, 2, 72),
+	(47, 2, 74),
+	(48, 2, 77),
+	(49, 2, 71),
+	(50, 3, 77),
+	(51, 3, 78),
+	(52, 3, 62),
+	(53, 3, 67),
+	(54, 3, 72),
+	(55, 3, 73),
+	(56, 4, 55),
+	#(57, 3, 67),
+	(58, 4, 56),
+	#(59, 3, 67),
+	(60, 4, 63),
+	(61, 4, 57),
+	(62, 4, 62),
+	(63, 2, 76),
+	(64, 3, 69),
+	#(65, 3, 67),
+	#(66, 3, 62),
+	#(67, 4, 62),
+	(68, 4, 58),
+	(69, 4, 74),
+	(70, 4, 77),
+	(73, 3, 71),
+	(74, 4, 65),
+	(75, 4, 72),
+	(76, 4, 64),
+	(77, 4, 59),
+	(80, 4, 71),
+	(81, 4, 76),
+	(82, 3, 78)
+	]
+
+	instrument_codes = {0: 0,
+						1: 32,
+						5: 24,
+						6: 73,
+						7: 10,
+						8: 14,
+						9: 13,
+						10: 13,
+						11: 112,
+						12: 0,
+						13: 0,
+						14: 0,
+						15: 0,
+						}
+
+	timeSign = data['headers']['time_sign']
+	channel = 0
+	program = 0
+	time = 0
+	tempo = data['headers']['tempo'] * 60 / timeSign
+	volume = 127
+	
+	c = 0
+	for i in range(lenTrack):
+		MIDI.addTempo(i, time, tempo)
+
+		if UniqInstEachLayer[i][0] == -1:
+			MIDI.addProgramChange(i , 9, time, 0)
+		else:
+			if c == 9: c += 1
+			MIDI.addProgramChange(i , c, time, instrument_codes[UniqInstEachLayer[i][0]])
+			UniqInstEachLayer[i][1] = c
+		c = c + 1 if c < 16 else 0
+	
+	for i, note in enumerate(data['notes']):
+		time = note['tick'] / timeSign
+		pitch = note['key']+21
+		duration = 2 if note['duration'] == 0 else note['duration'] / timeSign
+		track = note['layer']
+		'''
+		if note['isPerc']:
+			channel = 9
+			for a, b, c in percussions:
+				print("Perc")
+				if c == note['key']+21 and b == note['inst']: note['key'] = c-21	
+		else:
+			channel = 1'''
+
+		if byLayer:
+			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
+		
+		print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
+		MIDI.addNote(track, channel, pitch, time, duration, volume)
+
+	with open(filepath, "wb") as output_file:
+		MIDI.writeFile(output_file)
 
 
 #Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
