@@ -36,6 +36,7 @@ from PIL import Image, ImageTk
 
 from attr import Attr
 from nbsio import opennbs, writenbs
+from ncfio import writencf
 
 #sys.stdout = open('main_log.txt', 'w')
 
@@ -286,7 +287,10 @@ class MainWindow(tk.Frame):
 		#"Nokia export options" frame
 		self.ExpOptiGrp2 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
 		#self.ExpOptiGrp2.pack(fill='both', expand=True, padx=fpadx)
-		
+
+		self.NCFOutput = ScrolledText(self.ExpOptiGrp2, state="disabled", height=10)
+		self.NCFOutput.pack()
+
 		self.toggleExpOptiGrp()
 		
 		self.ExpOutputFrame = tk.LabelFrame(self.ExportTab, text="Output")
@@ -332,7 +336,7 @@ class MainWindow(tk.Frame):
 		for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
 			self.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate('<space>', when='tail'))
 
-		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
+		self.bind_class(("TCombobox", "ScrolledText"), "<Return>", lambda e: e.widget.event_generate('<Down>'))
 		self.bind_class("Entry" ,"<Button-3>", self.popupmenus)
 		
 	def popupmenus(self, event):
@@ -485,6 +489,16 @@ class MainWindow(tk.Frame):
 				( "Old" if data['IsOldVersion'] else "New", data['hasPerc'], data['maxLayer'], headers['inst_count'] )
 				self.FileInfoMess.configure(text=text)
 				
+				if data['maxLayer'] == 0:
+					text = writencf(data)
+				else:
+					text = "The song must have only 1 layer in order to export as Nokia Composer Format."
+				self.NCFOutput.configure(state='normal')
+				self.NCFOutput.delete('1.0', 'end')
+				self.NCFOutput.insert('end', text)
+				self.NCFOutput.configure(state='disabled')
+				#self.NCFOutput.update_idletasks()
+
 				self.UpdateProgBar(100)
 				self.last.inputFileData = copy.deepcopy(data)
 				self.RaiseFooter('Updated')
@@ -503,28 +517,38 @@ class MainWindow(tk.Frame):
 			fext = curr[0][1][1:]
 			print(fext)
 			self.exportFilePath = asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr)
-			if self.exportFilePath is not None and not self.exportFilePath.lower().endswith(fext): self.exportFilePath += fext
-			self.ExpOutputEntry.delete(0,'end')
-			self.ExpOutputEntry.insert(0, self.exportFilePath)
+			if bool(self.exportFilePath):
+				if not self.exportFilePath.lower().endswith(fext): self.exportFilePath += fext
+				self.ExpOutputEntry.delete(0,'end')
+				self.ExpOutputEntry.insert(0, self.exportFilePath)
+			else: self.exportFilePath = self.ExpOutputEntry.get()
+		#print(self.exportFilePath)
 		
 	def OnExport(self):
 		if self.exportFilePath is not None:
+			self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'disabled'
 			self.UpdateProgBar(20)
 			asFile = bool(self.var.export.mode.get())
 			type = self.ExpConfigCombox.current()
 			if asFile:
 				if type == 0:
 					exportMIDI(self.inputFileData, self.exportFilePath, self.var.export.midi.opt1.get())
+				elif type == 1:
+					with open(self.exportFilePath, "w") as f:
+						f.write(writencf(self.inputFileData))
 
 				self.UpdateProgBar(100)
 				self.RaiseFooter('Exported')
 				self.UpdateProgBar(-1)
-		
 
+				self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'normal'
+		
 	def UpdateProgBar(self, value, time=0.001):
 		if value == -1 or time <= 0:
 			self.progressbar.pack_forget()
+			self.config(cursor='arrow')
 		else:
+			self.config(cursor='wait')
 			self.progressbar["value"] = value
 			self.progressbar.pack(side='right')
 			self.progressbar.update()
@@ -618,15 +642,6 @@ def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	obj.update()
 	obj.minsize(mwidth or obj.winfo_width(), mheight or obj.winfo_height())
 
-def flipNotes(data, vertically=0, horizontally=0):
-	vertically, horizontally = bool(vertically), bool(horizontally)
-	ticklen = data['headers']['length']
-	layerlen = data['maxLayer']
-	if vertically or horizontally:
-		for note in data['notes']:
-			if horizontally: note['tick'] = ticklen - note['tick']
-			if vertically: note['layer'] = layerlen - note['layer']
-	return data
 
 def compactNotes(data, sepInst=1, groupPerc=1):
 	sepInst, groupPerc = bool(sepInst), bool(groupPerc)
