@@ -338,5 +338,10 @@ ASALocalRun/
 *.spec
 *.bat
 version.*
+
+.vscode/
+
 build/
 dist/
+
+Sounds/

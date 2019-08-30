@@ -18,7 +18,7 @@
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys, os, operator, webbrowser, copy
+import sys, os, operator, webbrowser, copy, traceback
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -58,6 +58,9 @@ class MainWindow(tk.Frame):
 		self.last = Attr()
 		self.last.inputFileData = None
 		self.var = Attr()
+		self.PlayingState = 'stop'
+		self.PlayingTick = -1
+		self.SongPlayerAfter = None
 		self.exportFilePath = None
 	
 	def elements(self):
@@ -114,6 +117,12 @@ class MainWindow(tk.Frame):
 		self.GeneralTabElements()
 		self.NbTabs.add(self.GeneralTab, text="General")
 		
+		#"Play" tab
+		self.PlayTab = tk.Frame(self.NbTabs)
+
+		self.PlayTabElements()
+		self.NbTabs.add(self.PlayTab, text="Play")
+
 		#"Tools" tab
 		self.ToolsTab = tk.Frame(self.NbTabs)
 
@@ -168,6 +177,36 @@ class MainWindow(tk.Frame):
 		self.FileInfoMess = tk.Message(self.FileInfoFrame, text="No flie was found.")
 		self.FileInfoMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 	
+	def PlayTabElements(self):
+		fpadx, fpady = 10, 10
+		padx, pady = 5, 5
+
+		self.PlayCanvasFrame = tk.Frame(self.PlayTab, relief='groove', borderwidth=1)
+		self.PlayCanvasFrame.pack(fill='both', expand=True, padx=fpadx, pady=fpady)
+
+		#a = tk.Label(self.PlayCanvasFrame, text='No value')
+		#a.pack()
+
+		self.PlayCtrlFrame = tk.Frame(self.PlayTab, relief='groove', borderwidth=1)
+		self.PlayCtrlFrame.pack(fill='both', padx=fpadx, pady=fpady)
+
+		self.PlayCtrlScale = tk.Scale(self.PlayCtrlFrame, from_=0, to=self.inputFileData['headers']['length'] if self.inputFileData is not None else 0, orient='horizontal', sliderlength=25)
+		self.PlayCtrlScale.pack(side='top', fill='x', expand=True)
+		self.PlayCtrlScale.bind("<ButtonPress-1>", lambda _: self.CtrlSongPlayer(state='pause'))
+		#self.PlayCtrlScale.bind("<ButtonRelease-1>", lambda e: setattr(self, 'PlayingTick', e.widget.get()))
+		self.PlayCtrlScale.bind("<ButtonRelease-1>", lambda _: self.CtrlSongPlayer(state='play'))
+
+		#self.PlaySongBtn = SquareButton(self.PlayCtrlFrame, text ='▶', size=20, command=lambda: self.CtrlSongPlayer(state='play'))
+		self.PlaySongBtn = tk.Button(self.PlayCtrlFrame, text ='Play', command=lambda: self.CtrlSongPlayer(state='play'))
+		self.PlaySongBtn.pack(side='left', anchor='sw', padx=padx, pady=pady)
+
+		self.PauseSongBtn = tk.Button(self.PlayCtrlFrame, text ='Pause', command=lambda: self.CtrlSongPlayer(state='pause'))
+		self.PauseSongBtn.pack(side='left', anchor='sw', padx=padx, pady=pady)
+
+		#self.StopSongBtn = SquareButton(self.PlayCtrlFrame, text ='⏹', size=20, command=lambda: self.CtrlSongPlayer(state='stop'))
+		self.StopSongBtn = tk.Button(self.PlayCtrlFrame, text ='Stop', command=lambda: self.CtrlSongPlayer(state='stop'))
+		self.StopSongBtn.pack(side='left', anchor='sw', padx=padx, pady=pady)
+
 	def ToolsTabElements(self):
 		fpadx, fpady = 10, 10
 		padx, pady = 5, 0
@@ -349,7 +388,7 @@ class MainWindow(tk.Frame):
 		self.popupMenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: w.event_generate("<Control-v>"))
 		self.popupMenu.tk.call("tk_popup", self.popupMenu, event.x_root, event.y_root)
 
-	def onClose(self, event):
+	def onClose(self, event=None):
 		self.parent.quit()
 		self.parent.destroy()
 
@@ -402,6 +441,31 @@ class MainWindow(tk.Frame):
 			self.CompactToolChkOpt1_1["state"] = "disable" if a is True else "normal"
 			if id <= 1:
 				self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get() == 0 else "normal"
+
+	def CtrlSongPlayer(self, event=None, state=None, repeat=False):
+		if self.inputFileData is None: return
+		hds = self.inputFileData['headers']
+		notes = self.inputFileData['notes']
+		if state == 'play' and self.PlayingState != 'play' or repeat:
+			self.PlayingState = 'play'
+			self.PlayingTick = int(self.PlayCtrlScale.get())
+			if self.PlayingTick < hds['length']:
+				self.PlayingTick += 1
+				self.PlayCtrlScale.set(self.PlayingTick)
+				self.SongPlayerAfter = self.after(int(1000 / hds['tempo']), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+			else:
+				state = 'stop'
+		if state == 'pause' and self.PlayingState != 'pause':
+			self.PlayingState = 'pause'
+			if self.SongPlayerAfter is not None: self.after_cancel(self.SongPlayerAfter)
+			self.SongPlayerAfter = None
+		if state == 'stop' and self.PlayingState != 'stop':
+			self.PlayingState = 'stop'
+			self.PlayingTick = -1
+			if self.SongPlayerAfter is not None: self.after_cancel(self.SongPlayerAfter)
+			self.SongPlayerAfter = None
+			self.PlayCtrlScale.set(0)
+		
 
 	def OnApplyTool(self):
 		self.ToolsTabButton['state'] = 'disabled'
@@ -489,6 +553,8 @@ class MainWindow(tk.Frame):
 				( "Old" if data['IsOldVersion'] else "New", data['hasPerc'], data['maxLayer'], headers['inst_count'] )
 				self.FileInfoMess.configure(text=text)
 				
+				self.PlayCtrlScale['to'] = self.inputFileData['headers']['length']
+
 				if data['maxLayer'] == 0:
 					text = writencf(data)
 				else:
@@ -497,7 +563,6 @@ class MainWindow(tk.Frame):
 				self.NCFOutput.delete('1.0', 'end')
 				self.NCFOutput.insert('end', text)
 				self.NCFOutput.configure(state='disabled')
-				#self.NCFOutput.update_idletasks()
 
 				self.UpdateProgBar(100)
 				self.last.inputFileData = copy.deepcopy(data)
@@ -628,6 +693,23 @@ class FlexCheckbutton(tk.Checkbutton):
 		if self.multiline:
 			self.bind("<Configure>", lambda event: self.configure(width=event.width-10, justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999) )
 
+class SquareButton(tk.Button):
+	def __init__(self, *args, **kwargs):
+		self.blankImg = tk.PhotoImage()
+
+		if "size" in kwargs:
+			print(kwargs['size'])
+			self.size = kwargs['size']
+			del kwargs['size']
+		else:
+			self.size = 30
+
+		pprint(kwargs)
+
+		tk.Button.__init__(self, *args, **kwargs)
+
+		self.configure(image=self.blankImg, font=("Arial", self.size-3), width=self.size, height=self.size, compound=tk.CENTER)
+
 def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	ScreenWidth = root.winfo_screenwidth()
 	ScreenHeight = root.winfo_screenheight()
@@ -697,7 +779,6 @@ def compactNotes(data, sepInst=1, groupPerc=1):
 	return r
 
 def DataPostprocess(data):
-	start = time()
 	usedInsts = [[], []]
 	maxLayer = 0
 	data['hasPerc'] = False
@@ -721,7 +802,6 @@ def DataPostprocess(data):
 	data['maxLayer'] = maxLayer
 	data['usedInsts'] = usedInsts
 	note = tick = inst = layer = isPerc = hasPerc = duraKey = usedInsts = maxLayer
-	end = time()
 	return data
 
 def exportMIDI(data, filepath, byLayer=False):
@@ -842,7 +922,7 @@ def exportMIDI(data, filepath, byLayer=False):
 			for a, b, c in percussions:
 				if c == note['key']+21 and b == note['inst']:
 					print("Replaced")
-					note['key'] = c-21
+					note['key'] = a-21
 
 		if byLayer:
 			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
