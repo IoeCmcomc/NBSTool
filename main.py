@@ -81,7 +81,7 @@ class MainWindow(tk.Frame):
 		self.properties()
 		self.elements()
 		self.WindowBind()
-		self.update()
+		#self.update()
 		self.pack(fill='both', expand=True)
 		self.update()
 		WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
@@ -117,10 +117,10 @@ class MainWindow(tk.Frame):
 		#Footer
 		tk.Frame(self, height=5).pack()
 
-		self.footer = tk.Frame(self, relief='groove', borderwidth=1, height=25)
+		self.footer = tk.Frame(self, relief='groove', borderwidth=1, height=25, width=self.winfo_width())
 		self.footer.pack_propagate(False)
-		self.footer.pack(fill='x')
 		self.footerElements()
+		self.footer.pack(side='top', fill='x')
 	
 	def menus(self):
 		# 'File' menu
@@ -177,11 +177,12 @@ class MainWindow(tk.Frame):
 		self.NbTabs.add(self.ExportTab, text="Export")
 		
 	def GeneralTabElements(self):
+		fpadx, fpady = 10, 10
 		padx, pady = 5, 5
 
 		#"Open file" frame
 		self.OpenFileFrame = tk.Frame(self.GeneralTab, relief='ridge', borderwidth=1)
-		self.OpenFileFrame.grid(row=0, columnspan=2, sticky='ew')
+		self.OpenFileFrame.grid(row=0, columnspan=2, sticky='nsew')
 		
 		self.OpenFileLabel = tk.Label(self.OpenFileFrame, text="Open file:", anchor='w', width=8)
 		self.OpenFileLabel.pack(side='left', padx=padx, pady=pady)
@@ -195,18 +196,16 @@ class MainWindow(tk.Frame):
 		self.OpenFileButton = ttk.Button(self.OpenFileFrame, text="Open", command = lambda: self.OnOpenFile('', True) )
 		self.OpenFileButton.pack(side='left', padx=padx, pady=pady)
 		
-		lfp = 10
-		
 		#File metadata frame
 		self.FileMetaFrame = tk.LabelFrame(self.GeneralTab, text="Metadata")
-		self.FileMetaFrame.grid(row=1, column=0, padx=lfp, pady=lfp, sticky='nsew')
+		self.FileMetaFrame.grid(row=1, column=0, padx=fpadx, pady=fpady, sticky='nsew')
 		
 		self.FileMetaMess = tk.Message(self.FileMetaFrame, text="No flie was found.")
 		self.FileMetaMess.pack(fill='both', expand=True, padx=padx, pady=padx)
 		
 		#More infomation frame
 		self.FileInfoFrame = tk.LabelFrame(self.GeneralTab, text="Infomations")
-		self.FileInfoFrame.grid(row=1, column=1, padx=lfp, pady=lfp, sticky='nsew')
+		self.FileInfoFrame.grid(row=1, column=1, padx=fpadx, pady=fpady, sticky='nsew')
 		
 		self.FileInfoMess = tk.Message(self.FileInfoFrame, text="No flie was found.")
 		self.FileInfoMess.pack(fill='both', expand=True, padx=padx, pady=pady)
@@ -409,9 +408,19 @@ class MainWindow(tk.Frame):
 		for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
 			self.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate('<space>', when='tail'))
 
-		self.bind_class(("TCombobox", "ScrolledText"), "<Return>", lambda e: e.widget.event_generate('<Down>'))
-		self.bind_class("Entry" ,"<Button-3>", self.popupmenus)
+		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
+		self.bind_class(("Entry", "ScrolledText") ,"<Button-3>", self.popupmenus)
 		
+		self.bind_class("TNotebook", "<<NotebookTabChanged>>", self._on_tab_changed)
+	
+	
+	#Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
+	def _on_tab_changed(self,event):
+		event.widget.update_idletasks()
+
+		tab = event.widget.nametowidget(event.widget.select())
+		event.widget.configure(height=tab.winfo_reqheight())
+	
 	def popupmenus(self, event):
 		w = event.widget
 		self.popupMenu = tk.Menu(self, tearoff=False)
@@ -669,11 +678,10 @@ class MainWindow(tk.Frame):
 			text.replace("\s", " ")
 			self.footerLabel.configure(text=text, foreground=color)
 			self.footerLabel.pack(side='left', fill='x')
-			self.footerLabel.update()
 			self.after(999, lambda: self.RaiseFooter(text=text, color=color, hid=True))
 		else:
 			self.footerLabel.pack_forget()
-			self.footerLabel.update()
+		self.footerLabel.update()
 
 class AboutWindow(tk.Toplevel):
 	def __init__(self, parent):
@@ -764,9 +772,10 @@ def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	WinPosX = int(ScreenWidth / 2 - WindowWidth / 2)
 	WinPosY = int(ScreenHeight / 2.3 - WindowHeight / 2)
 
-	obj.geometry("{}x{}+{}+{}".format(WindowWidth, WindowHeight, WinPosX, WinPosY))
-	obj.update()
 	obj.minsize(mwidth or obj.winfo_width(), mheight or obj.winfo_height())
+	obj.geometry("{}x{}+{}+{}".format(WindowWidth, WindowHeight, WinPosX, WinPosY))
+	#obj.update()
+	obj.update_idletasks()
 
 
 def compactNotes(data, sepInst=1, groupPerc=1):
@@ -845,7 +854,7 @@ def DataPostprocess(data):
 	data['headers']['length'] = tick + 1
 	data['maxLayer'] = maxLayer
 	data['usedInsts'] = usedInsts
-	note = tick = inst = layer = isPerc = hasPerc = duraKey = usedInsts = maxLayer
+	note = tick = inst = layer = duraKey = usedInsts = maxLayer = None
 	return data
 
 def exportMIDI(data, filepath, byLayer=False):
@@ -939,7 +948,7 @@ def exportMIDI(data, filepath, byLayer=False):
 
 	timeSign = data['headers']['time_sign']
 	channel = 0
-	program = 0
+	#program = 0
 	time = 0
 	tempo = data['headers']['tempo'] * 60 / timeSign
 	volume = 127
