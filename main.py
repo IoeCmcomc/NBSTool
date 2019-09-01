@@ -33,12 +33,46 @@ from random import randrange
 
 from midiutil import MIDIFile
 from PIL import Image, ImageTk
+from pydub import AudioSegment
+from pydub.playback import play, _play_with_simpleaudio
 
 from attr import Attr
 from nbsio import opennbs, writenbs
 from ncfio import writencf
 
+
 #sys.stdout = open('main_log.txt', 'w')
+
+#Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
+def resource_path(relative_path):
+	try:
+		base_path = sys._MEIPASS
+	except Exception:
+		base_path = os.path.abspath(".")
+	r = os.path.join(base_path, relative_path)
+	#print(r)
+	return r
+
+noteSounds = [
+r"sounds\harp.ogg",
+r"sounds\dbass.ogg",
+r"sounds\bdrum.ogg",
+r"sounds\sdrum.ogg",
+r"sounds\click.ogg",
+r"sounds\guitar.ogg",
+r"sounds\flute.ogg",
+r"sounds\bell.ogg",
+r"sounds\icechime.ogg",
+r"sounds\xylobone.ogg",
+r"sounds\iron_xylophone.ogg",
+r"sounds\cow_bell.ogg",
+r"sounds\didgeridoo.ogg",
+r"sounds\bit.ogg",
+r"sounds\banjo.ogg",
+r"sounds\pling.ogg"
+]
+
+noteSounds = [ {'path': item, 'obj': AudioSegment.from_ogg(resource_path(item))} for item in noteSounds]
 
 class MainWindow(tk.Frame):
 	def __init__(self, parent):
@@ -448,17 +482,28 @@ class MainWindow(tk.Frame):
 		notes = self.inputFileData['notes']
 		if state == 'play' and self.PlayingState != 'play' or repeat:
 			self.PlayingState = 'play'
-			self.PlayingTick = int(self.PlayCtrlScale.get())
-			if self.PlayingTick < hds['length']:
+			self.PlayingTick = int(self.PlayCtrlScale.get()) - 1
+			if self.PlayingTick < hds['length'] - 1:
 				self.PlayingTick += 1
-				self.PlayCtrlScale.set(self.PlayingTick)
-				self.SongPlayerAfter = self.after(int(1000 / hds['tempo']), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+				self.PlayCtrlScale.set(self.PlayingTick + 1)
+
+				currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
+				SoundToPlay = AudioSegment.silent(duration=4000)
+				for note in currNotes:
+					noteSoundObj = noteSounds[note['inst']]['obj']
+					ANoteSound = noteSoundObj._spawn(noteSounds[note['inst']]['obj'].raw_data, overrides={'frame_rate': int(noteSounds[note['inst']]['obj'].frame_rate * (2.0 ** ((note['key'] - 45) / 12))) })
+					SoundToPlay = SoundToPlay.overlay(ANoteSound)
+
+				_play_with_simpleaudio(SoundToPlay.set_frame_rate(44100).normalize() - 10)
+				self.SongPlayerAfter = self.after(int(1000 / hds['tempo'] - 1), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
 			else:
 				state = 'stop'
+		
 		if state == 'pause' and self.PlayingState != 'pause':
 			self.PlayingState = 'pause'
 			if self.SongPlayerAfter is not None: self.after_cancel(self.SongPlayerAfter)
 			self.SongPlayerAfter = None
+		
 		if state == 'stop' and self.PlayingState != 'stop':
 			self.PlayingState = 'stop'
 			self.PlayingTick = -1
@@ -506,8 +551,7 @@ class MainWindow(tk.Frame):
 		
 		self.UpdateProgBar(60)
 		data = DataPostprocess(data)
-		
-		
+				
 		self.UpdateProgBar(80)
 		self.UpdateVar()
 		self.UpdateProgBar(100)
@@ -932,15 +976,6 @@ def exportMIDI(data, filepath, byLayer=False):
 
 	with open(filepath, "wb") as output_file:
 		MIDI.writeFile(output_file)
-
-
-#Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
-def resource_path(relative_path):
-	try:
-		base_path = sys._MEIPASS
-	except Exception:
-		base_path = os.path.abspath(".")
-	return os.path.join(base_path, relative_path)
 
 
 root = tk.Tk()
