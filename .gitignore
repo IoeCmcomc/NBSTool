@@ -332,11 +332,13 @@ ASALocalRun/
 ## Ignore output/exported files.
 *.nbs
 *.mid
+*.mp3
 
 ## Ignore other files/folders.
 #*.ico
 *.spec
 *.bat
+*.pyo
 version.*
 
 .vscode/
@@ -345,3 +347,6 @@ build/
 dist/
 
 Sounds/
+ffmpeg/
+main.build/
+main.dist/

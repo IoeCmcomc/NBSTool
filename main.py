@@ -13,7 +13,7 @@
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
 # Programming language: Python
 # License: MIT license
-# Version: 0,50
+# Version: 0.5.0
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
@@ -34,7 +34,7 @@ from random import randrange
 from midiutil import MIDIFile
 from PIL import Image, ImageTk
 from pydub import AudioSegment
-from pydub.playback import play, _play_with_simpleaudio
+from pydub.playback import _play_with_simpleaudio
 
 from attr import Attr
 from nbsio import opennbs, writenbs
@@ -338,7 +338,7 @@ class MainWindow(tk.Frame):
 		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0, state='disabled')
 		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
 
-		self.var.export.types = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt')]
+		self.var.export.types = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt'), ('MPEG-1 Layer 3', '*.mp3')]
 		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.types])
 		self.ExpConfigCombox.current(0)
 		self.ExpConfigCombox.bind("<<ComboboxSelected>>", self.toggleExpOptiGrp)
@@ -346,22 +346,29 @@ class MainWindow(tk.Frame):
 
 		ttk.Separator(self.ExpConfigFrame, orient="horizontal").pack(fill='x', expand=False, padx=padx*3, pady=pady)
 		
+		self.ExtOptiSFrame = StackingFrame(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		self.ExtOptiSFrame.pack(fill='both', expand=True, padx=fpadx)
+
 		#"Midi export options" frame
-		self.ExpOptiGrp1 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
-		#self.ExpOptiGrp1.pack(fill='both', expand=True, padx=fpadx)
+		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'Midi')
 
 		self.var.export.midi.opt1 = tk.IntVar()
-		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
+		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExtOptiSFrame['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
 		self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
-		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExpOptiGrp1, text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
+		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExtOptiSFrame['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
 		self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
 		
 		#"Nokia export options" frame
-		self.ExpOptiGrp2 = tk.Frame(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'NCF')
 		#self.ExpOptiGrp2.pack(fill='both', expand=True, padx=fpadx)
 
-		self.NCFOutput = ScrolledText(self.ExpOptiGrp2, state="disabled", height=10)
-		self.NCFOutput.pack()
+		self.NCFOutput = ScrolledText(self.ExtOptiSFrame['NCF'], state="disabled", height=10)
+		self.NCFOutput.pack(fill='both', expand=True)
+
+		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'Music')
+
+		self.ExtMusicLabel = tk.Label(self.ExtOptiSFrame['Music'], text="There is no option available.")
+		self.ExtMusicLabel.pack()
 
 		self.toggleExpOptiGrp()
 		
@@ -570,20 +577,14 @@ class MainWindow(tk.Frame):
 	
 	def toggleExpOptiGrp(self ,event=None):
 		asFile = bool(self.var.export.mode.get())
-		type = self.ExpConfigCombox.current() + 1
-		show = 'ExpOptiGrp'+str(type)
-		i = 0
-		fpadx = 10
+		type = self.ExpConfigCombox.current()
 		if asFile:
-			for type in self.var.export.types:
-				i += 1
-				name = 'ExpOptiGrp'+str(i)
-				if name == show:
-					getattr(self, name).pack(fill='both', expand=True, padx=fpadx)
-				else:
-					getattr(self, name).pack_forget()
+			if type == 0: self.ExtOptiSFrame.switch('Midi')
+			elif type == 1: self.ExtOptiSFrame.switch('NCF')
+			else: self.ExtOptiSFrame.switch('Music')
 		else:
 			pass
+		self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()) + 2)
 	
 	def UpdateVar(self):
 		#print("Started updating….")
@@ -648,12 +649,16 @@ class MainWindow(tk.Frame):
 			self.UpdateProgBar(20)
 			asFile = bool(self.var.export.mode.get())
 			type = self.ExpConfigCombox.current()
+			fext = self.var.export.types[self.ExpConfigCombox.current()][1][2:]
+			print('Fext:',fext)
 			if asFile:
 				if type == 0:
 					exportMIDI(self.inputFileData, self.exportFilePath, self.var.export.midi.opt1.get())
 				elif type == 1:
 					with open(self.exportFilePath, "w") as f:
 						f.write(writencf(self.inputFileData))
+				elif type == 2:
+						exportMusic(self.inputFileData, self.exportFilePath, fext)
 
 				self.UpdateProgBar(100)
 				self.RaiseFooter('Exported')
@@ -694,7 +699,7 @@ class AboutWindow(tk.Toplevel):
 		logolabel = tk.Label(self, text="NBSTool", font=("Arial", 44), image=self.logo, compound='left')
 		logolabel.pack(padx=30, pady=(10*2, 10))
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0,50", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0.5.0", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -703,7 +708,7 @@ class AboutWindow(tk.Toplevel):
 		self.lift()
 		self.focus_force()
 		self.grab_set()
-		self.grab_release()
+		#self.grab_release()
 
 		self.resizable(False, False)
 		self.transient(self.parent)
@@ -744,7 +749,7 @@ class FlexCheckbutton(tk.Checkbutton):
 
 		if self.multiline:
 			self.bind("<Configure>", lambda event: self.configure(width=event.width-10, justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999) )
-
+#Currently unused
 class SquareButton(tk.Button):
 	def __init__(self, *args, **kwargs):
 		self.blankImg = tk.PhotoImage()
@@ -761,6 +766,27 @@ class SquareButton(tk.Button):
 		tk.Button.__init__(self, *args, **kwargs)
 
 		self.configure(image=self.blankImg, font=("Arial", self.size-3), width=self.size, height=self.size, compound=tk.CENTER)
+
+class StackingFrame(tk.Frame):
+	def __init__(self, parent, **kwargs):
+		super().__init__(parent, **kwargs)
+		self._frames = {}
+		self._i = 0
+	def __getitem__(self, key):
+		if key in self._frames: return self._frames[key]
+		super().__getitem__(key)
+	def append(self, frame, name=None):
+		if isinstance(frame, tk.Frame):
+			if not name:
+				name = self._i
+				self._i += 1
+			self._frames[name] = frame
+			#return self._frames[name]
+	def switch(self, key):
+		for k, v in self._frames.items():
+			if k == key: v.pack(side='top', fill='both', expand=True)
+			else: v.pack_forget()
+
 
 def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	ScreenWidth = root.winfo_screenwidth()
@@ -986,6 +1012,17 @@ def exportMIDI(data, filepath, byLayer=False):
 	with open(filepath, "wb") as output_file:
 		MIDI.writeFile(output_file)
 
+def exportMusic(data, path, ext):
+	tempo = data['headers']['tempo']
+	music = AudioSegment.silent(duration=int(data['headers']['length'] / tempo * 1000 + 1000))
+
+	for note in data['notes']:
+		noteSoundObj = noteSounds[note['inst']]['obj']
+		ANoteSound = noteSoundObj._spawn(noteSounds[note['inst']]['obj'].raw_data, overrides={'frame_rate': int(noteSounds[note['inst']]['obj'].frame_rate * (2.0 ** ((note['key'] - 45) / 12))) })
+		music = music.overlay(ANoteSound, position=int(note['tick'] / tempo * 1000))
+	
+	music = music.set_frame_rate(44100).normalize() - 10
+	music.export(path, format=ext)
 
 root = tk.Tk()
 app = MainWindow(root)
