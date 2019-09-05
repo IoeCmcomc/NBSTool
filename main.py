@@ -500,7 +500,7 @@ class MainWindow(tk.Frame):
 		if self.inputFileData is None: return
 		hds = self.inputFileData['headers']
 		notes = self.inputFileData['notes']
-		if state == 'play' and self.PlayingState != 'play' and self.SongPlayerAfter is not None or repeat:
+		if state == 'play' and self.PlayingState != 'play' or repeat and self.SongPlayerAfter is not None:
 			if self.PlayingTick < hds['length'] - 1:
 				self.PlayingState = 'play'
 				self.CtrlBtnSW.switch('pause')
@@ -525,12 +525,13 @@ class MainWindow(tk.Frame):
 			self.after_cancel(self.SongPlayerAfter)
 			self.SongPlayerAfter = None
 		
-		if state == 'stop' and self.PlayingState != 'stop' and self.SongPlayerAfter is not None:
+		if state == 'stop' and self.PlayingState != 'stop' and self.SongPlayerAfter:
 			self.PlayingState = 'stop'
 			self.PlayingTick = -1
+			self.CtrlBtnSW.switch('play')
 			self.after_cancel(self.SongPlayerAfter)
-			self.PlayCtrlScale.set(0)
 			self.SongPlayerAfter = None
+			self.PlayCtrlScale.set(0)
 		
 
 	def OnApplyTool(self):
@@ -658,7 +659,7 @@ class MainWindow(tk.Frame):
 			#print('Fext:',fext)
 			if asFile:
 				if type == 0:
-					exportMIDI(self.inputFileData, self.exportFilePath, self.var.export.midi.opt1.get())
+					exportMIDI(self, self.exportFilePath, self.var.export.midi.opt1.get())
 				elif type == 1:
 					with open(self.exportFilePath, "w") as f:
 						f.write(writencf(self.inputFileData))
@@ -899,8 +900,8 @@ def DataPostprocess(data):
 	note = tick = inst = layer = duraKey = usedInsts = maxLayer = None
 	return data
 
-def exportMIDI(data, filepath, byLayer=False):
-	data = copy.deepcopy(data)
+def exportMIDI(cls, filepath, byLayer=False):
+	data = copy.deepcopy(cls.inputFileData)
 	byLayer = bool(byLayer)
 
 	if not byLayer:
@@ -1017,13 +1018,15 @@ def exportMIDI(data, filepath, byLayer=False):
 			for a, b, c in percussions:
 				if c == note['key']+21 and b == note['inst']:
 					#print("Replaced")
-					note['key'] = a-21
+					note['key'] = a - 21
 
 		if byLayer:
 			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
 		
 		#print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
 		MIDI.addNote(track, channel, pitch, time, duration, volume)
+
+		cls.UpdateProgBar(10 + int( note['tick'] / data['headers']['length'] * 80))
 
 	with open(filepath, "wb") as output_file:
 		MIDI.writeFile(output_file)
