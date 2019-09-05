@@ -345,8 +345,10 @@ version.*
 
 build/
 dist/
+main.build/
+main.dist/
 
 Sounds/
 ffmpeg/
-main.build/
-main.dist/
+
+COMPILED_ffmpeg/

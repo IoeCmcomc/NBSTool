@@ -229,12 +229,15 @@ class MainWindow(tk.Frame):
 		#self.PlayCtrlScale.bind("<ButtonRelease-1>", lambda e: setattr(self, 'PlayingTick', e.widget.get()))
 		self.PlayCtrlScale.bind("<ButtonRelease-1>", lambda _: self.CtrlSongPlayer(state='play'))
 
-		#self.PlaySongBtn = SquareButton(self.PlayCtrlFrame, text ='▶', size=20, command=lambda: self.CtrlSongPlayer(state='play'))
-		self.PlaySongBtn = tk.Button(self.PlayCtrlFrame, text ='Play', command=lambda: self.CtrlSongPlayer(state='play'))
-		self.PlaySongBtn.pack(side='left', anchor='sw', padx=padx, pady=pady)
+		self.CtrlBtnSW = StackingWidget(self.PlayCtrlFrame, relief='groove', borderwidth=1)
+		self.CtrlBtnSW.pack(side='left', anchor='sw', padx=padx, pady=pady)
 
-		self.PauseSongBtn = tk.Button(self.PlayCtrlFrame, text ='Pause', command=lambda: self.CtrlSongPlayer(state='pause'))
-		self.PauseSongBtn.pack(side='left', anchor='sw', padx=padx, pady=pady)
+		#self.PlaySongBtn = SquareButton(self.PlayCtrlFrame, text ='▶', size=20, command=lambda: self.CtrlSongPlayer(state='play'))
+		self.CtrlBtnSW.append(tk.Button(self.CtrlBtnSW, text ='Play', command=lambda: self.CtrlSongPlayer(state='play')), 'play')
+		self.CtrlBtnSW.pack('play')
+
+		self.CtrlBtnSW.append(tk.Button(self.CtrlBtnSW, text ='Pause', command=lambda: self.CtrlSongPlayer(state='pause')), 'pause')
+		self.CtrlBtnSW.pack('pause')
 
 		#self.StopSongBtn = SquareButton(self.PlayCtrlFrame, text ='⏹', size=20, command=lambda: self.CtrlSongPlayer(state='stop'))
 		self.StopSongBtn = tk.Button(self.PlayCtrlFrame, text ='Stop', command=lambda: self.CtrlSongPlayer(state='stop'))
@@ -346,32 +349,33 @@ class MainWindow(tk.Frame):
 
 		ttk.Separator(self.ExpConfigFrame, orient="horizontal").pack(fill='x', expand=False, padx=padx*3, pady=pady)
 		
-		self.ExtOptiSFrame = StackingFrame(self.ExpConfigFrame, relief='groove', borderwidth=1)
-		self.ExtOptiSFrame.pack(fill='both', expand=True, padx=fpadx)
+		self.ExtOptiSW = StackingWidget(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		self.ExtOptiSW.pack(fill='both', expand=True, padx=fpadx)
 
 		#"Midi export options" frame
-		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'Midi')
+		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'Midi')
+		self.ExtOptiSW.pack('Midi', side='top', fill='both', expand=True)
 
 		self.var.export.midi.opt1 = tk.IntVar()
-		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExtOptiSFrame['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
+		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExtOptiSW['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
 		self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
-		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExtOptiSFrame['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
+		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExtOptiSW['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
 		self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
 		
 		#"Nokia export options" frame
-		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'NCF')
-		#self.ExpOptiGrp2.pack(fill='both', expand=True, padx=fpadx)
+		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'NCF')
+		self.ExtOptiSW.pack('NCF', side='top', fill='both', expand=True)
 
-		self.NCFOutput = ScrolledText(self.ExtOptiSFrame['NCF'], state="disabled", height=10)
+		self.NCFOutput = ScrolledText(self.ExtOptiSW['NCF'], state="disabled", height=10)
 		self.NCFOutput.pack(fill='both', expand=True)
 
-		self.ExtOptiSFrame.append(tk.Frame(self.ExtOptiSFrame), 'Music')
+		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'Music')
+		self.ExtOptiSW.pack('Music', side='top', fill='both', expand=True)
 
-		self.ExtMusicLabel = tk.Label(self.ExtOptiSFrame['Music'], text="There is no option available.")
+		self.ExtMusicLabel = tk.Label(self.ExtOptiSW['Music'], text="There is no option available.")
 		self.ExtMusicLabel.pack()
-
-		self.toggleExpOptiGrp()
 		
+		#Output frame
 		self.ExpOutputFrame = tk.LabelFrame(self.ExportTab, text="Output")
 		self.ExpOutputFrame.pack(fill='both', padx=fpadx, pady=(0, fpady))
 
@@ -496,11 +500,11 @@ class MainWindow(tk.Frame):
 		if self.inputFileData is None: return
 		hds = self.inputFileData['headers']
 		notes = self.inputFileData['notes']
-		if state == 'play' and self.PlayingState != 'play' or repeat:
-			self.PlayingState = 'play'
-			self.PlayingTick = int(self.PlayCtrlScale.get()) - 1
+		if state == 'play' and self.PlayingState != 'play' and self.SongPlayerAfter is not None or repeat:
 			if self.PlayingTick < hds['length'] - 1:
-				self.PlayingTick += 1
+				self.PlayingState = 'play'
+				self.CtrlBtnSW.switch('pause')
+				self.PlayingTick = int(self.PlayCtrlScale.get())
 				self.PlayCtrlScale.set(self.PlayingTick + 1)
 
 				currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
@@ -517,15 +521,16 @@ class MainWindow(tk.Frame):
 		
 		if state == 'pause' and self.PlayingState != 'pause':
 			self.PlayingState = 'pause'
-			if self.SongPlayerAfter is not None: self.after_cancel(self.SongPlayerAfter)
+			self.CtrlBtnSW.switch('play')
+			self.after_cancel(self.SongPlayerAfter)
 			self.SongPlayerAfter = None
 		
-		if state == 'stop' and self.PlayingState != 'stop':
+		if state == 'stop' and self.PlayingState != 'stop' and self.SongPlayerAfter is not None:
 			self.PlayingState = 'stop'
 			self.PlayingTick = -1
-			if self.SongPlayerAfter is not None: self.after_cancel(self.SongPlayerAfter)
-			self.SongPlayerAfter = None
+			self.after_cancel(self.SongPlayerAfter)
 			self.PlayCtrlScale.set(0)
+			self.SongPlayerAfter = None
 		
 
 	def OnApplyTool(self):
@@ -579,9 +584,9 @@ class MainWindow(tk.Frame):
 		asFile = bool(self.var.export.mode.get())
 		type = self.ExpConfigCombox.current()
 		if asFile:
-			if type == 0: self.ExtOptiSFrame.switch('Midi')
-			elif type == 1: self.ExtOptiSFrame.switch('NCF')
-			else: self.ExtOptiSFrame.switch('Music')
+			if type == 0: self.ExtOptiSW.switch('Midi')
+			elif type == 1: self.ExtOptiSW.switch('NCF')
+			else: self.ExtOptiSW.switch('Music')
 		else:
 			pass
 		self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()) + 2)
@@ -632,9 +637,9 @@ class MainWindow(tk.Frame):
 	def OnBrowseExp(self):
 		if self.filePath is not None:
 			curr = (self.var.export.types[self.ExpConfigCombox.current()],)
-			print(curr)
+			#print(curr)
 			fext = curr[0][1][1:]
-			print(fext)
+			#print(fext)
 			self.exportFilePath = asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr)
 			if bool(self.exportFilePath):
 				if not self.exportFilePath.lower().endswith(fext): self.exportFilePath += fext
@@ -646,11 +651,11 @@ class MainWindow(tk.Frame):
 	def OnExport(self):
 		if self.exportFilePath is not None:
 			self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'disabled'
-			self.UpdateProgBar(20)
+			self.UpdateProgBar(10)
 			asFile = bool(self.var.export.mode.get())
 			type = self.ExpConfigCombox.current()
 			fext = self.var.export.types[self.ExpConfigCombox.current()][1][2:]
-			print('Fext:',fext)
+			#print('Fext:',fext)
 			if asFile:
 				if type == 0:
 					exportMIDI(self.inputFileData, self.exportFilePath, self.var.export.midi.opt1.get())
@@ -658,9 +663,9 @@ class MainWindow(tk.Frame):
 					with open(self.exportFilePath, "w") as f:
 						f.write(writencf(self.inputFileData))
 				elif type == 2:
-						exportMusic(self.inputFileData, self.exportFilePath, fext)
+						exportMusic(self, self.exportFilePath, fext)
 
-				self.UpdateProgBar(100)
+				#self.UpdateProgBar(100)
 				self.RaiseFooter('Exported')
 				self.UpdateProgBar(-1)
 
@@ -755,7 +760,7 @@ class SquareButton(tk.Button):
 		self.blankImg = tk.PhotoImage()
 
 		if "size" in kwargs:
-			print(kwargs['size'])
+			#print(kwargs['size'])
 			self.size = kwargs['size']
 			del kwargs['size']
 		else:
@@ -767,25 +772,36 @@ class SquareButton(tk.Button):
 
 		self.configure(image=self.blankImg, font=("Arial", self.size-3), width=self.size, height=self.size, compound=tk.CENTER)
 
-class StackingFrame(tk.Frame):
+class StackingWidget(tk.Frame):
 	def __init__(self, parent, **kwargs):
 		super().__init__(parent, **kwargs)
 		self._frames = {}
 		self._i = 0
+		#self._shown = None
 	def __getitem__(self, key):
-		if key in self._frames: return self._frames[key]
+		if key in self._frames: return self._frames[key][0]
 		super().__getitem__(key)
-	def append(self, frame, name=None):
-		if isinstance(frame, tk.Frame):
-			if not name:
-				name = self._i
+	def append(self, frame, key=None):
+		if isinstance(frame, (tk.Widget, ttk.Widget)):
+			if not key:
+				key = self._i
 				self._i += 1
-			self._frames[name] = frame
+			self._frames[key] = [frame, None]
+			#self._shown = key
 			#return self._frames[name]
 	def switch(self, key):
-		for k, v in self._frames.items():
-			if k == key: v.pack(side='top', fill='both', expand=True)
-			else: v.pack_forget()
+		for k, (w, o) in self._frames.items():
+			if k == key:
+				if o: w.pack(**o)
+				else: w.pack()
+			else: w.pack_forget()
+	def pack(self, key=None, **opts):
+		if key:
+			self._frames[key][1] = opts
+			#self._frames[key][0].pack(**opts)
+		else: super().pack(**opts)
+		if len(self._frames) == 1:
+				self.switch(key)
 
 
 def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
@@ -905,7 +921,7 @@ def exportMIDI(data, filepath, byLayer=False):
 	for i in range(lenTrack):
 		if i not in UniqInstEachLayer: UniqInstEachLayer[i] = [0, None]
 
-	print(lenTrack, len(UniqInstEachLayer))
+	#print(lenTrack, len(UniqInstEachLayer))
 
 	MIDI = MIDIFile(lenTrack)
 
@@ -1000,28 +1016,31 @@ def exportMIDI(data, filepath, byLayer=False):
 		if note['isPerc']:
 			for a, b, c in percussions:
 				if c == note['key']+21 and b == note['inst']:
-					print("Replaced")
+					#print("Replaced")
 					note['key'] = a-21
 
 		if byLayer:
 			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
 		
-		print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
+		#print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
 		MIDI.addNote(track, channel, pitch, time, duration, volume)
 
 	with open(filepath, "wb") as output_file:
 		MIDI.writeFile(output_file)
 
-def exportMusic(data, path, ext):
+def exportMusic(cls, path, ext):
+	data = cls.inputFileData
 	tempo = data['headers']['tempo']
-	music = AudioSegment.silent(duration=int(data['headers']['length'] / tempo * 1000 + 1000))
+	length = data['headers']['length']
+	music = AudioSegment.silent(duration=int(length / tempo * 1000 + 1000))
 
 	for note in data['notes']:
 		noteSoundObj = noteSounds[note['inst']]['obj']
 		ANoteSound = noteSoundObj._spawn(noteSounds[note['inst']]['obj'].raw_data, overrides={'frame_rate': int(noteSounds[note['inst']]['obj'].frame_rate * (2.0 ** ((note['key'] - 45) / 12))) })
 		music = music.overlay(ANoteSound, position=int(note['tick'] / tempo * 1000))
+		cls.UpdateProgBar(10 + int( note['tick'] / length * 80))
 	
-	music = music.set_frame_rate(44100).normalize() - 10
+	music = music.set_frame_rate(44100).normalize()
 	music.export(path, format=ext)
 
 root = tk.Tk()
