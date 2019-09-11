@@ -18,13 +18,13 @@
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys, os, operator, webbrowser, copy, traceback
+import sys, os, operator, webbrowser, copy, traceback, re, json
 
 import tkinter as tk
 import tkinter.ttk as ttk
 
 import tkinter.messagebox as tkmsgbox
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 from tkinter.scrolledtext import ScrolledText
 
 from time import sleep, time
@@ -105,7 +105,7 @@ class MainWindow(tk.Frame):
 		
 		#Menu bar
 		self.menuBar = tk.Menu(self)
-		self.parent.config(menu=self.menuBar)
+		self.parent.configure(menu=self.menuBar)
 		self.menus()
 		
 		#Tabs
@@ -338,42 +338,58 @@ class MainWindow(tk.Frame):
 		self.ExpConfigMode1 = tk.Radiobutton(self.ExpConfigGrp1, text="File", variable=self.var.export.mode, value=1)
 		self.ExpConfigMode1.pack(side='left', padx=padx, pady=pady)
 		self.ExpConfigMode1.select()
-		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0, state='disabled')
+		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0)
 		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
 
-		self.var.export.types = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt'), ('MPEG-1 Layer 3', '*.mp3')]
-		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.types])
+		self.var.export.type.file = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt'), ('MPEG-1 Layer 3', '*.mp3')]
+		self.var.export.type.dtp = ['Wireless note block song', 'other']
+		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
 		self.ExpConfigCombox.current(0)
 		self.ExpConfigCombox.bind("<<ComboboxSelected>>", self.toggleExpOptiGrp)
 		self.ExpConfigCombox.pack(side='left', fill='x', padx=padx, pady=pady)
 
+		self.var.export.mode.trace('w', self.toggleExpOptiGrp)
+
 		ttk.Separator(self.ExpConfigFrame, orient="horizontal").pack(fill='x', expand=False, padx=padx*3, pady=pady)
 		
-		self.ExtOptiSW = StackingWidget(self.ExpConfigFrame, relief='groove', borderwidth=1)
-		self.ExtOptiSW.pack(fill='both', expand=True, padx=fpadx)
+		self.ExpOptiSW = StackingWidget(self.ExpConfigFrame, relief='groove', borderwidth=1)
+		self.ExpOptiSW.pack(fill='both', expand=True, padx=fpadx)
 
-		#"Midi export options" frame
-		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'Midi')
-		self.ExtOptiSW.pack('Midi', side='top', fill='both', expand=True)
+		#Midi export options frame
+		self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Midi')
+		self.ExpOptiSW.pack('Midi', side='top', fill='both', expand=True)
 
 		self.var.export.midi.opt1 = tk.IntVar()
-		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExtOptiSW['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
+		self.ExpMidi1Rad1 = tk.Radiobutton(self.ExpOptiSW['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
 		self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
-		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExtOptiSW['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
+		self.ExpMidi1Rad2 = tk.Radiobutton(self.ExpOptiSW['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
 		self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
 		
-		#"Nokia export options" frame
-		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'NCF')
-		self.ExtOptiSW.pack('NCF', side='top', fill='both', expand=True)
+		#Nokia export options frame
+		self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'NCF')
+		self.ExpOptiSW.pack('NCF', side='top', fill='both', expand=True)
 
-		self.NCFOutput = ScrolledText(self.ExtOptiSW['NCF'], state="disabled", height=10)
+		self.NCFOutput = ScrolledText(self.ExpOptiSW['NCF'], state="disabled", height=10)
 		self.NCFOutput.pack(fill='both', expand=True)
 
-		self.ExtOptiSW.append(tk.Frame(self.ExtOptiSW), 'Music')
-		self.ExtOptiSW.pack('Music', side='top', fill='both', expand=True)
+		#'Wireless song datapack' export options frame
+		self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Wnbs')
+		self.ExpOptiSW.pack('Wnbs', side='top', fill='both', expand=True)
 
-		self.ExtMusicLabel = tk.Label(self.ExtOptiSW['Music'], text="There is no option available.")
-		self.ExtMusicLabel.pack()
+		self.WnbsIDLabel = tk.Label(self.ExpOptiSW['Wnbs'], text="Unique name:")
+		self.WnbsIDLabel.pack(anchor='nw', padx=padx, pady=pady)
+
+		#vcmd = (self.register(self.onValidate), '%P')
+		self.WnbsIDEntry = tk.Entry(self.ExpOptiSW['Wnbs'], validate="key",
+		validatecommand=(self.register(lambda P: bool(re.match("^[a-zA-z0-9-_]+$", P))), '%P'))
+		self.WnbsIDEntry.pack(anchor='nw', padx=padx, pady=pady)
+
+		#Other export options frame
+		self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Other')
+		self.ExpOptiSW.pack('Other', side='top', fill='both', expand=True)
+		
+		self.ExpMusicLabel = tk.Label(self.ExpOptiSW['Other'], text="There is no option available.")
+		self.ExpMusicLabel.pack(anchor='nw', padx=padx, pady=pady)
 		
 		#Output frame
 		self.ExpOutputFrame = tk.LabelFrame(self.ExportTab, text="Output")
@@ -471,6 +487,7 @@ class MainWindow(tk.Frame):
 			if data is not None:
 				self.UpdateProgBar(80)
 				self.inputFileData = data
+				self.ExpOutputEntry.delete(0, 'end')
 		
 			self.UpdateVar()
 			self.RaiseFooter('Opened')
@@ -574,24 +591,45 @@ class MainWindow(tk.Frame):
 		self.UpdateProgBar(60)
 		data = DataPostprocess(data)
 				
-		self.UpdateProgBar(80)
+		self.UpdateProgBar(90)
 		self.UpdateVar()
 		self.UpdateProgBar(100)
 		self.RaiseFooter('Applied')
 		self.UpdateProgBar(-1)
 		self.ToolsTabButton['state'] = 'normal'
 	
-	def toggleExpOptiGrp(self ,event=None):
+	def toggleExpOptiGrp(self ,n=None, m=None, y=None):
 		asFile = bool(self.var.export.mode.get())
-		type = self.ExpConfigCombox.current()
+		#self.var.export.mode.set(self.var.export.mode.get())
+		key = max(0, self.ExpConfigCombox.current())
+		print(asFile, key)
 		if asFile:
-			if type == 0: self.ExtOptiSW.switch('Midi')
-			elif type == 1: self.ExtOptiSW.switch('NCF')
-			else: self.ExtOptiSW.switch('Music')
+			if key == 0: self.ExpOptiSW.switch('Midi')
+			elif key == 1: self.ExpOptiSW.switch('NCF')
+			else: self.ExpOptiSW.switch('Other')
+			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
 		else:
-			pass
+			if key == 0: self.ExpOptiSW.switch('Wnbs')
+			else: self.ExpOptiSW.switch('Other')
+			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) if isinstance(tup, tuple) else tup for tup in self.var.export.type.dtp])
+		key = min(key, len(self.ExpConfigCombox['values'])-1)
+		self.ExpConfigCombox.current(key)
 		self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()) + 2)
-	
+		#self.ExpConfigCombox.update_idletasks()
+		
+		if self.exportFilePath:
+			print(self.exportFilePath)
+			fext = (self.var.export.type.file[self.ExpConfigCombox.current()],)[0][1][1:]
+			if asFile:
+				self.exportFilePath = os.path.join(self.exportFilePath, self.WnbsIDEntry.get())
+				if not self.exportFilePath.lower().endswith(fext): self.exportFilePath = os.path.splitext(self.exportFilePath)[0] + fext #self.exportFilePath += fext
+			else:
+				self.WnbsIDEntry.delete(0, 'end')
+				self.WnbsIDEntry.insert(0, os.path.splitext(self.exportFilePath)[0])
+				if self.exportFilePath.lower().endswith(fext): self.exportFilePath = os.path.dirname(self.exportFilePath)
+			self.ExpOutputEntry.delete(0, 'end')
+			self.ExpOutputEntry.insert(0, self.exportFilePath)
+
 	def UpdateVar(self):
 		#print("Started updating….")
 		#Update general tab
@@ -636,48 +674,69 @@ class MainWindow(tk.Frame):
 		self.update_idletasks()
 	
 	def OnBrowseExp(self):
-		if self.filePath is not None:
-			curr = (self.var.export.types[self.ExpConfigCombox.current()],)
-			#print(curr)
-			fext = curr[0][1][1:]
-			#print(fext)
-			self.exportFilePath = asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr)
-			if bool(self.exportFilePath):
-				if not self.exportFilePath.lower().endswith(fext): self.exportFilePath += fext
-				self.ExpOutputEntry.delete(0,'end')
+		if self.filePath and self.inputFileData:
+			asFile = bool(self.var.export.mode.get())
+			if asFile:
+				curr = (self.var.export.type.file[self.ExpConfigCombox.current()],)
+				#print(curr)
+				fext = curr[0][1][1:]
+				self.exportFilePath = asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr)
+			else:
+				print("Ask directory")
+				curr = [(self.var.export.type.dtp[self.ExpConfigCombox.current()], '*.'),]
+				fext =''
+				#self.exportFilePath = asksaveasfilename(title="Export datapack (not file)", initialfile=os.path.splitext(os.path.basename(self.filePath))[0], filetypes=curr)
+				self.exportFilePath = askdirectory(title="Export datapack (choose the directory to put the datapack)", initialdir=os.path.dirname(self.filePath), mustexist=False)
+			if self.exportFilePath:
+				print(self.exportFilePath)
+				if asFile:
+					if not self.exportFilePath.lower().endswith(fext): self.exportFilePath = os.path.splitext(self.exportFilePath)[0] + fext #self.exportFilePath += fext
+					#self.exportFilePath = self.ExpOutputEntry.get()
+				else:
+					#self.WnbsIDEntry.delete(0, 'end')
+					#self.WnbsIDEntry.insert(0, os.path.splitext(self.exportFilePath)[0])
+					#self.exportFilePath = os.path.dirname(self.exportFilePath)
+					#regex = r"^(?:[^\s{0}.]+{0})+[^\s{0}.]+$".format(os.path.sep)
+					#print(regex)
+					#if re.match(regex, self.exportFilePath):
+					if '.' in os.path.basename(self.exportFilePath):
+						self.exportFilePath = os.path.dirname(self.exportFilePath)
+				self.ExpOutputEntry.delete(0, 'end')
 				self.ExpOutputEntry.insert(0, self.exportFilePath)
 			else: self.exportFilePath = self.ExpOutputEntry.get()
-		#print(self.exportFilePath)
 		
 	def OnExport(self):
 		if self.exportFilePath is not None:
 			self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'disabled'
 			self.UpdateProgBar(10)
+			data, path = self.inputFileData, self.exportFilePath
 			asFile = bool(self.var.export.mode.get())
 			type = self.ExpConfigCombox.current()
-			fext = self.var.export.types[self.ExpConfigCombox.current()][1][2:]
-			#print('Fext:',fext)
 			if asFile:
 				if type == 0:
-					exportMIDI(self, self.exportFilePath, self.var.export.midi.opt1.get())
+					exportMIDI(self, path, self.var.export.midi.opt1.get())
 				elif type == 1:
-					with open(self.exportFilePath, "w") as f:
-						f.write(writencf(self.inputFileData))
+					with open(path, "w") as f:
+						f.write(writencf(data))
 				elif type == 2:
-						exportMusic(self, self.exportFilePath, fext)
+						fext = self.var.export.type.file[self.ExpConfigCombox.current()][1][2:]
+						exportMusic(self, path, fext)
+			else:
+				if type == 0:
+					exportDatapack(data, os.path.join(path, self.WnbsIDEntry.get()), 'wnbs', self)
 
-				#self.UpdateProgBar(100)
-				self.RaiseFooter('Exported')
-				self.UpdateProgBar(-1)
+			#self.UpdateProgBar(100)
+			self.RaiseFooter('Exported')
+			self.UpdateProgBar(-1)
 
-				self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'normal'
-		
+			self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'normal'
+	
 	def UpdateProgBar(self, value, time=0.001):
 		if value == -1 or time <= 0:
 			self.progressbar.pack_forget()
-			self.config(cursor='arrow')
+			self.configure(cursor='arrow')
 		else:
-			self.config(cursor='wait')
+			self.configure(cursor='wait')
 			self.progressbar["value"] = value
 			self.progressbar.pack(side='right')
 			self.progressbar.update()
@@ -900,13 +959,13 @@ def DataPostprocess(data):
 	note = tick = inst = layer = duraKey = usedInsts = maxLayer = None
 	return data
 
-def exportMIDI(cls, filepath, byLayer=False):
+def exportMIDI(cls, path, byLayer=False):
 	data = copy.deepcopy(cls.inputFileData)
 	byLayer = bool(byLayer)
 
 	if not byLayer:
-		data = compactNotes(data)
 		data = DataPostprocess(data)
+		data = compactNotes(data)
 
 	UniqInstEachLayer = {}
 	for note in data['notes']:
@@ -1028,7 +1087,7 @@ def exportMIDI(cls, filepath, byLayer=False):
 
 		cls.UpdateProgBar(10 + int( note['tick'] / data['headers']['length'] * 80))
 
-	with open(filepath, "wb") as output_file:
+	with open(path, "wb") as output_file:
 		MIDI.writeFile(output_file)
 
 def exportMusic(cls, path, ext):
@@ -1045,6 +1104,99 @@ def exportMusic(cls, path, ext):
 	
 	music = music.set_frame_rate(44100).normalize()
 	music.export(path, format=ext)
+
+def exportDatapack(data, path, mode='none', self=None):
+	def writejson(path, jsout):
+		with open(path, 'w') as f:
+			json.dump(jsout, f, ensure_ascii=False)
+	def writemcfunction(path, text):
+			with open(path, 'w') as f:
+				f.write(text)
+
+	def wnbs():
+		soundNames = [
+				'harp',
+				'bass',
+				'basedrum',
+				'snare',
+				'hat',
+				'guitar',
+				'flute',
+				'bell',
+				'chime',
+				'xylophone',
+				'iron_xylophone',
+				'cow_bell',
+				'didgeridoo',
+				'bit',
+				'banjo',
+				'pling'
+		]
+		
+		os.makedirs(path, exist_ok=True)
+		writejson(os.path.join(path, 'pack.mcmeta'), {"pack":{"description":"Note block song made with NBSTool.", "pack_format":1}} )
+		os.makedirs(os.path.join(path, 'data', 'minecraft', 'tags', 'functions'), exist_ok=True)
+		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'load.json'), jsout = {"values":["{}:load".format(bname)]} )
+		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'tick.json'), jsout = {"values":["{}:tick".format(bname)]} )
+		os.makedirs(os.path.join(path, 'data', bname, 'functions'), exist_ok=True)
+		scoreObj = "wnbs_" + bname[:11]
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
+			"scoreboard objectives add {} dummy".format(scoreObj) )
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tick.mcfunction'),
+"""execute as @a[tag={}] run function {}:playing
+execute as @e[type=armor_stand, tag=WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname) )
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'play.mcfunction'),
+			"tag @s add {}".format(scoreObj) )
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'pause.mcfunction'),
+			"tag @s remove {}".format(scoreObj) )
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'stop.mcfunction'),
+"""tag @s remove {0}
+scoreboard players reset @s {0}""".format(scoreObj) )
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'remove.mcfunction'),
+			"scoreboard objectives remove {}".format(scoreObj) )
+
+		text = ''
+		for k, v in instLayers.items():
+			for i in range(len(v)):
+				text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
+					"{}-{}".format(soundNames[k], i), "{}-{}".format(k, i)
+				)
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'give.mcfunction'), text)
+
+		tempo = data['headers']['tempo']
+		text = "scoreboard players add @s {} 1".format(scoreObj)
+		#pprint(data['notes'])
+		for note in data['notes']:
+			text += \
+"""\nexecute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
+execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block""".format(
+				obj=scoreObj, tick=int(20 // tempo * note['tick'] + 1), inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=soundNames[note['inst']], key=max(33, min(57, note['key'])) - 33
+			)
+		text += "\nexecute if score @s {} matches {} run function {}:stop".format(scoreObj, int(20 // tempo * note['tick'] + 1), bname)
+		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'playing.mcfunction'), text)
+		"""
+		for k, v in data.items():
+			if k != 'notes':
+				pprint(k)
+				pprint(v)"""
+
+	path = os.path.join(*os.path.normpath(path).split())
+	bname = os.path.basename(path)
+	
+	data = DataPostprocess(data)
+	data = compactNotes(data, groupPerc=False)
+	
+	instLayers = {}
+	for note in data['notes']:
+		if note['inst'] not in instLayers:
+			instLayers[note['inst']] = [note['layer']]
+		elif note['layer'] not in instLayers[note['inst']]:
+			instLayers[note['inst']].append(note['layer'])
+	pprint(instLayers)
+	
+	locals()[mode]()
+	print("Done!")
 
 root = tk.Tk()
 app = MainWindow(root)
