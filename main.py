@@ -30,6 +30,7 @@ from tkinter.scrolledtext import ScrolledText
 from time import sleep, time
 from pprint import pprint
 from random import randrange
+from math import floor, log2
 
 from midiutil import MIDIFile
 from PIL import Image, ImageTk
@@ -953,7 +954,7 @@ def DataPostprocess(data):
 		else:
 			note['duration'] = 8
 		maxLayer = max(layer, maxLayer)
-	data['headers']['length'] = tick + 1
+	data['headers']['length'] = tick
 	data['maxLayer'] = maxLayer
 	data['usedInsts'] = usedInsts
 	note = tick = inst = layer = duraKey = usedInsts = maxLayer = None
@@ -1114,6 +1115,10 @@ def exportDatapack(data, path, mode='none', self=None):
 				f.write(text)
 
 	def wnbs():
+		scoreObj = "wnbs_" + bname[:7]
+		speed = int(min(data['headers']['tempo'] * 4, 120))
+		length = data['headers']['length']
+
 		soundNames = [
 				'harp',
 				'bass',
@@ -1139,21 +1144,28 @@ def exportDatapack(data, path, mode='none', self=None):
 		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'load.json'), jsout = {"values":["{}:load".format(bname)]} )
 		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'tick.json'), jsout = {"values":["{}:tick".format(bname)]} )
 		os.makedirs(os.path.join(path, 'data', bname, 'functions'), exist_ok=True)
-		scoreObj = "wnbs_" + bname[:11]
+
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
-			"scoreboard objectives add {} dummy".format(scoreObj) )
+"""scoreboard objectives add {0} dummy
+scoreboard objectives add {0}_t dummy
+scoreboard players set speed {0} {1}""".format(scoreObj, speed) )
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tick.mcfunction'),
-"""execute as @a[tag={}] run function {}:playing
-execute as @e[type=armor_stand, tag=WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname) )
+"""execute as @a[tag={0}] run scoreboard players operation @s {0} += speed {0}
+execute as @a[tag={0}] run function {1}:tree/0_{2}
+execute as @e[type=armor_stand, tag=WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname, 2**(floor(log2(length))+1)-1) )
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'play.mcfunction'),
-			"tag @s add {}".format(scoreObj) )
+"""tag @s add {0}
+scoreboard players set @s {0}_t -1
+""".format(scoreObj) )
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'pause.mcfunction'),
 			"tag @s remove {}".format(scoreObj) )
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'stop.mcfunction'),
 """tag @s remove {0}
-scoreboard players reset @s {0}""".format(scoreObj) )
+scoreboard players reset @s {0}
+scoreboard players reset @s {0}_t""".format(scoreObj) )
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'remove.mcfunction'),
-			"scoreboard objectives remove {}".format(scoreObj) )
+"""scoreboard objectives remove {0}
+scoreboard objectives remove {0}_t""".format(scoreObj) )
 
 		text = ''
 		for k, v in instLayers.items():
@@ -1163,18 +1175,86 @@ scoreboard players reset @s {0}""".format(scoreObj) )
 				)
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'give.mcfunction'), text)
 
-		tempo = data['headers']['tempo']
-		text = "scoreboard players add @s {} 1".format(scoreObj)
-		#pprint(data['notes'])
-		for note in data['notes']:
-			text += \
-"""\nexecute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
-execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
-execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block""".format(
-				obj=scoreObj, tick=int(20 // tempo * note['tick'] + 1), inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=soundNames[note['inst']], key=max(33, min(57, note['key'])) - 33
-			)
-		text += "\nexecute if score @s {} matches {} run function {}:stop".format(scoreObj, int(20 // tempo * note['tick'] + 1), bname)
-		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'playing.mcfunction'), text)
+		colNotes = { tick: [x for x in data['notes'] if x['tick'] == tick] for tick in range(length) }
+		#pprint(colNotes)
+		print(len(colNotes))
+
+		os.makedirs(os.path.join(path, 'data', bname, 'functions', 'notes'), exist_ok=True)
+		for tick in range(length):
+			currNotes = colNotes[tick]
+			text = ""
+			#text = "say Calling function {}:notes/{}\n".format(bname, tick)
+			for note in currNotes:
+				text += \
+"""execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
+execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
+""".format(
+						obj=scoreObj, tick=tick, inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=soundNames[note['inst']], key=max(33, min(57, note['key'])) - 33
+					)
+			if tick == length-1: text += "execute run function {}:stop".format(bname)
+			else: text += "scoreboard players set @s {}_t {}".format(scoreObj, tick)
+			if text != "": writemcfunction(os.path.join(path, 'data', bname, 'functions', 'notes', str(tick)+'.mcfunction'), text)
+
+		os.makedirs(os.path.join(path, 'data', bname, 'functions', 'tree'), exist_ok=True)
+		steps = floor(log2(length)) + 1
+		pow = 2**steps
+		for step in range(steps):
+			searchrange = floor(pow / (2**step))
+			segments = floor(pow / searchrange)
+			for segment in range(segments):
+				text = ""
+				half = floor(searchrange / 2)
+				lower = searchrange * segment
+				
+				min1 = lower
+				max1 = lower + half - 1
+				min2 = lower + half
+				max2 = lower + searchrange - 1
+				
+				#print(str(step) + " " + str(segments) + "    " + str(min1) + " " + str(max1) + " " + str(min2) + " " + string(max2))
+				
+				if min1 <= length:
+					if step == steps-1: # Last step, play the tick
+						try:
+							if len(colNotes[min1]) > 0: text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}\n".format(scoreObj, min1*80, (max1+1)*80+40, min1-1, bname, min1)
+						except KeyError: break
+						if min2 <= length:
+							try:
+								if len(colNotes[min2]) > 0: text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}".format(scoreObj, min2*80, (max2+1)*80+40, min2-1, bname, min2)
+							except KeyError: break
+					else: # Don't play yet, refine the search
+						for i in range(min1, min(max1, length)+1):
+							try:
+								if len(colNotes[i]) > 0:
+									text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}\n".format(scoreObj, min1*80, (max1+1)*80+40, bname, min1, max1)
+									break
+							except KeyError: break
+						for i in range(min2, min(max2, length)+1):
+							try:
+								if len(colNotes[i]) > 0:
+									text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}".format(scoreObj, min2*80, (max2+2)*80+40, bname, min2, max2)
+									break
+							except KeyError: break
+					if text != "":
+						#text = "say Calling function {}:tree/{}_{}\n".format(bname, min1, max2) + text
+						writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tree', '{}_{}.mcfunction'.format(min1, max2)), text)
+				else: break
+		
+# 		tempo = data['headers']['tempo']
+# 		text = "scoreboard players add @s {} 1".format(scoreObj)
+# 		#pprint(data['notes'])
+# 		for note in data['notes']:
+# 			text += \
+# """\nexecute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+# execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
+# execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
+# scoreboard players set @s {obj}_t {tick}}""".format(
+# 				obj=scoreObj, tick=int(20 // tempo * note['tick'] + 1), inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=soundNames[note['inst']], key=max(33, min(57, note['key'])) - 33
+# 			)
+# 		text += "\nexecute if score @s {} matches {} run function {}:stop".format(scoreObj, int(20 // tempo * note['tick'] + 1), bname)
+# 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'playing.mcfunction'), text)
+
 		"""
 		for k, v in data.items():
 			if k != 'notes':
@@ -1193,7 +1273,7 @@ execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_M
 			instLayers[note['inst']] = [note['layer']]
 		elif note['layer'] not in instLayers[note['inst']]:
 			instLayers[note['inst']].append(note['layer'])
-	pprint(instLayers)
+	#pprint(instLayers)
 	
 	locals()[mode]()
 	print("Done!")
