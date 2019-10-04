@@ -34,20 +34,20 @@ def readString(f):
 	length = readNumeric(f, INT)
 	return f.read(length).decode()
 
-def readnbs(filename):
+def readnbs(filename, cls=None):
 	IsOldVersion = False
 	headers = {}
-	logJumps = []
 	notes = []
 	maxLayer = 0
 	usedInsts = [[], []]
 	hasPerc = False
 	layers = []
 	customInsts = []
-	
+
 	if filename is not '':
 		with open(filename, "rb") as f:
 			#Header
+			if cls: cls.UpdateProgBar(25)
 			sign = readNumeric(f, SHORT) == 0 #Sign
 			if not sign:
 				IsOldVersion = True
@@ -76,24 +76,21 @@ def readnbs(filename):
 			headers['block_removed'] = readNumeric(f, INT) #Total block removed
 			headers['import_name'] = readString(f) #MIDI file name
 			#Notes
-			tick = -1;
-			tickJumps = layerJumps = 0;
+			tick = -1
+			tickJumps = layerJumps = 0
 			while True:
 				tickJumps = readNumeric(f, SHORT)
 				#if notes: notes[-1]['duration'] = tickJumps
 				if tickJumps == 0: break
 				tick += tickJumps
-				#logJumps = [tickJumps, [], tick]
 				layer = -1
+				if 'length' in headers and cls: cls.UpdateProgBar(25 + (tick / headers['length'] * 50))
 				while True:
 					layerJumps = readNumeric(f, SHORT)
 					if layerJumps == 0: break
 					layer += layerJumps
-					#logJumps[1].append(layerJumps)
-					#0=Piano (air), 1=Double Bass (wood), 2=Bass Drum (stone), 3=Snare Drum (sand), 4=Click (glass), 5=Guitar (wool), 6=Flute (Clay), 7=Bell (Block of Gold), 8=Chime (Packed Ice), 9=Xylophone (Bone Block)
 					inst = readNumeric(f, BYTE)
 					key = readNumeric(f, BYTE)#+21
-					#print(tick, layer, inst, key)
 					if inst in (2, 3, 4):
 						hasPerc = isPerc = True
 						if inst not in usedInsts[1]: usedInsts[1].append(inst)
@@ -103,17 +100,14 @@ def readnbs(filename):
 					duraKey = None
 					for idx, note in enumerate(notes):
 						if note['layer'] == layer: duraKey = idx
-					#print("duraKey: {0}".format(duraKey))
 					if duraKey is not None:
-						#print( "{0} - {1} = {2}".format(tick, notes[duraKey]['tick'], tick - notes[duraKey]['tick']) )
 						if notes: notes[duraKey]['duration'] = tick - notes[duraKey]['tick']
 					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc, 'duration':8})
-				#pprint(logJumps)
 				maxLayer = max(layer, maxLayer)
-			#notes[-1]['duration'] = 8
 			if headers['length'] is None: headers['length'] = tick + 1
 			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = None
 			#Layers
+			if cls: cls.UpdateProgBar(80)
 			for i in range(headers['height']):
 				name = readString(f) #Layer name
 				vol = readNumeric(f, BYTE) #Volume
@@ -124,19 +118,20 @@ def readnbs(filename):
 				layers.append({'index':i, 'name':name, 'volume':vol, 'stereo':stereo})
 			name = vol = stereo = None
 			#Custom instrument
+			if cls: cls.UpdateProgBar(85)
 			headers['inst_count'] = readNumeric(f, BYTE)
 			for i in range(headers['inst_count']):
 				name = readString(f) #Instrument name
 				file = readString(f) #Sound filename
 				pitch = readNumeric(f, BYTE) #Pitch
-				shouldPressKeys = readNumeric(f, BYTE) #Press key
+				shouldPressKeys = bool(readNumeric(f, BYTE)) #Press key
 				customInsts.append({'name':name, 'filename':file, 'pitch':pitch, 'pressKeys':shouldPressKeys})
 	sortedNotes = sorted(notes, key = operator.itemgetter('tick', 'layer') )
 	data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'IsOldVersion':IsOldVersion, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':usedInsts}
 	return data
 
-def opennbs(filename, printOutput=False):
-	data = readnbs(filename)
+def opennbs(filename, printOutput=False, cls=None):
+	data = readnbs(filename, cls)
 	if printOutput: pprint(data)
 	return data
 	
