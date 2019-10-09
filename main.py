@@ -23,7 +23,7 @@ import sys, os, operator, webbrowser, copy, traceback, re, json
 import tkinter as tk
 import tkinter.ttk as ttk
 
-import tkinter.messagebox as tkmsgbox
+#import tkinter.messagebox as tkmsgbox
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
 from tkinter.scrolledtext import ScrolledText
 
@@ -38,7 +38,7 @@ from pydub import AudioSegment
 from pydub.playback import _play_with_simpleaudio
 
 from attr import Attr
-from nbsio import opennbs, writenbs
+from nbsio import opennbs, writenbs, DataPostprocess
 from ncfio import writencf
 '''
 import logging
@@ -230,8 +230,7 @@ class MainWindow(tk.Frame):
 		self.PlayCanvasFrame = tk.Frame(self.PlayTab, relief='groove', borderwidth=1)
 		self.PlayCanvasFrame.pack(fill='both', expand=True, padx=fpadx, pady=fpady)
 
-		#a = tk.Label(self.PlayCanvasFrame, text='No value')
-		#a.pack()
+		tk.Message(self.PlayCanvasFrame, text='Experimental feature', font=("Arial", 44)).pack(fill='both', expand=True)
 
 		self.PlayCtrlFrame = tk.Frame(self.PlayTab, relief='groove', borderwidth=1)
 		self.PlayCtrlFrame.pack(fill='both', padx=fpadx, pady=fpady)
@@ -282,7 +281,7 @@ class MainWindow(tk.Frame):
 		self.InstToolMess = tk.Message(self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
 		self.InstToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
 		
-		opts = ["(not applied)"] + [x['name'] for x in vaniNoteSounds] + ["Random"]
+		self.var.tool.opts = opts = ["(not applied)"] + [x['name'] for x in vaniNoteSounds] + ["Random"]
 		self.InstToolCombox = ttk.Combobox(self.InstToolFrame, state='readonly', values=opts)
 		self.InstToolCombox.current(0)
 		self.InstToolCombox.pack(side='left', fill='both' ,expand=True, padx=padx, pady=pady)
@@ -448,7 +447,9 @@ class MainWindow(tk.Frame):
 			self.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate('<space>', when='tail'))
 
 		self.bind_class("TCombobox", "<Return>", lambda e: e.widget.event_generate('<Down>'))
-		self.bind_class(("Entry", "ScrolledText") ,"<Button-3>", self.popupmenus)
+
+		for tkclass in ("Entry", "Text", "ScrolledText"):
+			self.bind_class(tkclass ,"<Button-3>", self.popupmenus)
 		
 		self.bind_class("TNotebook", "<<NotebookTabChanged>>", self._on_tab_changed)
 	
@@ -488,19 +489,12 @@ class MainWindow(tk.Frame):
 		if fromEntry: fileName = self.OpenFileEntry.get()
 		self.UpdateProgBar(20)
 		if fileName != '':
-			try:
-				data = opennbs(fileName, cls=self)
-			except Exception as ex:
-				self.RaiseFooter(type(ex).__name__, 'darkred')
-				self.UpdateProgBar(-1)
-				print('='*40+"\n ERROR!"+"\n"+'='*40)
-				print(traceback.format_exc())
-				return
+			data = opennbs(fileName)
 			if data is not None:
 				self.UpdateProgBar(80)
 				self.inputFileData = data
 				self.ExpOutputEntry.delete(0, 'end')
-				self.exportFilePath.set(None)
+				self.exportFilePath.set('')
 		
 			self.UpdateVar()
 			self.RaiseFooter('Opened')
@@ -511,10 +505,15 @@ class MainWindow(tk.Frame):
 		if self.inputFileData is not None:
 			if saveAsNewFile is True:
 				types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
-				filename = asksaveasfilename(filetypes = types)
-			else: filename = self.filePath
+				self.filePath = asksaveasfilename(filetypes = types)
 			self.UpdateProgBar(50)
-			writenbs(filename, self.inputFileData)
+
+			writenbs(self.filePath, self.inputFileData)
+
+			if saveAsNewFile is True:
+				self.OpenFileEntry.delete(0,'end')
+				self.OpenFileEntry.insert(0, self.filePath)
+
 			self.UpdateProgBar(100)
 			self.RaiseFooter('Saved')
 			self.UpdateProgBar(-1)
@@ -530,6 +529,8 @@ class MainWindow(tk.Frame):
 		if self.inputFileData is None: return
 		hds = self.inputFileData['headers']
 		notes = self.inputFileData['notes']
+		tickIndexes = self.inputFileData['indexByTick']
+
 		if state == 'play' and self.PlayingState != 'play' or repeat and self.SongPlayerAfter is not None:
 			if self.PlayingTick < hds['length'] - 1:
 				self.PlayingState = 'play'
@@ -537,13 +538,13 @@ class MainWindow(tk.Frame):
 				self.PlayingTick = int(self.PlayCtrlScale.get())
 				self.PlayCtrlScale.set(self.PlayingTick + 1)
 
-				currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
+				#currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
+				currNotes = tickIndexes[self.PlayingTick][1]
+
 				SoundToPlay = AudioSegment.silent(duration=4000)
-				#print('='*40, self.PlayingTick)
-				for note in currNotes:
-					#print(len(self.noteSounds), note['inst'])
-					noteSoundObj = self.noteSounds[note['inst']]['obj']
-					ANoteSound = noteSoundObj._spawn(self.noteSounds[note['inst']]['obj'].raw_data, overrides={'frame_rate': int(self.noteSounds[note['inst']]['obj'].frame_rate * (2.0 ** ((note['key'] - self.noteSounds[note['inst']]['pitch']) / 12))) })
+				for i in currNotes:
+					noteSoundObj = self.noteSounds[notes[i]['inst']]['obj']
+					ANoteSound = noteSoundObj._spawn(self.noteSounds[notes[i]['inst']]['obj'].raw_data, overrides={'frame_rate': int(self.noteSounds[notes[i]['inst']]['obj'].frame_rate * (2.0 ** ((notes[i]['key'] - self.noteSounds[notes[i]['inst']]['pitch']) / 12))) })
 					SoundToPlay = SoundToPlay.overlay(ANoteSound)
 
 				_play_with_simpleaudio(SoundToPlay.set_frame_rate(44100).normalize() - 10)
@@ -581,7 +582,7 @@ class MainWindow(tk.Frame):
 
 			#Instrument change
 			if instOpti > 0:
-				note['inst'] = randrange(len(self.var.tool.inst)) if instOpti > len(self.noteSounds) else instOpti-1
+				note['inst'] = randrange(len(self.var.tool.opts)-2) if instOpti > len(self.noteSounds) else instOpti-1
 		self.UpdateProgBar(30)
 		#Reduce
 		if bool(self.var.tool.reduce.opt2.get()) and bool(self.var.tool.reduce.opt3.get()):
@@ -666,10 +667,12 @@ class MainWindow(tk.Frame):
 				self.UpdateProgBar(50)
 				self.PlayCtrlScale['to'] = self.inputFileData['headers']['length']
 				self.UpdateProgBar(60)
-				customInsts = [ {'name': item['name'], 'filepath': resource_path('sounds', item['filename']), 'obj': AudioSegment.from_ogg(resource_path('sounds', item['filename'])), 'pitch': item['pitch']} for item in data['customInsts']]
+				customInsts =  [ {'name': item['name'], 'filepath': resource_path('sounds', item['filename']), 'obj': AudioSegment.from_ogg(resource_path('sounds', item['filename'])), 'pitch': item['pitch']} for item in data['customInsts']]
 				self.noteSounds = vaniNoteSounds + customInsts
+				pprint(data['customInsts'])
 				self.UpdateProgBar(70)
-				self.InstToolCombox.configure(values= ["(not applied)"] + [x['name'] for x in self.noteSounds] + ["Random"] )
+				self.var.tool.opts = opts = ["(not applied)"] + [x['name'] for x in self.noteSounds] + ["Random"]
+				self.InstToolCombox.configure(values=opts)
 				self.UpdateProgBar(80)
 				if data['maxLayer'] == 0:
 					text = writencf(data)
@@ -707,19 +710,9 @@ class MainWindow(tk.Frame):
 				print(self.exportFilePath.get())
 				if asFile:
 					if not self.exportFilePath.get().lower().endswith(fext): self.exportFilePath.set( self.exportFilePath.get().split('.')[0] + fext )
-					#self.exportFilePath = self.ExpOutputEntry.get()
 				else:
-					#self.WnbsIDEntry.delete(0, 'end')
-					#self.WnbsIDEntry.insert(0, os.path.splitext(self.exportFilePath)[0])
-					#self.exportFilePath = os.path.dirname(self.exportFilePath)
-					#regex = r"^(?:[^\s{0}.]+{0})+[^\s{0}.]+$".format(os.path.sep)
-					#print(regex)
-					#if re.match(regex, self.exportFilePath):
-					if '.' in os.path.basename(self.exportFilePath.get()):
-						self.exportFilePath.set( os.path.dirname(self.exportFilePath.get()) )
-				#self.ExpOutputEntry.delete(0, 'end')
-				#self.ExpOutputEntry.insert(0, self.exportFilePath)
-			#else: self.exportFilePath = self.ExpOutputEntry.get()
+					if '.' in self.exportFilePath.get().split('/')[-1]:
+						self.exportFilePath.set( '/'.join(self.exportFilePath.get().split('/')[0:-1]) )
 		
 	def OnExport(self):
 		if self.exportFilePath.get() is not None:
@@ -949,32 +942,6 @@ def compactNotes(data, sepInst=1, groupPerc=1):
 				PrevNote = note
 	return r
 
-def DataPostprocess(data):
-	usedInsts = [[], []]
-	maxLayer = 0
-	data['hasPerc'] = False
-	for i, note in enumerate(data['notes']):
-		tick, inst, layer = note['tick'], note['inst'], note['layer']
-		if inst in (2, 3, 4):
-			data['hasPerc'] = note['isPerc'] = True
-			if inst not in usedInsts[1]: usedInsts[1].append(inst)
-		else:
-			note['isPerc'] = False
-			if inst not in usedInsts[0]: usedInsts[0].append(inst)
-		duraKey = None
-		for idx, note in enumerate(data['notes']):
-			if note['layer'] == layer: duraKey = idx
-		if duraKey is not None:
-			if i > 0: data['notes'][duraKey]['duration'] = tick - data['notes'][duraKey]['tick']
-		else:
-			note['duration'] = 8
-		maxLayer = max(layer, maxLayer)
-	data['headers']['length'] = tick
-	data['maxLayer'] = maxLayer
-	data['usedInsts'] = usedInsts
-	note = tick = inst = layer = duraKey = usedInsts = maxLayer = None
-	return data
-
 def exportMIDI(cls, path, byLayer=False):
 	data = copy.deepcopy(cls.inputFileData)
 	byLayer = bool(byLayer)
@@ -1001,7 +968,7 @@ def exportMIDI(cls, path, byLayer=False):
 
 	MIDI = MIDIFile(lenTrack)
 
-	percussions = [
+	percussions = (
 	#(percussion_key, instrument, key)
 	(35, 2, 64),
 	(36, 2, 60),
@@ -1047,7 +1014,7 @@ def exportMIDI(cls, path, byLayer=False):
 	(80, 4, 71),
 	(81, 4, 76),
 	(82, 3, 78)
-	]
+	)
 
 	instrument_codes = {0: 0,
 						1: 32,
@@ -1237,21 +1204,6 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
 						#text = "say Calling function {}:tree/{}_{}\n".format(bname, min1, max2) + text
 						writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tree', '{}_{}.mcfunction'.format(min1, max2)), text)
 				else: break
-		
-# 		tempo = data['headers']['tempo']
-# 		text = "scoreboard players add @s {} 1".format(scoreObj)
-# 		#pprint(data['notes'])
-# 		for note in data['notes']:
-# 			text += \
-# """\nexecute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
-# execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
-# execute if entity @s[scores={{{obj}={tick}}}] as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
-# scoreboard players set @s {obj}_t {tick}}""".format(
-# 				obj=scoreObj, tick=int(20 // tempo * note['tick'] + 1), inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=noteSounds[note['inst']], key=max(33, min(57, note['key'])) - 33
-# 			)
-# 		text += "\nexecute if score @s {} matches {} run function {}:stop".format(scoreObj, int(20 // tempo * note['tick'] + 1), bname)
-# 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'playing.mcfunction'), text)
-
 
 	path = os.path.join(*os.path.normpath(path).split())
 	bname = os.path.basename(path)

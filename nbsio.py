@@ -34,7 +34,7 @@ def readString(f):
 	length = readNumeric(f, INT)
 	return f.read(length).decode()
 
-def readnbs(filename, cls=None):
+def readnbs(filename):
 	IsOldVersion = False
 	headers = {}
 	notes = []
@@ -47,7 +47,6 @@ def readnbs(filename, cls=None):
 	if filename is not '':
 		with open(filename, "rb") as f:
 			#Header
-			if cls: cls.UpdateProgBar(25)
 			sign = readNumeric(f, SHORT) == 0 #Sign
 			if not sign:
 				IsOldVersion = True
@@ -84,7 +83,6 @@ def readnbs(filename, cls=None):
 				if tickJumps == 0: break
 				tick += tickJumps
 				layer = -1
-				if 'length' in headers and cls: cls.UpdateProgBar(25 + (tick / headers['length'] * 50))
 				while True:
 					layerJumps = readNumeric(f, SHORT)
 					if layerJumps == 0: break
@@ -105,9 +103,11 @@ def readnbs(filename, cls=None):
 					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc, 'duration':8})
 				maxLayer = max(layer, maxLayer)
 			if headers['length'] is None: headers['length'] = tick + 1
-			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = None
+			#indexByTick = [ [tk, [notes.index(nt) for nt in notes if nt['tick'] == tk] ] for tk in range(headers['length']) ]
+			#indexByTick = ( (tk, (notes.index(nt) for nt in notes if nt['tick'] == tk) ) for tk in range(headers['length']) )
+			indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']) ])
+			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = tk = nt = None
 			#Layers
-			if cls: cls.UpdateProgBar(80)
 			for i in range(headers['height']):
 				name = readString(f) #Layer name
 				vol = readNumeric(f, BYTE) #Volume
@@ -118,7 +118,6 @@ def readnbs(filename, cls=None):
 				layers.append({'index':i, 'name':name, 'volume':vol, 'stereo':stereo})
 			name = vol = stereo = None
 			#Custom instrument
-			if cls: cls.UpdateProgBar(85)
 			headers['inst_count'] = readNumeric(f, BYTE)
 			for i in range(headers['inst_count']):
 				name = readString(f) #Instrument name
@@ -127,14 +126,43 @@ def readnbs(filename, cls=None):
 				shouldPressKeys = bool(readNumeric(f, BYTE)) #Press key
 				customInsts.append({'name':name, 'filename':file, 'pitch':pitch, 'pressKeys':shouldPressKeys})
 	sortedNotes = sorted(notes, key = operator.itemgetter('tick', 'layer') )
-	data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'IsOldVersion':IsOldVersion, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':usedInsts}
+	data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'IsOldVersion':IsOldVersion, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':usedInsts, 'indexByTick':indexByTick }
 	return data
 
-def opennbs(filename, printOutput=False, cls=None):
-	data = readnbs(filename, cls)
+def opennbs(filename, printOutput=False):
+	data = readnbs(filename)
 	if printOutput: pprint(data)
 	return data
 	
+def DataPostprocess(data):
+	headers = data['headers']
+	notes = data['notes']
+	usedInsts = [[], []]
+	maxLayer = 0
+	data['hasPerc'] = False
+	for i, note in enumerate(data['notes']):
+		tick, inst, layer = note['tick'], note['inst'], note['layer']
+		if inst in (2, 3, 4):
+			data['hasPerc'] = note['isPerc'] = True
+			if inst not in usedInsts[1]: usedInsts[1].append(inst)
+		else:
+			note['isPerc'] = False
+			if inst not in usedInsts[0]: usedInsts[0].append(inst)
+		duraKey = None
+		for idx, note in enumerate(data['notes']):
+			if note['layer'] == layer: duraKey = idx
+		if duraKey is not None:
+			if i > 0: data['notes'][duraKey]['duration'] = tick - data['notes'][duraKey]['tick']
+		else:
+			note['duration'] = 8
+		maxLayer = max(layer, maxLayer)
+	data['headers']['length'] = tick
+	data['maxLayer'] = maxLayer
+	data['usedInsts'] = usedInsts
+	#data['indexByTick'] = 1
+	data['indexByTick'] = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']) ])
+	note = tick = inst = layer = duraKey = usedInsts = maxLayer = tk = nt = None
+	return data
 
 def writeNumeric(f, fmt, v):
 	f.write(fmt.pack(v))
@@ -145,9 +173,10 @@ def writeString(f, v):
 	
 def writenbs(filename, data):
 	if filename is not '' and data is not None:
+		data = DataPostprocess(data)
 		headers, notes, layers, customInsts, IsOldVersion, hasPerc, maxLayer, usedInsts = \
 		data['headers'], data['notes'], data['layers'], data['customInsts'], data['IsOldVersion'], data['hasPerc'], data['maxLayer'], data['usedInsts']
-		with open(filename+'_saved.nbs', "wb") as f:
+		with open(filename, "wb") as f:
 			#Header
 			if not IsOldVersion:
 				writeNumeric(f, SHORT, 0)
@@ -160,7 +189,7 @@ def writenbs(filename, data):
 			writeString(f, headers['author']) #Author
 			writeString(f, headers['orig_author']) #OriginalAuthor
 			writeString(f, headers['description']) #Description 
-			writeNumeric(f, SHORT, headers['tempo']*100) #Tempo
+			writeNumeric(f, SHORT, int(headers['tempo']*100)) #Tempo
 			writeNumeric(f, BYTE, headers['auto-saving']) #Auto-saving enabled
 			writeNumeric(f, BYTE, headers['auto-saving_time']) #Auto-saving duration
 			writeNumeric(f, BYTE, headers['time_sign']) #Time signature
@@ -197,13 +226,16 @@ def writenbs(filename, data):
 				if not IsOldVersion:
 					writeNumeric(f, BYTE, layer['stereo']) #Stereo
 			#Custom instrument
-			writeNumeric(f, BYTE, len(customInsts))
-			if len(customInsts) > 0:
-				for customInst in customInsts:
-					writeString(f, customInst['name']) #Instrument name
-					writeString(f, customInst['filepath']) #Sound filename
-					writeNumeric(f, BYTE, customInst['pitch']) #Pitch
-					writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
+			pprint(customInsts)
+			if len(customInsts) == 0: writeNumeric(f, BYTE, 0)
+			else:
+				writeNumeric(f, BYTE, len(customInsts))
+				if len(customInsts) > 0:
+					for customInst in customInsts:
+						writeString(f, customInst['name']) #Instrument name
+						writeString(f, customInst['filename']) #Sound filename
+						writeNumeric(f, BYTE, customInst['pitch']) #Pitch
+						writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
 
 if __name__ == "__main__":
 	import sys
