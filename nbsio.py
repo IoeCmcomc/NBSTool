@@ -114,7 +114,7 @@ def readnbs(filename):
 				if sign:
 					stereo = readNumeric(f, BYTE) #Stereo
 				else:
-					stereo = None
+					stereo = 100
 				layers.append({'index':i, 'name':name, 'volume':vol, 'stereo':stereo})
 			name = vol = stereo = None
 			#Custom instrument

@@ -35,7 +35,7 @@ from math import floor, log2
 from midiutil import MIDIFile
 from PIL import Image, ImageTk
 from pydub import AudioSegment
-from pydub.playback import _play_with_simpleaudio
+from pydub.playback import _play_with_simpleaudio, play
 
 from attr import Attr
 from nbsio import opennbs, writenbs, DataPostprocess
@@ -529,6 +529,7 @@ class MainWindow(tk.Frame):
 		if self.inputFileData is None: return
 		hds = self.inputFileData['headers']
 		notes = self.inputFileData['notes']
+		layers = self.inputFileData['layers']
 		tickIndexes = self.inputFileData['indexByTick']
 
 		if state == 'play' and self.PlayingState != 'play' or repeat and self.SongPlayerAfter is not None:
@@ -541,18 +542,25 @@ class MainWindow(tk.Frame):
 				#currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
 				currNotes = tickIndexes[self.PlayingTick][1]
 
-				SoundToPlay = AudioSegment.silent(duration=4000)
+				SoundToPlay = AudioSegment.silent(duration=2000).set_channels(2)
 				for i in currNotes:
-					noteSoundObj = self.noteSounds[notes[i]['inst']]['obj']
-					ANoteSound = noteSoundObj._spawn(self.noteSounds[notes[i]['inst']]['obj'].raw_data, overrides={'frame_rate': int(self.noteSounds[notes[i]['inst']]['obj'].frame_rate * (2.0 ** ((notes[i]['key'] - self.noteSounds[notes[i]['inst']]['pitch']) / 12))) })
-					SoundToPlay = SoundToPlay.overlay(ANoteSound)
+					note = notes[i]
+					currLayer = layers[note['layer']]
+					noteSoundObj = self.noteSounds[note['inst']]['obj']
+					ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - self.noteSounds[note['inst']]['pitch']) / 12))) })
+					SoundToPlay = SoundToPlay.overlay(ANoteSound.pan(currLayer['stereo'] / 128).apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)).set_frame_rate(44100)
+					#.normalize()
+					)
 
-				_play_with_simpleaudio(SoundToPlay.set_frame_rate(44100).normalize() - 10)
-				self.SongPlayerAfter = self.after(int(1000 / hds['tempo'] * 0.8), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+				_play_with_simpleaudio(SoundToPlay)
+
+				self.SongPlayerAfter = self.after(40, lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+				#self.SongPlayerAfter = self.after(int(1000 / hds['tempo'] * 0.8), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
 			else:
 				state = 'stop'
 		
 		if state == 'pause' and self.PlayingState != 'pause':
+			if self.PlayingState == 'stop': return
 			self.PlayingState = 'pause'
 			self.CtrlBtnSW.switch('play')
 			self.after_cancel(self.SongPlayerAfter)
@@ -669,7 +677,6 @@ class MainWindow(tk.Frame):
 				self.UpdateProgBar(60)
 				customInsts =  [ {'name': item['name'], 'filepath': resource_path('sounds', item['filename']), 'obj': AudioSegment.from_ogg(resource_path('sounds', item['filename'])), 'pitch': item['pitch']} for item in data['customInsts']]
 				self.noteSounds = vaniNoteSounds + customInsts
-				pprint(data['customInsts'])
 				self.UpdateProgBar(70)
 				self.var.tool.opts = opts = ["(not applied)"] + [x['name'] for x in self.noteSounds] + ["Random"]
 				self.InstToolCombox.configure(values=opts)
