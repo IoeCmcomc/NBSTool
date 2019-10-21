@@ -13,12 +13,12 @@
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
 # Programming language: Python
 # License: MIT license
-# Version: 0.5.0
+# Version: 0.7.0
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys, os, operator, webbrowser, copy, traceback, re, json
+import sys, os, operator, webbrowser, copy, traceback, re, json, itertools, functools
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -31,6 +31,7 @@ from time import sleep, time
 from pprint import pprint
 from random import randrange
 from math import floor, log2
+from datetime import date
 
 from midiutil import MIDIFile
 from PIL import Image, ImageTk
@@ -60,31 +61,6 @@ def resource_path(*args):
 		r = os.path.join(os.path.abspath("."), relative_path)
 	#print(r)
 	return r
-
-vaniNoteSounds = [
-	{'filename': 'harp.ogg', 'name': 'harp'},
-	{'filename': 'dbass.ogg', 'name': 'bass'},
-	{'filename': 'bdrum.ogg', 'name': 'basedrum'},
-	{'filename': 'sdrum.ogg', 'name': 'snare'},
-	{'filename': 'click.ogg', 'name': 'hat'},
-	{'filename': 'guitar.ogg', 'name': 'guitar'},
-	{'filename': 'flute.ogg', 'name': 'flute'},
-	{'filename': 'bell.ogg', 'name': 'bell'},
-	{'filename': 'icechime.ogg', 'name': 'chime'},
-	{'filename': 'xylobone.ogg', 'name': 'xylophone'},
-	{'filename': 'iron_xylophone.ogg', 'name': 'iron_xylophone'},
-	{'filename': 'cow_bell.ogg', 'name': 'cow_bell'},
-	{'filename': 'didgeridoo.ogg', 'name': 'didgeridoo'},
-	{'filename': 'bit.ogg', 'name': 'bit'},
-	{'filename': 'banjo.ogg', 'name': 'banjo'},
-	{'filename': 'pling.ogg', 'name': 'pling'}
-]
-
-print('Importing sounds...')
-
-vaniNoteSounds = [ {'name': item['name'], 'filepath': resource_path('sounds', item['filename']), 'obj': AudioSegment.from_ogg(resource_path('sounds', item['filename'])), 'pitch': 45} for item in vaniNoteSounds]
-
-print('Imported sounds.')
 
 class MainWindow(tk.Frame):
 	def __init__(self, parent):
@@ -769,6 +745,7 @@ class MainWindow(tk.Frame):
 			self.footerLabel.pack_forget()
 		self.footerLabel.update()
 
+
 class AboutWindow(tk.Toplevel):
 	def __init__(self, parent):
 		tk.Toplevel.__init__(self)
@@ -780,7 +757,7 @@ class AboutWindow(tk.Toplevel):
 		logolabel = tk.Label(self, text="NBSTool", font=("Arial", 44), image=self.logo, compound='left')
 		logolabel.pack(padx=30, pady=(10*2, 10))
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0.5.0", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0.7.0", justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -894,6 +871,12 @@ def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	obj.geometry("{}x{}+{}+{}".format(WindowWidth, WindowHeight, WinPosX, WinPosY))
 	#obj.update()
 	obj.update_idletasks()
+
+
+def eqsplit(a, n):
+	n = min(n, len(a))
+	k, m = divmod(len(a), n)
+	return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
 
 
 def compactNotes(data, sepInst=1, groupPerc=1):
@@ -1080,21 +1063,66 @@ def exportMIDI(cls, path, byLayer=False):
 	with open(path, "wb") as output_file:
 		MIDI.writeFile(output_file)
 
-def exportMusic(cls, path, ext):
-	data = cls.inputFileData
-	noteSounds = cls.noteSounds
-	tempo = data['headers']['tempo']
-	length = data['headers']['length']
-	music = AudioSegment.silent(duration=int(length / tempo * 1000 + 1000))
 
-	for note in data['notes']:
-		noteSoundObj = noteSounds[note['inst']]['obj']
-		ANoteSound = noteSoundObj._spawn(noteSounds[note['inst']]['obj'].raw_data, overrides={'frame_rate': int(noteSounds[note['inst']]['obj'].frame_rate * (2.0 ** ((note['key'] - 45) / 12))) })
-		music = music.overlay(ANoteSound, position=int(note['tick'] / tempo * 1000))
-		cls.UpdateProgBar(10 + int( note['tick'] / length * 80))
+def exportMusic(cls, path, ext):
+	start = time()
+	noteSounds = cls.noteSounds
+	notes = cls.inputFileData['notes']
+	headers = cls.inputFileData['headers']
+	tempo = headers['tempo']
+	length = headers['length']+1
+	layers = cls.inputFileData['layers']
+	tickIndexes = cls.inputFileData['indexByTick']
+	toUnsigned = lambda x: 256 + x if x < 0 else x
+	tickSoundLength = max(len(x['obj']) for x in noteSounds)
+	music = AudioSegment.silent(duration=int(length / tempo * 1000 + 500))
+	lastInst = -1
 	
-	music = music.set_frame_rate(44100).normalize()
-	music.export(path, format=ext)
+	for currtick in range(length):
+		currNotes = tickIndexes[currtick][1]
+
+		for n, i in enumerate(currNotes):
+			lstart = time()
+			note = notes[i]
+			currLayer = layers[note['layer']]
+			inst = note['inst']
+			
+			if inst != lastInst:
+				currNoteSound = noteSounds[inst]
+				noteSoundObj = currNoteSound['obj']			
+				
+			ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - currNoteSound['pitch']) / 12))) }).set_frame_rate(44100)
+			
+			if currLayer['volume'] != 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
+			
+			if currLayer['stereo'] != 100: ANoteSound = ANoteSound.pan((toUnsigned(currLayer['stereo']) - 100) / 100)
+			
+			if len(currNotes) == 1: tickSound = ANoteSound
+			elif n == 0: tickSound = ANoteSound + AudioSegment.silent(duration=tickSoundLength - len(ANoteSound))
+			else: tickSound = tickSound.overlay(ANoteSound)
+			
+			lastInst = note['inst']
+
+		if len(currNotes) > 0: music = music.overlay(tickSound.set_frame_rate(44100), position=int(note['tick'] / tempo * 1000))
+		
+		print('Processing {}/{} tick. Time: {:3f}. Done in {:3f} seconds.'.format(note['tick'], length, time() - start, time() - lstart))
+			
+	print("Processed in {:3f} seconds.".format(time() - start))
+	
+	'''
+	meta = {'album': '',
+		'artist': headers['author'],
+		'comment': headers['description'],
+		'date': date.today().year,
+		'genre': 'Minecraft note block',
+		'title': headers['name'],
+		'track': ''}'''
+		
+	meta = {'genre': 'Minecraft note block'}
+	
+	music.set_frame_rate(44100).export(path, format=ext, tags=meta)
+	print("Exported in {:3f} seconds.".format(time() - start))
+
 
 def exportDatapack(cls, path, mode='none'):
 	def writejson(path, jsout):
@@ -1231,12 +1259,38 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
 	locals()[mode]()
 	print("Done!")
 
-print('Creating root...')
+if __name__ == "__main__":
+	
+	vaniNoteSounds = [
+	{'filename': 'harp.ogg', 'name': 'harp'},
+	{'filename': 'dbass.ogg', 'name': 'bass'},
+	{'filename': 'bdrum.ogg', 'name': 'basedrum'},
+	{'filename': 'sdrum.ogg', 'name': 'snare'},
+	{'filename': 'click.ogg', 'name': 'hat'},
+	{'filename': 'guitar.ogg', 'name': 'guitar'},
+	{'filename': 'flute.ogg', 'name': 'flute'},
+	{'filename': 'bell.ogg', 'name': 'bell'},
+	{'filename': 'icechime.ogg', 'name': 'chime'},
+	{'filename': 'xylobone.ogg', 'name': 'xylophone'},
+	{'filename': 'iron_xylophone.ogg', 'name': 'iron_xylophone'},
+	{'filename': 'cow_bell.ogg', 'name': 'cow_bell'},
+	{'filename': 'didgeridoo.ogg', 'name': 'didgeridoo'},
+	{'filename': 'bit.ogg', 'name': 'bit'},
+	{'filename': 'banjo.ogg', 'name': 'banjo'},
+	{'filename': 'pling.ogg', 'name': 'pling'}
+]
 
-root = tk.Tk()
-app = MainWindow(root)
-print('Creating app...')
-root.iconbitmap(resource_path("icon.ico"))
-print('Ready')
-root.mainloop()
-print("The app was closed.")
+	print('Importing sounds...')
+	vaniNoteSounds = [ {'name': item['name'], 'filepath': resource_path('sounds', item['filename']), 'obj': AudioSegment.from_ogg(resource_path('sounds', item['filename'])), 'pitch': 45} for item in vaniNoteSounds]
+
+	print('Imported sounds.')
+	print('Creating root...')
+
+	root = tk.Tk()
+	app = MainWindow(root)
+	print('Creating app...')
+	root.iconbitmap(resource_path("icon.ico"))
+	print('Ready')
+	root.mainloop()
+	
+	print("The app was closed.")

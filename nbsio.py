@@ -13,7 +13,7 @@
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
 # Programming language: Python
 # License: MIT license
-# Version: 0,50
+# Version: 0,7.0
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
@@ -103,9 +103,7 @@ def readnbs(filename):
 					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc, 'duration':8})
 				maxLayer = max(layer, maxLayer)
 			if headers['length'] is None: headers['length'] = tick + 1
-			#indexByTick = [ [tk, [notes.index(nt) for nt in notes if nt['tick'] == tk] ] for tk in range(headers['length']) ]
-			#indexByTick = ( (tk, (notes.index(nt) for nt in notes if nt['tick'] == tk) ) for tk in range(headers['length']) )
-			indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']) ])
+			indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
 			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = tk = nt = None
 			#Layers
 			for i in range(headers['height']):
@@ -115,7 +113,7 @@ def readnbs(filename):
 					stereo = readNumeric(f, BYTE) #Stereo
 				else:
 					stereo = 100
-				layers.append({'index':i, 'name':name, 'volume':vol, 'stereo':stereo})
+				layers.append({'name':name, 'volume':vol, 'stereo':stereo})
 			name = vol = stereo = None
 			#Custom instrument
 			headers['inst_count'] = readNumeric(f, BYTE)
@@ -160,7 +158,7 @@ def DataPostprocess(data):
 	data['maxLayer'] = maxLayer
 	data['usedInsts'] = usedInsts
 	#data['indexByTick'] = 1
-	data['indexByTick'] = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']) ])
+	data['indexByTick'] = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
 	note = tick = inst = layer = duraKey = usedInsts = maxLayer = tk = nt = None
 	return data
 
