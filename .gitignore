@@ -350,7 +350,8 @@ dist/
 main.build/
 main.dist/
 
-Sounds/
-ffmpeg/
+#Sounds/
+#ffmpeg/
 
 COMPILED_ffmpeg/
+sounds/block.note.sax.ogg
