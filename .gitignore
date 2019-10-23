@@ -353,5 +353,4 @@ main.dist/
 #Sounds/
 #ffmpeg/
 
-COMPILED_ffmpeg/
 sounds/block.note.sax.ogg

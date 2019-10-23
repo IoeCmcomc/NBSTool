@@ -56,7 +56,7 @@ def resource_path(*args):
 		relative_path = os.path.join(*args)
 	else: relative_path = args[0]
 	try:
-		 r = os.path.join(sys._MEIPASS, relative_path)
+		r = os.path.join(sys._MEIPASS, relative_path)
 	except Exception:
 		r = os.path.join(os.path.abspath("."), relative_path)
 	#print(r)
@@ -73,7 +73,7 @@ class MainWindow(tk.Frame):
 		self.pack(fill='both', expand=True)
 		self.update()
 		WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
-	
+
 	def properties(self):
 		self.filePath = None
 		self.inputFileData = None
@@ -85,7 +85,7 @@ class MainWindow(tk.Frame):
 		self.PlayingTick = -1
 		self.SongPlayerAfter = None
 		self.exportFilePath = tk.StringVar()
-	
+
 	def elements(self):
 		self.parent.title("NBS Tool")
 		self.style = ttk.Style()
@@ -328,7 +328,13 @@ class MainWindow(tk.Frame):
 		self.ExpConfigMode2 = tk.Radiobutton(self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0)
 		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
 
-		self.var.export.type.file = [('MIDI files', '*.mid'), ('Nokia Composer Format', '*.txt'), ('MPEG-1 Layer 3', '*.mp3')]
+		self.var.export.type.file = \
+		[('Musical Instrument Digital Interface files', '*.mid'),
+		('Nokia Composer Format', '*.txt'),
+		('MPEG-1 Layer 3', '*.mp3'),
+		('Waveform Audio File Format', '*.wav'),
+		('Ogg Vorbis files', '*.ogg'),
+		('Free Lossless Audio Codec files', '*.flac')]
 		self.var.export.type.dtp = ['Wireless note block song', 'other']
 		self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
 		self.ExpConfigCombox.current(0)
@@ -507,6 +513,7 @@ class MainWindow(tk.Frame):
 		notes = self.inputFileData['notes']
 		layers = self.inputFileData['layers']
 		tickIndexes = self.inputFileData['indexByTick']
+		noteSounds = self.noteSounds
 
 		if state == 'play' and self.PlayingState != 'play' or repeat and self.SongPlayerAfter is not None:
 			if self.PlayingTick < hds['length'] - 1:
@@ -515,23 +522,31 @@ class MainWindow(tk.Frame):
 				self.PlayingTick = int(self.PlayCtrlScale.get())
 				self.PlayCtrlScale.set(self.PlayingTick + 1)
 
-				#currNotes = [x for x in notes if x['tick'] == self.PlayingTick]
+				toUnsigned = lambda x: 256 + x if x < 0 else x
+				tickSoundLength = max(len(x['obj']) for x in noteSounds)
 				currNotes = tickIndexes[self.PlayingTick][1]
+				SoundToPlay = None
 
-				SoundToPlay = AudioSegment.silent(duration=2000).set_channels(2)
-				for i in currNotes:
+				for n, i in enumerate(currNotes ):
 					note = notes[i]
 					currLayer = layers[note['layer']]
-					noteSoundObj = self.noteSounds[note['inst']]['obj']
-					ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - self.noteSounds[note['inst']]['pitch']) / 12))) })
-					SoundToPlay = SoundToPlay.overlay(ANoteSound.pan(currLayer['stereo'] / 128).apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)).set_frame_rate(44100)
-					#.normalize()
-					)
+					inst = note['inst']
+					
+					currNoteSound = noteSounds[inst]
+					noteSoundObj = currNoteSound['obj']
+					
+					ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - currNoteSound['pitch']) / 12))) }).set_frame_rate(44100)
+					if currLayer['volume'] != 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
+					if currLayer['stereo'] != 100: ANoteSound = ANoteSound.pan((toUnsigned(currLayer['stereo']) - 100) / 100)
+					
+					if len(currNotes) == 1: SoundToPlay = ANoteSound
+					elif n == 0: SoundToPlay = ANoteSound + AudioSegment.silent(duration=tickSoundLength - len(ANoteSound))
+					else: SoundToPlay = SoundToPlay.overlay(ANoteSound)
+				
+				if len(currNotes) > 0: _play_with_simpleaudio(SoundToPlay.set_frame_rate(44100))
 
-				_play_with_simpleaudio(SoundToPlay)
-
-				self.SongPlayerAfter = self.after(40, lambda: self.CtrlSongPlayer(state='play', repeat=True) )
-				#self.SongPlayerAfter = self.after(int(1000 / hds['tempo'] * 0.8), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+				#self.SongPlayerAfter = self.after(40, lambda: self.CtrlSongPlayer(state='play', repeat=True) )
+				self.SongPlayerAfter = self.after(int(1000 / hds['tempo'] * 0.9), lambda: self.CtrlSongPlayer(state='play', repeat=True) )
 			else:
 				state = 'stop'
 		
@@ -710,7 +725,7 @@ class MainWindow(tk.Frame):
 				elif type == 1:
 					with open(path, "w") as f:
 						f.write(writencf(data))
-				elif type == 2:
+				elif type in {2, 3, 4, 5}:
 						fext = self.var.export.type.file[self.ExpConfigCombox.current()][1][2:]
 						exportMusic(self, path, fext)
 			else:
@@ -1289,6 +1304,9 @@ if __name__ == "__main__":
 	root = tk.Tk()
 	app = MainWindow(root)
 	print('Creating app...')
+
+	if len(sys.argv) == 2: app.OnOpenFile(sys.argv[1])
+
 	root.iconbitmap(resource_path("icon.ico"))
 	print('Ready')
 	root.mainloop()

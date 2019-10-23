@@ -34,6 +34,7 @@ def readncf(text):
 		if key is not None and dur >= 0.25: notes.append({'tick':tick, 'layer': 0, 'inst':0, 'key':key, 'isPerc': False, 'duration': dur*4})
 		tick += dur*4
 
+	headers = {}
 	headers['file_version'] = 3
 	headers['vani_inst'] = 16 
 	headers['length'] = 0
