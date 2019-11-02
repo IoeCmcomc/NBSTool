@@ -18,7 +18,7 @@
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys, os, operator, webbrowser, copy, traceback, re, json, itertools, functools
+import sys, os, operator, webbrowser, copy, traceback, re, json, music21
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -33,10 +33,12 @@ from random import randrange
 from math import floor, log2
 from datetime import date
 
-from midiutil import MIDIFile
 from PIL import Image, ImageTk
 from pydub import AudioSegment
-from pydub.playback import _play_with_simpleaudio, play
+from pydub.playback import _play_with_simpleaudio
+import music21 as m21
+import music21.stream as m21s
+import music21.instrument as m21i
 
 from attr import Attr
 from nbsio import opennbs, writenbs, DataPostprocess
@@ -888,12 +890,6 @@ def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
 	obj.update_idletasks()
 
 
-def eqsplit(a, n):
-	n = min(n, len(a))
-	k, m = divmod(len(a), n)
-	return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
-
-
 def compactNotes(data, sepInst=1, groupPerc=1):
 	sepInst, groupPerc = bool(sepInst), bool(groupPerc)
 	r = data
@@ -958,20 +954,16 @@ def exportMIDI(cls, path, byLayer=False):
 	UniqInstEachLayer = {}
 	for note in data['notes']:
 		if note['layer'] not in UniqInstEachLayer:
-			if note['isPerc']: UniqInstEachLayer[note['layer']] = [-1, None]
-			else: UniqInstEachLayer[note['layer']] = [note['inst'], None]
+			if note['isPerc']: UniqInstEachLayer[note['layer']] = -1
+			else: UniqInstEachLayer[note['layer']] = note['inst']
 		else:
-			if not note['isPerc']: note['inst'] = UniqInstEachLayer[note['layer']][0]
-	pprint(UniqInstEachLayer)
+			if not note['isPerc']: note['inst'] = UniqInstEachLayer[note['layer']]
 
 	lenTrack = data['maxLayer'] + 1
-
 	for i in range(lenTrack):
-		if i not in UniqInstEachLayer: UniqInstEachLayer[i] = [0, None]
-
-	#print(lenTrack, len(UniqInstEachLayer))
-
-	MIDI = MIDIFile(lenTrack)
+		if i not in UniqInstEachLayer: UniqInstEachLayer[i] = 0
+	
+	main_score = m21s.Score()
 
 	percussions = (
 	#(percussion_key, instrument, key)
@@ -1021,63 +1013,83 @@ def exportMIDI(cls, path, byLayer=False):
 	(82, 3, 78)
 	)
 
-	instrument_codes = {0: 0,
-						1: 32,
-						5: 24,
-						6: 73,
-						7: 10,
-						8: 14,
-						9: 13,
-						10: 13,
-						11: 112,
-						12: 0,
-						13: 0,
-						14: 0,
-						15: 0,
+	instrument_codes = {-1:m21i.Percussion, 
+						0: m21i.Harp,
+						1: m21i.AcousticBass,
+						5: m21i.Guitar,
+						6: m21i.Flute,
+						7: m21i.Handbells,
+						8: m21i.ChurchBells,
+						9: m21i.Xylophone,
+						10: m21i.Xylophone,
+						11: m21i.Piano,
+						12: m21i.Piano,
+						13: m21i.Piano,
+						14: m21i.Banjo,
+						15: m21i.Piano,
 						}
 
 	timeSign = data['headers']['time_sign']
-	channel = 0
-	#program = 0
 	time = 0
 	tempo = data['headers']['tempo'] * 60 / timeSign
 	volume = 127
 	
 	c = 0
 	for i in range(lenTrack):
-		MIDI.addTempo(i, time, tempo)
+		staff = m21s.Part()
+		staff.append(m21.tempo.MetronomeMark(number=tempo)) #Tempo
+		staff.timeSignature = m21.meter.TimeSignature('{}/4'.format(timeSign)) #Time signature
+		staff.clef = m21.clef.TrebleClef() #Clef
+		try:
+			staff.append(instrument_codes[UniqInstEachLayer[i]]())
+		except KeyError:
+			staff.append(m21i.Piano())
+		main_score.append(staff)
 
-		if UniqInstEachLayer[i][0] == -1:
-			MIDI.addProgramChange(i , 9, time, 0)
-		else:
-			if c == 9: c += 1
-			MIDI.addProgramChange(i , c, time, instrument_codes[UniqInstEachLayer[i][0]])
-			UniqInstEachLayer[i][1] = c
-		c = c + 1 if c < 16 else 0
-	
 	for i, note in enumerate(data['notes']):
 		time = note['tick'] / timeSign
-		pitch = note['key']+21
+		pitch = note['key'] + 21
 		duration = 2 if note['duration'] == 0 else note['duration'] / timeSign
 		track = note['layer']
 
 		if note['isPerc']:
 			for a, b, c in percussions:
-				if c == note['key']+21 and b == note['inst']:
-					#print("Replaced")
-					note['key'] = a - 21
+				if c == pitch and b == note['inst']: pitch = a
 
 		if byLayer:
 			volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
 		
 		#print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
-		MIDI.addNote(track, channel, pitch, time, duration, volume)
 
-		cls.UpdateProgBar(10 + int( note['tick'] / data['headers']['length'] * 80))
+		a_note = m21.note.Note()
+		a_note.pitch.midi = pitch #Pitch
+		a_note.duration.quarterLength = 1 / 4 #Duration
+		a_note.volume = volume
+		main_score[track].append(a_note)
+		a_note.offset = time
 
-	with open(path, "wb") as output_file:
-		MIDI.writeFile(output_file)
+		cls.UpdateProgBar(10 + int( note['tick'] / (data['headers']['length']+1) * 80))
 
+	mt = m21.metadata.Metadata()
+	mt.title = mt.popularTitle = 'Title'
+	mt.composer = 'Composer'
+	main_score.insert(0, mt)
+	
+	#fn = main_score.write("midi", path)
+
+	mid = m21.midi.translate.streamToMidiFile(main_score)
+
+	if data['hasPerc']:
+		for i in range(lenTrack):
+			if UniqInstEachLayer[i] == -1:
+				for el in mid.tracks[i].events:
+					el.channel = 10
+
+	cls.UpdateProgBar(95)
+
+	mid.open(path, 'wb')
+	mid.write()
+	mid.close()
 
 def exportMusic(cls, path, ext):
 	start = time()
