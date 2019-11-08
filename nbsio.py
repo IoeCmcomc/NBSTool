@@ -89,7 +89,7 @@ def readnbs(filename):
 					layer += layerJumps
 					inst = readNumeric(f, BYTE)
 					key = readNumeric(f, BYTE)#+21
-					if inst in (2, 3, 4):
+					if inst in {2, 3, 4}:
 						hasPerc = isPerc = True
 						if inst not in usedInsts[1]: usedInsts[1].append(inst)
 					else:
@@ -140,7 +140,7 @@ def DataPostprocess(data):
 	data['hasPerc'] = False
 	for i, note in enumerate(data['notes']):
 		tick, inst, layer = note['tick'], note['inst'], note['layer']
-		if inst in (2, 3, 4):
+		if inst in {2, 3, 4}:
 			data['hasPerc'] = note['isPerc'] = True
 			if inst not in usedInsts[1]: usedInsts[1].append(inst)
 		else:

@@ -43,14 +43,6 @@ import music21.instrument as m21i
 from attr import Attr
 from nbsio import opennbs, writenbs, DataPostprocess
 from ncfio import writencf
-'''
-import logging
-
-l = logging.getLogger("pydub.converter")
-l.setLevel(logging.DEBUG)
-l.addHandler(logging.StreamHandler())'''
-
-#sys.stdout = open('main_log.txt', 'w')
 
 #Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
 def resource_path(*args):
@@ -71,12 +63,14 @@ class MainWindow(tk.Frame):
 		self.properties()
 		self.elements()
 		self.WindowBind()
+		self.toggleExpOptiGrp()
 		#self.update()
 		self.pack(fill='both', expand=True)
 		self.update()
 		WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
 
 	def properties(self):
+		self.VERSION = '0.7.0'
 		self.filePath = None
 		self.inputFileData = None
 		self.noteSounds = None
@@ -331,7 +325,7 @@ class MainWindow(tk.Frame):
 		self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
 
 		self.var.export.type.file = \
-		[('Musical Instrument Digital Interface files', '*.mid'),
+		[('Musical Instrument Digital files', '*.mid'),
 		('Nokia Composer Format', '*.txt'),
 		('MPEG-1 Layer 3', '*.mp3'),
 		('Waveform Audio File Format', '*.wav'),
@@ -459,9 +453,9 @@ class MainWindow(tk.Frame):
 		self.parent.quit()
 		self.parent.destroy()
 
-	def OnBrowseFile(self, doOpen=False):
+	def OnBrowseFile(self, doOpen=False, filename=None):
 		types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
-		filename = askopenfilename(filetypes = types)
+		if filename is None: filename = askopenfilename(filetypes = types)
 		if self.filePath is None or bool(filename):
 			self.filePath = filename
 			self.OpenFileEntry.delete(0,'end')
@@ -481,6 +475,7 @@ class MainWindow(tk.Frame):
 				self.exportFilePath.set('')
 		
 			self.UpdateVar()
+			self.parent.title("{} – NBS Tool".format(fileName.split('/')[-1]))
 			self.RaiseFooter('Opened')
 			self.UpdateProgBar(100)
 		self.UpdateProgBar(-1)
@@ -490,6 +485,7 @@ class MainWindow(tk.Frame):
 			if saveAsNewFile is True:
 				types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
 				self.filePath = asksaveasfilename(filetypes = types)
+				if not self.filePath.lower().endswith('.nbs'): self.filePath = self.filePath.split('.')[0] + '.nbs'
 			self.UpdateProgBar(50)
 
 			writenbs(self.filePath, self.inputFileData)
@@ -498,6 +494,7 @@ class MainWindow(tk.Frame):
 				self.OpenFileEntry.delete(0,'end')
 				self.OpenFileEntry.insert(0, self.filePath)
 
+			self.parent.title("{} – NBS Tool".format(self.filePath.split('/')[-1]))
 			self.UpdateProgBar(100)
 			self.RaiseFooter('Saved')
 			self.UpdateProgBar(-1)
@@ -518,7 +515,7 @@ class MainWindow(tk.Frame):
 		noteSounds = self.noteSounds
 
 		if state == 'play' and self.PlayingState != 'play' or repeat and self.SongPlayerAfter is not None:
-			if self.PlayingTick < hds['length'] - 1:
+			if self.PlayingTick <= hds['length'] - 1:
 				self.PlayingState = 'play'
 				self.CtrlBtnSW.switch('pause')
 				self.PlayingTick = int(self.PlayCtrlScale.get())
@@ -538,7 +535,7 @@ class MainWindow(tk.Frame):
 					noteSoundObj = currNoteSound['obj']
 					
 					ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - currNoteSound['pitch']) / 12))) }).set_frame_rate(44100)
-					if currLayer['volume'] != 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
+					if 0 < currLayer['volume'] < 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
 					if currLayer['stereo'] != 100: ANoteSound = ANoteSound.pan((toUnsigned(currLayer['stereo']) - 100) / 100)
 					
 					if len(currNotes) == 1: SoundToPlay = ANoteSound
@@ -614,47 +611,15 @@ class MainWindow(tk.Frame):
 		self.RaiseFooter('Applied')
 		self.UpdateProgBar(-1)
 		self.ToolsTabButton['state'] = 'normal'
-	
-	def toggleExpOptiGrp(self ,n=None, m=None, y=None):
-		print(n, m, y)
-		asFile = bool(self.var.export.mode.get())
-		key = max(0, self.ExpConfigCombox.current())
-		print(asFile, key)
-		if asFile:
-			if key == 0: self.ExpOptiSW.switch('Midi')
-			elif key == 1: self.ExpOptiSW.switch('NCF')
-			else: self.ExpOptiSW.switch('Other')
-			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
-		else:
-			if key == 0: self.ExpOptiSW.switch('Wnbs')
-			else: self.ExpOptiSW.switch('Other')
-			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) if isinstance(tup, tuple) else tup for tup in self.var.export.type.dtp])
-		key = min(key, len(self.ExpConfigCombox['values'])-1)
-		self.ExpConfigCombox.current(key)
-		self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()) + 2)
-		
-		if self.exportFilePath.get():
-			print(self.exportFilePath.get())
-			fext = (self.var.export.type.file[self.ExpConfigCombox.current()],)[0][1][1:]
-			print(fext)
-			print(self.WnbsIDEntry.get())
-			if asFile:
-				if not self.exportFilePath.get().lower().endswith(self.WnbsIDEntry.get()): self.exportFilePath.set( "{}/{}".format(self.exportFilePath.get(), self.WnbsIDEntry.get()) )
-				self.WnbsIDEntry.delete(0, 'end')
-				if not self.exportFilePath.get().lower().endswith(fext): self.exportFilePath.set( self.exportFilePath.get().split('.')[0] + fext )
-			else:
-				if '.' in self.exportFilePath.get():
-					self.WnbsIDEntry.delete(0, 'end')
-					self.WnbsIDEntry.insert(0, self.exportFilePath.get().split('/')[-1].split('.')[0])
-					self.exportFilePath.set( '/'.join(self.exportFilePath.get().split('/')[0:-1]) )
 
 	def UpdateVar(self):
 		#print("Started updating….")
 		data = self.inputFileData
-		self.UpdateProgBar(20)
 		if data is not None:
 			self.ToolsTabButton['state'] = 'normal'
 			if data != self.last.inputFileData:
+				self.UpdateProgBar(10)
+				self.parent.title("*{} – NBS Tool".format(self.filePath.split('/')[-1]))
 				self.UpdateProgBar(20)
 				headers = data['headers']
 				self.UpdateProgBar(30)
@@ -693,21 +658,47 @@ class MainWindow(tk.Frame):
 
 		self.update_idletasks()
 	
+	def toggleExpOptiGrp(self ,n=None, m=None, y=None):
+		asFile = bool(self.var.export.mode.get())
+		key = max(0, self.ExpConfigCombox.current())
+		if asFile:
+			if key == 0: self.ExpOptiSW.switch('Midi')
+			elif key == 1: self.ExpOptiSW.switch('NCF')
+			else: self.ExpOptiSW.switch('Other')
+			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
+		else:
+			if key == 0: self.ExpOptiSW.switch('Wnbs')
+			else: self.ExpOptiSW.switch('Other')
+			self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) if isinstance(tup, tuple) else tup for tup in self.var.export.type.dtp])
+		key = min(key, len(self.ExpConfigCombox['values'])-1)
+		self.ExpConfigCombox.current(key)
+		self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()))
+		
+		if self.exportFilePath.get():
+			print(self.exportFilePath.get())
+			fext = (self.var.export.type.file[self.ExpConfigCombox.current()],)[0][1][1:]
+			if asFile:
+				if not self.exportFilePath.get().lower().endswith(self.WnbsIDEntry.get()): self.exportFilePath.set( "{}/{}".format(self.exportFilePath.get(), self.WnbsIDEntry.get()) )
+				self.WnbsIDEntry.delete(0, 'end')
+				if not self.exportFilePath.get().lower().endswith(fext): self.exportFilePath.set( self.exportFilePath.get().split('.')[0] + fext )
+			else:
+				if '.' in self.exportFilePath.get():
+					self.WnbsIDEntry.delete(0, 'end')
+					self.WnbsIDEntry.insert(0, self.exportFilePath.get().split('/')[-1].split('.')[0])
+					self.exportFilePath.set( '/'.join(self.exportFilePath.get().split('/')[0:-1]) )
+
 	def OnBrowseExp(self):
 		if self.filePath and self.inputFileData:
 			asFile = bool(self.var.export.mode.get())
 			if asFile:
 				curr = (self.var.export.type.file[self.ExpConfigCombox.current()],)
-				#print(curr)
 				fext = curr[0][1][1:]
 				self.exportFilePath.set( asksaveasfilename(title="Export file", initialfile=os.path.splitext(os.path.basename(self.filePath))[0]+fext, filetypes=curr) )
 			else:
-				print("Ask directory")
 				curr = [(self.var.export.type.dtp[self.ExpConfigCombox.current()], '*.'),]
 				fext =''
 				self.exportFilePath.set( askdirectory(title="Export datapack (choose the directory to put the datapack)", initialdir=os.path.dirname(self.filePath), mustexist=False) )
 			if self.exportFilePath.get():
-				print(self.exportFilePath.get())
 				if asFile:
 					if not self.exportFilePath.get().lower().endswith(fext): self.exportFilePath.set( self.exportFilePath.get().split('.')[0] + fext )
 				else:
@@ -741,15 +732,16 @@ class MainWindow(tk.Frame):
 			self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'normal'
 	
 	def UpdateProgBar(self, value, time=0.001):
-		if value == -1 or time <= 0:
-			self.progressbar.pack_forget()
-			self.configure(cursor='arrow')
-		else:
-			self.configure(cursor='wait')
-			self.progressbar["value"] = value
-			self.progressbar.pack(side='right')
-			self.progressbar.update()
-			sleep(time)
+		if value != self.progressbar["value"]:
+			if value == -1 or time < 0:
+				self.progressbar.pack_forget()
+				self.configure(cursor='arrow')
+			else:
+				self.configure(cursor='wait')
+				self.progressbar["value"] = value
+				self.progressbar.pack(side='right')
+				self.progressbar.update()
+				if time != 0: sleep(time)
 	
 	def RaiseFooter(self, text='', color='green', hid=False):
 		if hid == False:
@@ -774,7 +766,7 @@ class AboutWindow(tk.Toplevel):
 		logolabel = tk.Label(self, text="NBSTool", font=("Arial", 44), image=self.logo, compound='left')
 		logolabel.pack(padx=30, pady=(10*2, 10))
 
-		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: 0.7.0", justify='center')
+		description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: {}".format(parent.VERSION), justify='center')
 		description.pack(fill='both', expand=False, padx=10, pady=10)
 
 		githubLink = ttk.Button(self, text='GitHub', command= lambda: webbrowser.open("https://github.com/IoeCmcomc/NBSTool",new=True))
@@ -1068,7 +1060,7 @@ def exportMIDI(cls, path, byLayer=False):
 		main_score[track].append(a_note)
 		a_note.offset = time
 
-		cls.UpdateProgBar(10 + int( note['tick'] / (data['headers']['length']+1) * 80))
+		cls.UpdateProgBar(10 + int( note['tick'] / (data['headers']['length']+1) * 80), 0)
 
 	mt = m21.metadata.Metadata()
 	mt.title = mt.popularTitle = 'Title'
@@ -1091,6 +1083,9 @@ def exportMIDI(cls, path, byLayer=False):
 	mid.write()
 	mid.close()
 
+	exper_s = m21.midi.translate.midiFileToStream(mid)
+	fn = exper_s.write("midi", path+'_test.mid')
+
 def exportMusic(cls, path, ext):
 	start = time()
 	noteSounds = cls.noteSounds
@@ -1109,7 +1104,6 @@ def exportMusic(cls, path, ext):
 		currNotes = tickIndexes[currtick][1]
 
 		for n, i in enumerate(currNotes):
-			lstart = time()
 			note = notes[i]
 			currLayer = layers[note['layer']]
 			inst = note['inst']
@@ -1120,7 +1114,7 @@ def exportMusic(cls, path, ext):
 				
 			ANoteSound = noteSoundObj._spawn(noteSoundObj.raw_data, overrides={'frame_rate': int(noteSoundObj.frame_rate * (2.0 ** ((note['key'] - currNoteSound['pitch']) / 12))) }).set_frame_rate(44100)
 			
-			if currLayer['volume'] != 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
+			if 0 < currLayer['volume'] < 100: ANoteSound = ANoteSound.apply_gain(noteSoundObj.dBFS - noteSoundObj.dBFS * (currLayer['volume'] / 100)) + 3
 			
 			if currLayer['stereo'] != 100: ANoteSound = ANoteSound.pan((toUnsigned(currLayer['stereo']) - 100) / 100)
 			
@@ -1131,23 +1125,23 @@ def exportMusic(cls, path, ext):
 			lastInst = note['inst']
 
 		if len(currNotes) > 0: music = music.overlay(tickSound.set_frame_rate(44100), position=int(note['tick'] / tempo * 1000))
-		
-		print('Processing {}/{} tick. Time: {:3f}. Done in {:3f} seconds.'.format(note['tick'], length, time() - start, time() - lstart))
-			
-	print("Processed in {:3f} seconds.".format(time() - start))
+
+		cls.UpdateProgBar(10 + int(note['tick'] / length * 80), 0)
+		#print('Processing {}/{} tick. Time: {:3f}. Done in {:3f} seconds.'.format(note['tick'], length, time() - start, time() - lstart))
+				
 	
-	'''
 	meta = {'album': '',
 		'artist': headers['author'],
 		'comment': headers['description'],
-		'date': date.today().year,
+		'date': str(date.today().year),
 		'genre': 'Minecraft note block',
 		'title': headers['name'],
-		'track': ''}'''
-		
-	meta = {'genre': 'Minecraft note block'}
+		'track': ''}
 	
-	music.set_frame_rate(44100).export(path, format=ext, tags=meta)
+	#meta = {'genre': 'Minecraft note block'}
+	
+	cls.UpdateProgBar(95)
+	music.export(path, format=ext, tags=meta)
 	print("Exported in {:3f} seconds.".format(time() - start))
 
 
@@ -1159,17 +1153,48 @@ def exportDatapack(cls, path, mode='none'):
 			with open(path, 'w') as f:
 				f.write(text)
 
+	def makeFolderTree(inp, a=[]):
+		print(a)
+		if isinstance(inp, (tuple, set)):
+			for el in inp:
+				makeFolderTree(el, copy.copy(a))
+		elif isinstance(inp, dict):
+			for k, v in inp.items():
+				makeFolderTree(v, a + [k])
+		elif isinstance(inp, str):
+			p = os.path.join(*a, inp)
+			#print(p)
+			os.makedirs(p, exist_ok=True)
+		else:
+			return
+
 	def wnbs():
 		scoreObj = "wnbs_" + bname[:7]
 		speed = int(min(data['headers']['tempo'] * 4, 120))
 		length = data['headers']['length']
 		
-		os.makedirs(path, exist_ok=True)
+		# os.path.exists()
+
+		makeFolderTree(
+			{path:{
+				'data':{
+					bname:{
+						'functions':{
+							'notes',
+							'tree',
+						},
+					},
+					'minecraft':{
+						'tags':'functions',
+						},
+					},
+				},
+			}
+		)
+
 		writejson(os.path.join(path, 'pack.mcmeta'), {"pack":{"description":"Note block song made with NBSTool.", "pack_format":1}} )
-		os.makedirs(os.path.join(path, 'data', 'minecraft', 'tags', 'functions'), exist_ok=True)
 		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'load.json'), jsout = {"values":["{}:load".format(bname)]} )
 		writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions', 'tick.json'), jsout = {"values":["{}:tick".format(bname)]} )
-		os.makedirs(os.path.join(path, 'data', bname, 'functions'), exist_ok=True)
 
 		writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
 """scoreboard objectives add {0} dummy
@@ -1205,7 +1230,6 @@ scoreboard objectives remove {0}_t""".format(scoreObj) )
 		#pprint(colNotes)
 		print(len(colNotes))
 
-		os.makedirs(os.path.join(path, 'data', bname, 'functions', 'notes'), exist_ok=True)
 		for tick in range(length):
 			currNotes = colNotes[tick]
 			text = ""
@@ -1222,7 +1246,6 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
 			else: text += "scoreboard players set @s {}_t {}".format(scoreObj, tick)
 			if text != "": writemcfunction(os.path.join(path, 'data', bname, 'functions', 'notes', str(tick)+'.mcfunction'), text)
 
-		os.makedirs(os.path.join(path, 'data', bname, 'functions', 'tree'), exist_ok=True)
 		steps = floor(log2(length)) + 1
 		pow = 2**steps
 		for step in range(steps):
@@ -1317,7 +1340,7 @@ if __name__ == "__main__":
 	app = MainWindow(root)
 	print('Creating app...')
 
-	if len(sys.argv) == 2: app.OnOpenFile(sys.argv[1])
+	if len(sys.argv) == 2: app.OnBrowseFile(True, sys.argv[1])
 
 	root.iconbitmap(resource_path("icon.ico"))
 	print('Ready')
