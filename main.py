@@ -18,7 +18,7 @@
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys, os, operator, webbrowser, copy, traceback, re, json, music21
+import sys, os, operator, webbrowser, copy, traceback, re, json
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -32,6 +32,7 @@ from pprint import pprint
 from random import randrange
 from math import floor, log2
 from datetime import date
+#from collections import deque
 
 from PIL import Image, ImageTk
 from pydub import AudioSegment
@@ -49,10 +50,14 @@ def resource_path(*args):
 	if len(args) > 1:
 		relative_path = os.path.join(*args)
 	else: relative_path = args[0]
-	try:
-		r = os.path.join(sys._MEIPASS, relative_path)
-	except Exception:
-		r = os.path.join(os.path.abspath("."), relative_path)
+	if getattr(sys, 'frozen', False):
+		datadir = os.path.dirname(sys.executable)
+		r = os.path.join(datadir, relative_path)
+	else:
+		try:
+			r = os.path.join(sys._MEIPASS, relative_path)
+		except Exception:
+			r = os.path.join(os.path.abspath("."), relative_path)
 	#print(r)
 	return r
 
@@ -68,6 +73,10 @@ class MainWindow(tk.Frame):
 		self.pack(fill='both', expand=True)
 		self.update()
 		WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
+		self.lift()
+		self.focus_force()
+		self.grab_set()
+		self.grab_release()
 
 	def properties(self):
 		self.VERSION = '0.7.0'
@@ -86,7 +95,11 @@ class MainWindow(tk.Frame):
 		self.parent.title("NBS Tool")
 		self.style = ttk.Style()
 		#self.style.theme_use("default")
-		self.style.theme_use("vista")
+		try:
+			self.style.theme_use("vista")
+		except Exception as e:
+			print(repr(e), e.__class__.__name__)
+			self.style.theme_use("winnative")
 		
 		#Menu bar
 		self.menuBar = tk.Menu(self)
@@ -448,7 +461,7 @@ class MainWindow(tk.Frame):
 		self.popupMenu.add_command(label="Copy", accelerator="Ctrl+C", command=lambda: w.event_generate("<Control-c>"))
 		self.popupMenu.add_command(label="Paste", accelerator="Ctrl+V", command=lambda: w.event_generate("<Control-v>"))
 		self.popupMenu.tk.call("tk_popup", self.popupMenu, event.x_root, event.y_root)
-
+		
 	def onClose(self, event=None):
 		self.parent.quit()
 		self.parent.destroy()
@@ -473,9 +486,10 @@ class MainWindow(tk.Frame):
 				self.inputFileData = data
 				self.ExpOutputEntry.delete(0, 'end')
 				self.exportFilePath.set('')
+				print(type(data))
 		
 			self.UpdateVar()
-			self.parent.title("{} – NBS Tool".format(fileName.split('/')[-1]))
+			self.parent.title('"{}" – NBS Tool'.format(fileName.split('/')[-1]))
 			self.RaiseFooter('Opened')
 			self.UpdateProgBar(100)
 		self.UpdateProgBar(-1)
@@ -494,7 +508,7 @@ class MainWindow(tk.Frame):
 				self.OpenFileEntry.delete(0,'end')
 				self.OpenFileEntry.insert(0, self.filePath)
 
-			self.parent.title("{} – NBS Tool".format(self.filePath.split('/')[-1]))
+			self.parent.title('"{}" – NBS Tool'.format(self.filePath.split('/')[-1]))
 			self.UpdateProgBar(100)
 			self.RaiseFooter('Saved')
 			self.UpdateProgBar(-1)
@@ -617,9 +631,10 @@ class MainWindow(tk.Frame):
 		data = self.inputFileData
 		if data is not None:
 			self.ToolsTabButton['state'] = 'normal'
+			self.ExpSaveButton['state'] = 'normal'
 			if data != self.last.inputFileData:
 				self.UpdateProgBar(10)
-				self.parent.title("*{} – NBS Tool".format(self.filePath.split('/')[-1]))
+				self.parent.title('*"{}" – NBS Tool'.format(self.filePath.split('/')[-1]))
 				self.UpdateProgBar(20)
 				headers = data['headers']
 				self.UpdateProgBar(30)
@@ -655,6 +670,7 @@ class MainWindow(tk.Frame):
 			self.UpdateProgBar(-1)
 		else:
 			self.ToolsTabButton['state'] = 'disabled'
+			self.ExpSaveButton['state'] = 'disabled'
 
 		self.update_idletasks()
 	
@@ -1083,8 +1099,8 @@ def exportMIDI(cls, path, byLayer=False):
 	mid.write()
 	mid.close()
 
-	exper_s = m21.midi.translate.midiFileToStream(mid)
-	fn = exper_s.write("midi", path+'_test.mid')
+	#exper_s = m21.midi.translate.midiFileToStream(mid)
+	#exper_s.write("midi", path+'_test.mid')
 
 def exportMusic(cls, path, ext):
 	start = time()
@@ -1339,7 +1355,8 @@ if __name__ == "__main__":
 	root = tk.Tk()
 	app = MainWindow(root)
 	print('Creating app...')
-
+	
+	print(sys.argv)
 	if len(sys.argv) == 2: app.OnBrowseFile(True, sys.argv[1])
 
 	root.iconbitmap(resource_path("icon.ico"))

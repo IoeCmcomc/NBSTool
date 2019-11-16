@@ -21,6 +21,7 @@
 from struct import Struct
 from pprint import pprint
 from random import shuffle
+from collections import deque
 import operator
 
 BYTE = Struct('<b')
@@ -37,12 +38,12 @@ def readString(f):
 def readnbs(filename):
 	IsOldVersion = False
 	headers = {}
-	notes = []
+	notes = deque()
 	maxLayer = 0
 	usedInsts = [[], []]
 	hasPerc = False
-	layers = []
-	customInsts = []
+	layers = deque()
+	customInsts = deque()
 
 	if filename is not '':
 		with open(filename, "rb") as f:
@@ -157,8 +158,7 @@ def DataPostprocess(data):
 	data['headers']['length'] = tick
 	data['maxLayer'] = maxLayer
 	data['usedInsts'] = usedInsts
-	#data['indexByTick'] = 1
-	data['indexByTick'] = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
+	data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
 	note = tick = inst = layer = duraKey = usedInsts = maxLayer = tk = nt = None
 	return data
 
@@ -172,8 +172,8 @@ def writeString(f, v):
 def writenbs(filename, data):
 	if filename is not '' and data is not None:
 		data = DataPostprocess(data)
-		headers, notes, layers, customInsts, IsOldVersion, hasPerc, maxLayer, usedInsts = \
-		data['headers'], data['notes'], data['layers'], data['customInsts'], data['IsOldVersion'], data['hasPerc'], data['maxLayer'], data['usedInsts']
+		headers, notes, layers, customInsts, IsOldVersion = \
+		data['headers'], data['notes'], data['layers'], data['customInsts'], data['IsOldVersion']
 		with open(filename, "wb") as f:
 			#Header
 			if not IsOldVersion:

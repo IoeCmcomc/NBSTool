@@ -351,3 +351,4 @@ main.build/
 main.dist/
 
 sounds/block.note.sax.ogg
+setup.py
