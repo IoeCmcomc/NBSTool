@@ -329,14 +329,26 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
-## Ignore output/exported files.
+## Ignore output/exported files and datapacks.
 *.nbs
 *.mid
+*.mp3
+add*/
+pack.mcmeta/
 
 ## Ignore other files/folders.
 #*.ico
 *.spec
 *.bat
+*.pyo
 version.*
+
+.vscode/
+
 build/
 dist/
+main.build/
+main.dist/
+
+sounds/block.note.sax.ogg
+setup.py

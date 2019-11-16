@@ -13,7 +13,7 @@
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
 # Programming language: Python
 # License: MIT license
-# Version: 0,50
+# Version: 0,7.0
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
@@ -21,6 +21,7 @@
 from struct import Struct
 from pprint import pprint
 from random import shuffle
+from collections import deque
 import operator
 
 BYTE = Struct('<b')
@@ -37,14 +38,13 @@ def readString(f):
 def readnbs(filename):
 	IsOldVersion = False
 	headers = {}
-	logJumps = []
-	notes = []
+	notes = deque()
 	maxLayer = 0
 	usedInsts = [[], []]
 	hasPerc = False
-	layers = []
-	customInsts = []
-	
+	layers = deque()
+	customInsts = deque()
+
 	if filename is not '':
 		with open(filename, "rb") as f:
 			#Header
@@ -76,25 +76,21 @@ def readnbs(filename):
 			headers['block_removed'] = readNumeric(f, INT) #Total block removed
 			headers['import_name'] = readString(f) #MIDI file name
 			#Notes
-			tick = -1;
-			tickJumps = layerJumps = 0;
+			tick = -1
+			tickJumps = layerJumps = 0
 			while True:
 				tickJumps = readNumeric(f, SHORT)
 				#if notes: notes[-1]['duration'] = tickJumps
 				if tickJumps == 0: break
 				tick += tickJumps
-				#logJumps = [tickJumps, [], tick]
 				layer = -1
 				while True:
 					layerJumps = readNumeric(f, SHORT)
 					if layerJumps == 0: break
 					layer += layerJumps
-					#logJumps[1].append(layerJumps)
-					#0=Piano (air), 1=Double Bass (wood), 2=Bass Drum (stone), 3=Snare Drum (sand), 4=Click (glass), 5=Guitar (wool), 6=Flute (Clay), 7=Bell (Block of Gold), 8=Chime (Packed Ice), 9=Xylophone (Bone Block)
 					inst = readNumeric(f, BYTE)
 					key = readNumeric(f, BYTE)#+21
-					#print(tick, layer, inst, key)
-					if inst in (2, 3, 4):
+					if inst in {2, 3, 4}:
 						hasPerc = isPerc = True
 						if inst not in usedInsts[1]: usedInsts[1].append(inst)
 					else:
@@ -103,16 +99,13 @@ def readnbs(filename):
 					duraKey = None
 					for idx, note in enumerate(notes):
 						if note['layer'] == layer: duraKey = idx
-					#print("duraKey: {0}".format(duraKey))
 					if duraKey is not None:
-						#print( "{0} - {1} = {2}".format(tick, notes[duraKey]['tick'], tick - notes[duraKey]['tick']) )
 						if notes: notes[duraKey]['duration'] = tick - notes[duraKey]['tick']
 					notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'isPerc':isPerc, 'duration':8})
-				#pprint(logJumps)
 				maxLayer = max(layer, maxLayer)
-			#notes[-1]['duration'] = 8
 			if headers['length'] is None: headers['length'] = tick + 1
-			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = None
+			indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
+			tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = tk = nt = None
 			#Layers
 			for i in range(headers['height']):
 				name = readString(f) #Layer name
@@ -120,8 +113,8 @@ def readnbs(filename):
 				if sign:
 					stereo = readNumeric(f, BYTE) #Stereo
 				else:
-					stereo = None
-				layers.append({'index':i, 'name':name, 'volume':vol, 'stereo':stereo})
+					stereo = 100
+				layers.append({'name':name, 'volume':vol, 'stereo':stereo})
 			name = vol = stereo = None
 			#Custom instrument
 			headers['inst_count'] = readNumeric(f, BYTE)
@@ -129,10 +122,10 @@ def readnbs(filename):
 				name = readString(f) #Instrument name
 				file = readString(f) #Sound filename
 				pitch = readNumeric(f, BYTE) #Pitch
-				shouldPressKeys = readNumeric(f, BYTE) #Press key
+				shouldPressKeys = bool(readNumeric(f, BYTE)) #Press key
 				customInsts.append({'name':name, 'filename':file, 'pitch':pitch, 'pressKeys':shouldPressKeys})
 	sortedNotes = sorted(notes, key = operator.itemgetter('tick', 'layer') )
-	data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'IsOldVersion':IsOldVersion, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':usedInsts}
+	data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'IsOldVersion':IsOldVersion, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':usedInsts, 'indexByTick':indexByTick }
 	return data
 
 def opennbs(filename, printOutput=False):
@@ -140,6 +133,34 @@ def opennbs(filename, printOutput=False):
 	if printOutput: pprint(data)
 	return data
 	
+def DataPostprocess(data):
+	headers = data['headers']
+	notes = data['notes']
+	usedInsts = [[], []]
+	maxLayer = 0
+	data['hasPerc'] = False
+	for i, note in enumerate(data['notes']):
+		tick, inst, layer = note['tick'], note['inst'], note['layer']
+		if inst in {2, 3, 4}:
+			data['hasPerc'] = note['isPerc'] = True
+			if inst not in usedInsts[1]: usedInsts[1].append(inst)
+		else:
+			note['isPerc'] = False
+			if inst not in usedInsts[0]: usedInsts[0].append(inst)
+		duraKey = None
+		for idx, note in enumerate(data['notes']):
+			if note['layer'] == layer: duraKey = idx
+		if duraKey is not None:
+			if i > 0: data['notes'][duraKey]['duration'] = tick - data['notes'][duraKey]['tick']
+		else:
+			note['duration'] = 8
+		maxLayer = max(layer, maxLayer)
+	data['headers']['length'] = tick
+	data['maxLayer'] = maxLayer
+	data['usedInsts'] = usedInsts
+	data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
+	note = tick = inst = layer = duraKey = usedInsts = maxLayer = tk = nt = None
+	return data
 
 def writeNumeric(f, fmt, v):
 	f.write(fmt.pack(v))
@@ -150,9 +171,10 @@ def writeString(f, v):
 	
 def writenbs(filename, data):
 	if filename is not '' and data is not None:
-		headers, notes, layers, customInsts, IsOldVersion, hasPerc, maxLayer, usedInsts = \
-		data['headers'], data['notes'], data['layers'], data['customInsts'], data['IsOldVersion'], data['hasPerc'], data['maxLayer'], data['usedInsts']
-		with open(filename+'_saved.nbs', "wb") as f:
+		data = DataPostprocess(data)
+		headers, notes, layers, customInsts, IsOldVersion = \
+		data['headers'], data['notes'], data['layers'], data['customInsts'], data['IsOldVersion']
+		with open(filename, "wb") as f:
 			#Header
 			if not IsOldVersion:
 				writeNumeric(f, SHORT, 0)
@@ -165,7 +187,7 @@ def writenbs(filename, data):
 			writeString(f, headers['author']) #Author
 			writeString(f, headers['orig_author']) #OriginalAuthor
 			writeString(f, headers['description']) #Description 
-			writeNumeric(f, SHORT, headers['tempo']*100) #Tempo
+			writeNumeric(f, SHORT, int(headers['tempo']*100)) #Tempo
 			writeNumeric(f, BYTE, headers['auto-saving']) #Auto-saving enabled
 			writeNumeric(f, BYTE, headers['auto-saving_time']) #Auto-saving duration
 			writeNumeric(f, BYTE, headers['time_sign']) #Time signature
@@ -202,13 +224,16 @@ def writenbs(filename, data):
 				if not IsOldVersion:
 					writeNumeric(f, BYTE, layer['stereo']) #Stereo
 			#Custom instrument
-			writeNumeric(f, BYTE, len(customInsts))
-			if len(customInsts) > 0:
-				for customInst in customInsts:
-					writeString(f, customInst['name']) #Instrument name
-					writeString(f, customInst['filepath']) #Sound filename
-					writeNumeric(f, BYTE, customInst['pitch']) #Pitch
-					writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
+			pprint(customInsts)
+			if len(customInsts) == 0: writeNumeric(f, BYTE, 0)
+			else:
+				writeNumeric(f, BYTE, len(customInsts))
+				if len(customInsts) > 0:
+					for customInst in customInsts:
+						writeString(f, customInst['name']) #Instrument name
+						writeString(f, customInst['filename']) #Sound filename
+						writeNumeric(f, BYTE, customInst['pitch']) #Pitch
+						writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
 
 if __name__ == "__main__":
 	import sys
