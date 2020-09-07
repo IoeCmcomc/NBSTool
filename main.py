@@ -481,7 +481,7 @@ class MainWindow(tk.Frame):
         self.parent.quit()
         self.parent.destroy()
 
-    def OnBrowseFile(self, _):
+    def OnBrowseFile(self, _=None):
         types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
         filename = askopenfilename(filetypes=types)
         if filename != '':
