@@ -20,9 +20,9 @@
 
 from struct import Struct
 from pprint import pprint
-from random import shuffle
+# from random import shuffle
 from collections import deque
-import operator
+from operator import itemgetter
 
 BYTE = Struct('<b')
 SHORT = Struct('<h')
@@ -30,30 +30,29 @@ INT = Struct('<i')
 
 VERSION = 4
 
-def readNumeric(f, fmt):
+def read_numeric(f, fmt):
     raw = f.read(fmt.size)
-    #print("{0:<20}{1:<10}{2:<11}".format(str(raw), raw.hex(), int(raw.hex(), 16)))
+    # print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), int(raw.hex(), 16)))
     return fmt.unpack(raw)[0]
 
 def readString(f):
-    length = readNumeric(f, INT)
+    length = read_numeric(f, INT)
     raw = f.read(length)
-    #print("{0:<20}{1}".format(length, raw))
-    return raw.decode()
+    # print("{0:<20}{1}".format(length, raw))
+    return raw.decode('unicode_escape') # ONBS doesn't support UTF-8
 
 def readnbsheader(f):
     headers = {}
-    headers['is_classic'] = False
     headers['length'] = None
+    readNumeric = read_numeric
     
     #Header
     first = readNumeric(f, SHORT) #Sign
-    if first != 0: #File is new type
-        headers['is_classic'] = True
+    if first != 0: #File is old type
         headers['file_version'] = 0
         headers['vani_inst'] = 10
         headers['length'] = first
-    else: #File is old type
+    else: #File is new type
         headers['file_version'] = readNumeric(f, BYTE) #Version
         headers['vani_inst'] = readNumeric(f, BYTE)
     if headers['file_version'] >= 3:
@@ -87,7 +86,8 @@ def readnbs(fn):
     layers = deque()
     customInsts = deque()
     appendix = None
-
+    readNumeric = read_numeric
+    
     if fn != '':
         if fn.__class__.__name__ == 'HTTPResponse':
             f = fn
@@ -95,12 +95,12 @@ def readnbs(fn):
             f = open(fn, "rb")
         try:
             headers = readnbsheader(f)
+            file_version = headers['file_version']
             #Notes
             tick = -1
             tickJumps = layerJumps = 0
             while True:
                 tickJumps = readNumeric(f, SHORT)
-                #if notes: notes[-1]['duration'] = tickJumps
                 if tickJumps == 0: break
                 tick += tickJumps
                 layer = -1
@@ -110,7 +110,7 @@ def readnbs(fn):
                     layer += layerJumps
                     inst = readNumeric(f, BYTE)
                     key = readNumeric(f, BYTE)#+21
-                    if headers['file_version'] >= 4:
+                    if file_version >= 4:
                         vel = readNumeric(f, BYTE)
                         pan = readNumeric(f, BYTE)
                         pitch = readNumeric(f, SHORT)
@@ -125,16 +125,10 @@ def readnbs(fn):
                     else:
                         isPerc = False
                         if inst not in usedInsts[0]: usedInsts[0].append(inst)
-                    duraKey = None
-                    for idx, note in enumerate(notes):
-                        if note['layer'] == layer: duraKey = idx
-                    if duraKey is not None:
-                        if notes: notes[duraKey]['duration'] = tick - notes[duraKey]['tick']
-                    notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'vel':vel, 'pan':pan, 'pitch':pitch, 'isPerc':isPerc, 'duration':8})
+                    notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'vel':vel, 'pan':pan, 'pitch':pitch, 'isPerc':isPerc})
                 maxLayer = max(layer, maxLayer)
             if headers['length'] is None: headers['length'] = tick + 1
-            indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
-            tick = tickJumps = layerJumps = layer = inst = key = duraKey = isPerc = tk = nt = None
+            # indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
             #Layers
             for i in range(headers['height']):
                 name = readString(f) #Layer name
@@ -144,10 +138,7 @@ def readnbs(fn):
                     lock = False
                 vol = readNumeric(f, BYTE) #Volume
                 vol = 100 if vol == -1 else vol
-                if headers['file_version'] >= 2:
-                    stereo = readNumeric(f, BYTE) #Stereo
-                else:
-                    stereo = 100
+                stereo = readNumeric(f, BYTE) if file_version >= 2 else 100 #Stereo
                 layers.append({'name':name, 'lock':lock, 'volume':vol, 'stereo':stereo})
             name = vol = stereo = None
             #Custom instrument
@@ -165,23 +156,17 @@ def readnbs(fn):
                 f.close()
             except:
                 pass
-    sortedNotes = sorted(notes, key = operator.itemgetter('tick', 'layer') )
-    data = {'headers':headers, 'notes':sortedNotes, 'layers':layers, 'customInsts':customInsts, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':(tuple(usedInsts[0]), tuple(usedInsts[1])), 'indexByTick':indexByTick }
+    data = {'headers':headers, 'notes':notes, 'layers':layers, 'customInsts':customInsts, 'hasPerc':hasPerc, 'maxLayer':maxLayer, 'usedInsts':(tuple(usedInsts[0]), tuple(usedInsts[1])), }
     if appendix: data['appendix'] = appendix
-    return data
-
-def opennbs(fn, printOutput=False):
-    data = readnbs(fn)
-    if printOutput: pprint(data)
     return data
     
 def DataPostprocess(data):
-    headers = data['headers']
+    # headers = data['headers']
     notes = data['notes']
     usedInsts = [[], []]
     maxLayer = 0
     data['hasPerc'] = False
-    for i, note in enumerate(data['notes']):
+    for i, note in enumerate(notes):
         tick, inst, layer = note['tick'], note['inst'], note['layer']
         if inst in {2, 3, 4}:
             data['hasPerc'] = note['isPerc'] = True
@@ -189,19 +174,11 @@ def DataPostprocess(data):
         else:
             note['isPerc'] = False
             if inst not in usedInsts[0]: usedInsts[0].append(inst)
-        duraKey = None
-        for idx, note in enumerate(data['notes']):
-            if note['layer'] == layer: duraKey = idx
-        if duraKey is not None:
-            if i > 0: data['notes'][duraKey]['duration'] = tick - data['notes'][duraKey]['tick']
-        else:
-            note['duration'] = 8
         maxLayer = max(layer, maxLayer)
     data['headers']['length'] = tick
     data['maxLayer'] = maxLayer
     data['usedInsts'] = (tuple(usedInsts[0]), tuple(usedInsts[1]))
-    data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
-    note = tick = inst = layer = duraKey = usedInsts = maxLayer = tk = nt = None
+    # data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
     return data
 
 def writeNumeric(f, fmt, v):
@@ -216,13 +193,14 @@ def writenbs(fn, data):
         data = DataPostprocess(data)
         headers, notes, layers, customInsts = \
         data['headers'], data['notes'], data['layers'], data['customInsts']
+        file_version = headers['file_version']
         with open(fn, "wb") as f:
             #Header
-            if not headers['is_classic']:
+            if file_version != 0:
                 writeNumeric(f, SHORT, 0)
-                writeNumeric(f, BYTE, headers['file_version']) #Version
+                writeNumeric(f, BYTE, file_version) #Version
                 writeNumeric(f, BYTE, headers['vani_inst'])
-            if headers['is_classic'] or headers['file_version'] >= 3:
+            if (file_version == 0) or (file_version >= 3):
                 writeNumeric(f, SHORT, headers['length']) #Length
             writeNumeric(f, SHORT, headers['height']) #Height
             writeString(f, headers['name']) #Name
@@ -239,14 +217,13 @@ def writenbs(fn, data):
             writeNumeric(f, INT, headers['block_added']) #Total block added
             writeNumeric(f, INT, headers['block_removed']) #Total block removed
             writeString(f, headers['import_name']) #MIDI file name
-            if headers['file_version'] >= 4:
+            if file_version >= 4:
                 writeNumeric(f, BYTE, headers['loop']) #Loop enabled
                 writeNumeric(f, BYTE, headers['loop_max']) #Max loop count
                 writeNumeric(f, SHORT, headers['loop_start']) #Loop start tick
             #Notes
             # shuffle(notes)
-            sortedNotes = sorted(notes, key = operator.itemgetter('tick', 'layer') )
-            #pprint(sortedNotes)
+            sortedNotes = sorted(notes, key = itemgetter('tick', 'layer') )
             tick = layer = -1
             fstNote = sortedNotes[0]
             for note in sortedNotes:
@@ -261,7 +238,7 @@ def writenbs(fn, data):
                     layer = note['layer']
                     writeNumeric(f, BYTE, note['inst'])
                     writeNumeric(f, BYTE, note['key'])#-21
-                    if headers['file_version'] >= 4:
+                    if file_version >= 4:
                         writeNumeric(f, BYTE, note['vel'])
                         writeNumeric(f, BYTE, note['pan'])
                         writeNumeric(f, SHORT, note['pitch'])
@@ -270,10 +247,10 @@ def writenbs(fn, data):
             #Layers
             for layer in layers:
                 writeString(f, layer['name']) #Layer name
-                if headers['file_version'] >= 4:
+                if file_version >= 4:
                     writeNumeric(f, BYTE, layer['lock']) #Lock
                 writeNumeric(f, BYTE, layer['volume']) #Volume
-                if headers['file_version'] >= 2:
+                if file_version >= 2:
                     writeNumeric(f, BYTE, layer['stereo']) #Stereo
             #Custom instrument
             pprint(customInsts)
@@ -291,4 +268,5 @@ if __name__ == "__main__":
     import sys
     if len(sys.argv) == 2: in_ra = True
     else: in_ra = sys.argv[2]
-    opennbs(sys.argv[1], in_ra)
+    data = readnbs(sys.argv[1])
+    if in_ra: pprint(data)

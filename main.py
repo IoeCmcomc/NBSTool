@@ -30,29 +30,26 @@ import json
 import tkinter as tk
 import tkinter.ttk as ttk
 
-#import tkinter.messagebox as tkmsgbox
-from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory
-from tkinter.scrolledtext import ScrolledText
+from tkinter.messagebox import showerror
+from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory, askopenfilenames
 
-from time import sleep, time
+import pygubu
+
+from time import time, strftime
 from pprint import pprint
 from random import randrange
 from math import floor, log2
-from datetime import date
-#from collections import deque
+from datetime import timedelta
 
 from PIL import Image, ImageTk
 import music21 as m21
 import music21.stream as m21s
 import music21.instrument as m21i
 
-from attr import Attr
-from nbsio import opennbs, writenbs, DataPostprocess
+from nbsio import readnbs, writenbs, DataPostprocess
 from ncfio import writencf
 
 # Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
-
-
 def resource_path(*args):
     if len(args) > 1:
         relative_path = os.path.join(*args)
@@ -70,38 +67,14 @@ def resource_path(*args):
     return r
 
 
-class MainWindow(tk.Frame):
-    def __init__(self, parent):
-        tk.Frame.__init__(self, parent)
-        self.parent = parent
-        self.properties()
-        self.elements()
-        self.WindowBind()
-        self.toggleExpOptiGrp()
-        # self.update()
-        self.pack(fill='both', expand=True)
-        self.update()
-        WindowGeo(self.parent, self.parent, 800, 500, 600, 500)
-        self.lift()
-        self.focus_force()
-        self.grab_set()
-        self.grab_release()
-
-    def properties(self):
-        self.VERSION = '0.7.0'
-        self.filePath = None
-        self.inputFileData = None
-        self.noteSounds = None
-        self.last = Attr()
-        self.last.inputFileData = None
-        self.var = Attr()
-        self.PlayingState = 'stop'
-        self.PlayingTick = -1
-        self.SongPlayerAfter = None
-        self.exportFilePath = tk.StringVar()
-
-    def elements(self):
-        self.parent.title("NBS Tool")
+class MainWindow:
+    def __init__(self):
+        self.builder = builder = pygubu.Builder()
+        builder.add_from_file(resource_path('toplevel.ui'))
+        self.toplevel = builder.get_object('toplevel')
+        self.mainwin = builder.get_object('mainFrame')
+        
+        self.toplevel.title("NBS Tool")
         self.style = ttk.Style()
         # self.style.theme_use("default")
         try:
@@ -112,47 +85,70 @@ class MainWindow(tk.Frame):
                 self.style.theme_use("winnative")
             except Exception:
                 pass
+        
+        self.setupMenuBar()
+        self.windowBind()
+        
+        builder.connect_callbacks(self)
+        
+        self.mainwin.lift()
+        self.mainwin.focus_force()
+        self.mainwin.grab_set()
+        self.mainwin.grab_release()
 
-        # Menu bar
-        self.menuBar = tk.Menu(self)
-        self.parent.configure(menu=self.menuBar)
-        self.menus()
+        self.VERSION = '0.7.0'
+        self.filePaths = []
+        self.songsData = []
 
-        # Tabs
-        self.NbTabs = ttk.Notebook(self)
-        self.tabs()
-        self.NbTabs.enable_traversal()
-        self.NbTabs.pack(fill='both', expand=True)
-
-        # Footer
-        tk.Frame(self, height=5).pack()
-
-        self.footer = tk.Frame(
-            self, relief='groove', borderwidth=1, height=25, width=self.winfo_width())
-        self.footer.pack_propagate(False)
-        self.footerElements()
-        self.footer.pack(side='top', fill='x')
-
-    def menus(self):
+    def setupMenuBar(self):
         # 'File' menu
-        self.fileMenu = tk.Menu(self.menuBar, tearoff=False)
+        self.menuBar = menuBar = self.builder.get_object('menubar')
+        self.toplevel.configure(menu=menuBar)
+        
+        self.fileMenu = tk.Menu(menuBar, tearoff=False)
         self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 
         self.fileMenu.add_command(
-            label="Open", accelerator="Ctrl+O", command=self.OnBrowseFile)
+            label="Open", accelerator="Ctrl+O", command=self.openFiles)
         self.fileMenu.add_command(
-            label="Save", accelerator="Ctrl+S", command=self.OnSaveFile)
-        self.fileMenu.add_command(
-            label="Save as new file", accelerator="Ctrl+Shift+S", command=lambda: self.OnSaveFile(True))
+            label="Save all", accelerator="Ctrl+S", command=self.OnSaveFile)
         self.fileMenu.add_separator()
         self.fileMenu.add_command(
             label="Quit", accelerator="Esc", command=self.onClose)
+            
+        self.importMenu = tk.Menu(menuBar, tearoff=False)
+        self.menuBar.add_cascade(label="Import", menu=self.importMenu)
+        
+        self.exportMenu = tk.Menu(menuBar, tearoff=False)
+        self.menuBar.add_cascade(label="Export", menu=self.importMenu)
 
-        self.helpMenu = tk.Menu(self.menuBar, tearoff=False)
+        self.helpMenu = tk.Menu(menuBar, tearoff=False)
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
         self.helpMenu.add_command(
             label="About", command=lambda: AboutWindow(self))
+
+    def openFiles(self, _=None):
+            types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
+            self.filePaths = askopenfilenames(filetypes=types)
+            fileTable = self.builder.get_object('fileTable')
+            
+            fileTable.delete(*fileTable.get_children())
+            for filePath in self.filePaths:
+                try:
+                    songData = readnbs(filePath)
+                    self.songsData.append(songData)
+                except Exception:
+                    showerror("Reading file error", "Cannot read or parse file: "+filePath)
+                    print(traceback.format_exc())
+                    continue
+                headers = songData['headers']
+                length = timedelta(seconds=floor(headers['length'] / headers['tempo'])) if headers['length'] != None else "Not calculated"
+                name = headers['name']
+                author = headers['author']
+                orig_author = headers['orig_author']
+                fileTable.insert("", 'end', text=filePath, values=(length, name, author, orig_author))
+                self.mainwin.update()
 
     def tabs(self):
         # "General" tab
@@ -430,29 +426,29 @@ class MainWindow(tk.Frame):
         # self.progressbar.start()
         # self.progressbar.stop()
 
-    def WindowBind(self):
+    def windowBind(self):
         # Keys
-        self.parent.bind('<Escape>', self.onClose)
-        self.parent.bind('<Control-o>', self.OnBrowseFile)
-        self.parent.bind('<Control-s>', self.OnSaveFile)
-        self.parent.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
-        self.parent.bind('<Control-Shift-S>', lambda _: self.OnSaveFile(True))
+        self.toplevel.bind('<Escape>', self.onClose)
+        self.toplevel.bind('<Control-o>', self.openFiles)
+        self.toplevel.bind('<Control-s>', self.OnSaveFile)
+        self.toplevel.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
+        self.toplevel.bind('<Control-Shift-S>', lambda _: self.OnSaveFile(True))
 
         # Bind class
-        self.bind_class("Message", "<Configure>",
+        self.mainwin.bind_class("Message", "<Configure>",
                         lambda e: e.widget.configure(width=e.width-10))
 
         for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
-            self.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate(
+            self.mainwin.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate(
                 '<space>', when='tail'))
 
-        self.bind_class("TCombobox", "<Return>",
+        self.mainwin.bind_class("TCombobox", "<Return>",
                         lambda e: e.widget.event_generate('<Down>'))
 
-        for tkclass in ("Entry", "Text", "ScrolledText"):
-            self.bind_class(tkclass, "<Button-3>", self.popupmenus)
+        for tkclass in ("Entry", "Text", "ScrolledText", "TCombobox"):
+            self.mainwin.bind_class(tkclass, "<Button-3>", self.popupmenus)
 
-        self.bind_class("TNotebook", "<<NotebookTabChanged>>",
+        self.mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
                         self._on_tab_changed)
 
     # Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
@@ -464,7 +460,7 @@ class MainWindow(tk.Frame):
 
     def popupmenus(self, event):
         w = event.widget
-        self.popupMenu = tk.Menu(self, tearoff=False)
+        self.popupMenu = tk.Menu(self.mainwin, tearoff=False)
         self.popupMenu.add_command(
             label="Select all", accelerator="Ctrl+A", command=lambda: w.event_generate("<Control-a>"))
         self.popupMenu.add_separator()
@@ -478,8 +474,8 @@ class MainWindow(tk.Frame):
                                event.x_root, event.y_root)
 
     def onClose(self, event=None):
-        self.parent.quit()
-        self.parent.destroy()
+        self.toplevel.quit()
+        self.toplevel.destroy()
 
     def OnBrowseFile(self, _=None):
         types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
@@ -1329,18 +1325,15 @@ if __name__ == "__main__":
         {'filename': 'banjo.ogg', 'name': 'banjo'},
         {'filename': 'pling.ogg', 'name': 'pling'}
     ]
-    print('Creating root...')
-
-    root = tk.Tk()
-    app = MainWindow(root)
+    
+    app = MainWindow()
     print('Creating app...')
 
     print(sys.argv)
     if len(sys.argv) == 2:
         app.OnOpenFile(sys.argv[1])
 
-    root.iconbitmap(resource_path("icon.ico"))
     print('Ready')
-    root.mainloop()
+    app.mainwin.mainloop()
 
     print("The app was closed.")
