@@ -1,12 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.0">
   <object class="tk.Toplevel" id="toplevel">
+    <property name="class_">test</property>
     <property name="geometry">550x550</property>
     <property name="height">550</property>
     <property name="minsize">200|200</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
-    <property name="title" translatable="yes">NBSTool</property>
+    <property name="title" translatable="yes">NBS Tool</property>
     <property name="width">550</property>
     <child>
       <object class="tk.Frame" id="mainFrame">
@@ -23,7 +24,6 @@
             <property name="text" translatable="yes">Files</property>
             <property name="width">200</property>
             <layout manager="pack">
-              <property name="expand">false</property>
               <property name="fill">both</property>
               <property name="padx">5</property>
               <property name="pady">5</property>
@@ -35,8 +35,9 @@
                 <property name="scrolltype">both</property>
                 <property name="usemousewheel">false</property>
                 <layout manager="pack">
-                  <property name="expand">false</property>
-                  <property name="fill">x</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="pady">5</property>
                   <property name="propagate">True</property>
                   <property name="side">top</property>
                 </layout>
@@ -46,9 +47,8 @@
                     <property name="selectmode">extended</property>
                     <property name="width">105</property>
                     <layout manager="pack">
-                      <property name="expand">false</property>
-                      <property name="padx">5</property>
-                      <property name="pady">5</property>
+                      <property name="expand">true</property>
+                      <property name="fill">both</property>
                       <property name="propagate">True</property>
                       <property name="side">top</property>
                     </layout>
@@ -118,6 +118,9 @@
             </child>
             <child>
               <object class="tk.Button" id="openFilesBtn">
+                <property name="command">openFiles</property>
+                <property name="justify">left</property>
+                <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Open...</property>
                 <property name="width">10</property>
                 <layout manager="pack">
@@ -131,7 +134,9 @@
             </child>
             <child>
               <object class="tk.Button" id="saveFilesBtn">
-                <property name="text" translatable="yes">Save</property>
+                <property name="command">saveFiles</property>
+                <property name="state">disabled</property>
+                <property name="text" translatable="yes">Save...</property>
                 <property name="width">10</property>
                 <layout manager="pack">
                   <property name="anchor">w</property>
@@ -143,8 +148,26 @@
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="removeFEntriesBtn">
+              <object class="tk.Button" id="removeEntriesBtn">
+                <property name="command">removeSelectedFiles</property>
+                <property name="state">disabled</property>
                 <property name="text" translatable="yes">Remove</property>
+                <property name="width">10</property>
+                <layout manager="pack">
+                  <property name="anchor">e</property>
+                  <property name="padx">5</property>
+                  <property name="pady">5</property>
+                  <property name="propagate">True</property>
+                  <property name="side">right</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Button" id="addEntriesBtn">
+                <property name="command">addFiles</property>
+                <property name="compound">top</property>
+                <property name="takefocus">false</property>
+                <property name="text" translatable="yes">Add...</property>
                 <property name="width">10</property>
                 <layout manager="pack">
                   <property name="anchor">e</property>

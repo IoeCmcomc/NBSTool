@@ -27,6 +27,8 @@ import traceback
 import re
 import json
 
+from pathlib import Path
+
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -35,7 +37,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory,
 
 import pygubu
 
-from time import time, strftime
+from time import time
 from pprint import pprint
 from random import randrange
 from math import floor, log2
@@ -75,6 +77,7 @@ class MainWindow:
         self.mainwin = builder.get_object('mainFrame')
         
         self.toplevel.title("NBS Tool")
+        WindowGeo(self.toplevel, 550, 550)
         self.style = ttk.Style()
         # self.style.theme_use("default")
         try:
@@ -88,6 +91,18 @@ class MainWindow:
         
         self.setupMenuBar()
         self.windowBind()
+        
+        def on_fileTable_select(event):
+            selectionNotEmpty = len(event.widget.selection()) > 0
+            if selectionNotEmpty:
+                builder.get_object('saveFilesBtn')["state"] = "normal"
+                builder.get_object('removeEntriesBtn')["state"] = "normal"
+            else:
+                builder.get_object('saveFilesBtn')["state"] = "disabled"
+                builder.get_object('removeEntriesBtn')["state"] = "disabled"
+        
+        fileTable = builder.get_object('fileTable')
+        fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
         
         builder.connect_callbacks(self)
         
@@ -111,7 +126,9 @@ class MainWindow:
         self.fileMenu.add_command(
             label="Open", accelerator="Ctrl+O", command=self.openFiles)
         self.fileMenu.add_command(
-            label="Save all", accelerator="Ctrl+S", command=self.OnSaveFile)
+            label="Save", accelerator="Ctrl+S", command=self.saveAll)
+        self.fileMenu.add_command(
+            label="Save all", accelerator="Ctrl+Shift+S", command=self.saveAll)
         self.fileMenu.add_separator()
         self.fileMenu.add_command(
             label="Quit", accelerator="Esc", command=self.onClose)
@@ -126,29 +143,71 @@ class MainWindow:
         self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
 
         self.helpMenu.add_command(
-            label="About", command=lambda: AboutWindow(self))
+            label="About")
 
     def openFiles(self, _=None):
-            types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
-            self.filePaths = askopenfilenames(filetypes=types)
-            fileTable = self.builder.get_object('fileTable')
+        fileTable = self.builder.get_object('fileTable')
+        fileTable.delete(*fileTable.get_children())
+        self.filePaths.clear()
+        self.songsData.clear()
+        self.addFiles()
+    
+    def addFiles(self, _=None):
+        types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
+        addedPaths = askopenfilenames(filetypes=types)
+        if len(addedPaths) == 0: return
+        fileTable = self.builder.get_object('fileTable')
+        for filePath in addedPaths:
+            try:
+                songData = readnbs(filePath)
+                self.songsData.append(songData)
+            except Exception:
+                showerror("Reading file error", "Cannot read or parse file: "+filePath)
+                print(traceback.format_exc())
+                continue
+            headers = songData['headers']
+            length = timedelta(seconds=floor(headers['length'] / headers['tempo'])) if headers['length'] != None else "Not calculated"
+            name = headers['name']
+            author = headers['author']
+            orig_author = headers['orig_author']
+            fileTable.insert("", 'end', text=filePath, values=(length, name, author, orig_author))
+            self.mainwin.update()
+        self.filePaths.extend(addedPaths)
+
+    def saveFiles(self, _=None):
+        if len(self.filePaths) == 0: return
+        fileTable = self.builder.get_object('fileTable')
+        if len(selection := fileTable.selection()) > 0:
+            if len(selection) == 1:
+                filePath = os.path.basename(self.filePaths[fileTable.index(selection[0])])
+                types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
+                path = asksaveasfilename(filetypes=types, initialfile=filePath, defaultextension=".nbs")
+            else:
+                path = askdirectory(title="Select folder to save")
+            if path == '': return
+            Path(path).mkdir(parents=True, exist_ok=True)
+            for item in selection:
+                i = fileTable.index(item)
+                filePath = self.filePaths[i]
+                writenbs(os.path.join(path, os.path.basename(filePath)), self.songsData[i])
+
+    def saveAll(self, _=None):
+        if len(self.filePaths) == 0: return
+        path = askdirectory(title="Select folder to save")
+        if path == '': return
+        Path(path).mkdir(parents=True, exist_ok=True)
+        for i, filePath in enumerate(self.filePaths):
+            writenbs(os.path.join(path, os.path.basename(filePath)), self.songsData[i])
             
-            fileTable.delete(*fileTable.get_children())
-            for filePath in self.filePaths:
-                try:
-                    songData = readnbs(filePath)
-                    self.songsData.append(songData)
-                except Exception:
-                    showerror("Reading file error", "Cannot read or parse file: "+filePath)
-                    print(traceback.format_exc())
-                    continue
-                headers = songData['headers']
-                length = timedelta(seconds=floor(headers['length'] / headers['tempo'])) if headers['length'] != None else "Not calculated"
-                name = headers['name']
-                author = headers['author']
-                orig_author = headers['orig_author']
-                fileTable.insert("", 'end', text=filePath, values=(length, name, author, orig_author))
-                self.mainwin.update()
+    def removeSelectedFiles(self):
+        if len(self.filePaths) == 0: return
+        fileTable = self.builder.get_object('fileTable')
+        if len(selection := fileTable.selection()) > 0:
+            for item in reversed(selection):
+                i = fileTable.index(item)
+                fileTable.delete(item)
+                del self.filePaths[i]
+                del self.songsData[i]        
 
     def tabs(self):
         # "General" tab
@@ -427,29 +486,35 @@ class MainWindow:
         # self.progressbar.stop()
 
     def windowBind(self):
+        toplevel = self.toplevel
+        mainwin = self.mainwin
         # Keys
-        self.toplevel.bind('<Escape>', self.onClose)
-        self.toplevel.bind('<Control-o>', self.openFiles)
-        self.toplevel.bind('<Control-s>', self.OnSaveFile)
-        self.toplevel.bind('<Control-Shift-s>', lambda _: self.OnSaveFile(True))
-        self.toplevel.bind('<Control-Shift-S>', lambda _: self.OnSaveFile(True))
+        toplevel.bind('<Escape>', self.onClose)
+        toplevel.bind('<Control-o>', self.openFiles)
+        toplevel.bind('<Control-s>', self.saveFiles)
+        toplevel.bind('<Control-Shift-s>', self.saveAll)
+        toplevel.bind('<Control-Shift-S>', self.saveAll)
 
         # Bind class
-        self.mainwin.bind_class("Message", "<Configure>",
+        mainwin.bind_class("Message", "<Configure>",
                         lambda e: e.widget.configure(width=e.width-10))
 
         for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
-            self.mainwin.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate(
+            mainwin.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate(
                 '<space>', when='tail'))
 
-        self.mainwin.bind_class("TCombobox", "<Return>",
+        mainwin.bind_class("TCombobox", "<Return>",
                         lambda e: e.widget.event_generate('<Down>'))
 
         for tkclass in ("Entry", "Text", "ScrolledText", "TCombobox"):
-            self.mainwin.bind_class(tkclass, "<Button-3>", self.popupmenus)
+            mainwin.bind_class(tkclass, "<Button-3>", self.popupmenus)
 
-        self.mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
+        mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
                         self._on_tab_changed)
+                        
+        mainwin.bind_class("Treeview", "<Shift-Down>", self._on_treeview_shift_down)
+        mainwin.bind_class("Treeview", "<Shift-Up>", self._on_treeview_shift_up)
+        mainwin.bind_class("Treeview", "<Button-1>", self._on_treeview_left_click, add='+')
 
     # Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
     def _on_tab_changed(self, event):
@@ -457,7 +522,41 @@ class MainWindow:
 
         tab = event.widget.nametowidget(event.widget.select())
         event.widget.configure(height=tab.winfo_reqheight())
-
+        
+    # Credit: https://stackoverflow.com/questions/57939932/treeview-how-to-select-multiple-rows-using-cursor-up-and-down-keys
+    def _on_treeview_shift_down(self, event):
+        tree = event.widget
+        cur_item = tree.focus()
+        next_item = tree.next(cur_item)
+        if next_item == '': return 'break'
+        selection = tree.selection()
+        if next_item in selection:
+            tree.selection_remove(cur_item)
+        else:
+            tree.selection_add(cur_item)
+        tree.selection_add(next_item)
+        tree.focus(next_item)
+        tree.see(next_item)
+        
+    def _on_treeview_shift_up(self, event):
+        tree = event.widget
+        cur_item = tree.focus()
+        prev_item = tree.prev(cur_item)
+        if prev_item == '': return 'break'
+        selection = tree.selection()
+        if prev_item in selection:
+            tree.selection_remove(cur_item)
+        else:
+            tree.selection_add(cur_item)
+        tree.selection_add(prev_item)
+        tree.focus(prev_item)
+        tree.see(prev_item)
+        
+    def _on_treeview_left_click(self, event):
+        tree = event.widget
+        if tree.identify_row(event.y) == '':
+            tree.selection_set(tuple())
+        
     def popupmenus(self, event):
         w = event.widget
         self.popupMenu = tk.Menu(self.mainwin, tearoff=False)
@@ -476,49 +575,6 @@ class MainWindow:
     def onClose(self, event=None):
         self.toplevel.quit()
         self.toplevel.destroy()
-
-    def OnBrowseFile(self, _=None):
-        types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
-        filename = askopenfilename(filetypes=types)
-        if filename != '':
-            self.OnOpenFile(filename)
-
-    def OnOpenFile(self, fileName):
-        self.UpdateProgBar(20)
-        if self.filePath != '':
-            data = opennbs(fileName)
-            if data is not None:
-                self.UpdateProgBar(80)
-                self.inputFileData = data
-                self.ExpOutputEntry.delete(0, 'end')
-                self.exportFilePath.set('')
-                print(type(data))
-                
-            self.filePath = fileName
-            self.UpdateVar()
-            self.parent.title('"{}" – NBS Tool'.format(
-                fileName.split('/')[-1]))
-            self.RaiseFooter('Opened')
-            self.UpdateProgBar(100)
-        self.UpdateProgBar(-1)
-
-    def OnSaveFile(self, saveAsNewFile=False):
-        if self.inputFileData is not None:
-            if saveAsNewFile is True:
-                types = [('Note Block Studio files', '*.nbs'),
-                         ('All files', '*')]
-                self.filePath = asksaveasfilename(filetypes=types)
-                if not self.filePath.lower().endswith('.nbs'):
-                    self.filePath = self.filePath.split('.')[0] + '.nbs'
-            self.UpdateProgBar(50)
-
-            writenbs(self.filePath, self.inputFileData)
-
-            self.parent.title('"{}" – NBS Tool'.format(
-                self.filePath.split('/')[-1]))
-            self.UpdateProgBar(100)
-            self.RaiseFooter('Saved')
-            self.UpdateProgBar(-1)
 
     def toggleCompactToolOpt(self, id=1):
         if id <= 2:
@@ -757,47 +813,6 @@ class MainWindow:
         self.footerLabel.update()
 
 
-class AboutWindow(tk.Toplevel):
-    def __init__(self, parent):
-        tk.Toplevel.__init__(self)
-        self.parent = parent
-        self.title("About this application...")
-
-        self.logo = ImageTk.PhotoImage(Image.open(resource_path(
-            'icon.ico')).resize((128, 128), Image.ANTIALIAS))
-
-        logolabel = tk.Label(self, text="NBSTool", font=(
-            "Arial", 44), image=self.logo, compound='left')
-        logolabel.pack(padx=30, pady=(10*2, 10))
-
-        description = tk.Message(self, text="A tool to work with .nbs (Note Block Studio) files.\nAuthor: IoeCmcomc\nVersion: {}".format(
-            parent.VERSION), justify='center')
-        description.pack(fill='both', expand=False, padx=10, pady=10)
-
-        githubLink = ttk.Button(self, text='GitHub', command=lambda: webbrowser.open(
-            "https://github.com/IoeCmcomc/NBSTool", new=True))
-        githubLink.pack(padx=10, pady=10)
-
-        self.lift()
-        self.focus_force()
-        self.grab_set()
-        # self.grab_release()
-
-        self.resizable(False, False)
-        self.transient(self.parent)
-
-        self.bind("<FocusOut>", self.Alarm)
-        self.bind('<Escape>', lambda _: self.destroy())
-
-        self.iconbitmap(resource_path("icon.ico"))
-
-        WindowGeo(self, parent, 500, 300)
-
-    def Alarm(self, event):
-        self.focus_force()
-        self.bell()
-
-
 class FlexCheckbutton(tk.Checkbutton):
     def __init__(self, *args, **kwargs):
         okwargs = dict(kwargs)
@@ -887,9 +902,25 @@ class StackingWidget(tk.Frame):
             self.switch(key)
 
 
-def WindowGeo(obj, parent, width, height, mwidth=None, mheight=None):
-    ScreenWidth = root.winfo_screenwidth()
-    ScreenHeight = root.winfo_screenheight()
+def WindowGeo(obj, width, height, mwidth=None, mheight=None):
+    # Credit: https://stackoverflow.com/questions/3129322/how-do-i-get-monitor-resolution-in-python/56913005#56913005
+    def get_curr_screen_size():
+        """
+        Workaround to get the size of the current screen in a multi-screen setup.
+
+        Returns:
+            Size(Tuple): (width, height)
+        """
+        root = tk.Tk()
+        root.update_idletasks()
+        root.attributes('-fullscreen', True)
+        root.state('iconic')
+        size = (root.winfo_width(), root.winfo_height(),)
+        root.destroy()
+        print(size)
+        return size
+
+    ScreenWidth, ScreenHeight = get_curr_screen_size()
 
     WindowWidth = width or obj.winfo_reqwidth()
     WindowHeight = height or obj.winfo_reqheight()

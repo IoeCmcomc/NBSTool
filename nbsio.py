@@ -20,31 +20,43 @@
 
 from struct import Struct
 from pprint import pprint
-# from random import shuffle
 from collections import deque
 from operator import itemgetter
+from typing import BinaryIO
+from time import time
 
 BYTE = Struct('<b')
 SHORT = Struct('<h')
+SHORT_SIGNED = Struct('<H')
 INT = Struct('<i')
 
 VERSION = 4
 
-def read_numeric(f, fmt):
+beginInst = False
+
+def read_numeric(f: BinaryIO, fmt: Struct):
+    '''Read the following bytes from file and return a number.'''
+    
     raw = f.read(fmt.size)
-    # print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), int(raw.hex(), 16)))
+    rawInt = int.from_bytes(raw, byteorder='little', signed=True)
+    if beginInst: print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
     return fmt.unpack(raw)[0]
 
-def readString(f):
+def read_string(f: BinaryIO):
+    '''Read the following bytes from file and return a ASCII string.'''
+    
     length = read_numeric(f, INT)
     raw = f.read(length)
-    # print("{0:<20}{1}".format(length, raw))
+    if beginInst: print("{0:<20}{1}".format(length, raw))
     return raw.decode('unicode_escape') # ONBS doesn't support UTF-8
 
-def readnbsheader(f):
+def readnbsheader(f: BinaryIO) -> dict:
+    '''Read a .nbs file header from a file object'''
+
     headers = {}
     headers['length'] = None
     readNumeric = read_numeric
+    readString = read_string
     
     #Header
     first = readNumeric(f, SHORT) #Sign
@@ -78,7 +90,9 @@ def readnbsheader(f):
         headers['loop_start'] =  readNumeric(f, SHORT) #Loop start tick
     return headers
 
-def readnbs(fn):
+def readnbs(fn) -> dict:
+    '''Read a .nbs file from disk or URL.'''
+
     notes = deque()
     maxLayer = 0
     usedInsts = [[], []]
@@ -87,6 +101,7 @@ def readnbs(fn):
     customInsts = deque()
     appendix = None
     readNumeric = read_numeric
+    readString = read_string
     
     if fn != '':
         if fn.__class__.__name__ == 'HTTPResponse':
@@ -113,12 +128,11 @@ def readnbs(fn):
                     if file_version >= 4:
                         vel = readNumeric(f, BYTE)
                         pan = readNumeric(f, BYTE)
-                        pitch = readNumeric(f, SHORT)
+                        pitch = readNumeric(f, SHORT_SIGNED)
                     else:
                         vel = 100
                         pan = 100
                         pitch = 0
-            
                     if inst in {2, 3, 4}:
                         hasPerc = isPerc = True
                         if inst not in usedInsts[1]: usedInsts[1].append(inst)
@@ -150,7 +164,7 @@ def readnbs(fn):
                 shouldPressKeys = bool(readNumeric(f, BYTE)) #Press key
                 customInsts.append({'name':name, 'fn':file, 'pitch':pitch, 'pressKeys':shouldPressKeys})
             #Rest of the file
-                appendix = f.read()
+            appendix = f.read()
         finally:
             try:
                 f.close()
@@ -181,19 +195,25 @@ def DataPostprocess(data):
     # data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
     return data
 
-def writeNumeric(f, fmt, v):
+def write_numeric(f, fmt, v):
     f.write(fmt.pack(v))
 
-def writeString(f, v):
-    writeNumeric(f, INT, len(v))
+def write_string(f, v):
+    write_numeric(f, INT, len(v))
     f.write(v.encode())
     
-def writenbs(fn, data):
+def writenbs(fn: str, data: dict) -> None:
+    '''Save nbs data to a file on disk with the path given.'''
+
+    start = time()
     if fn != '' and data is not None:
+        writeNumeric = write_numeric
+        writeString = write_string
         data = DataPostprocess(data)
         headers, notes, layers, customInsts = \
         data['headers'], data['notes'], data['layers'], data['customInsts']
         file_version = headers['file_version']
+        
         with open(fn, "wb") as f:
             #Header
             if file_version != 0:
@@ -222,7 +242,6 @@ def writenbs(fn, data):
                 writeNumeric(f, BYTE, headers['loop_max']) #Max loop count
                 writeNumeric(f, SHORT, headers['loop_start']) #Loop start tick
             #Notes
-            # shuffle(notes)
             sortedNotes = sorted(notes, key = itemgetter('tick', 'layer') )
             tick = layer = -1
             fstNote = sortedNotes[0]
@@ -241,9 +260,10 @@ def writenbs(fn, data):
                     if file_version >= 4:
                         writeNumeric(f, BYTE, note['vel'])
                         writeNumeric(f, BYTE, note['pan'])
-                        writeNumeric(f, SHORT, note['pitch'])
-            writeNumeric(f, SHORT, 0)
-            writeNumeric(f, SHORT, 0)
+                        writeNumeric(f, SHORT_SIGNED, note['pitch'])
+            # writeNumeric(f, SHORT, 0)
+            # writeNumeric(f, SHORT, 0)
+            writeNumeric(f, INT, 0)
             #Layers
             for layer in layers:
                 writeString(f, layer['name']) #Layer name
@@ -253,7 +273,6 @@ def writenbs(fn, data):
                 if file_version >= 2:
                     writeNumeric(f, BYTE, layer['stereo']) #Stereo
             #Custom instrument
-            pprint(customInsts)
             if len(customInsts) == 0: writeNumeric(f, BYTE, 0)
             else:
                 writeNumeric(f, BYTE, len(customInsts))
@@ -263,6 +282,9 @@ def writenbs(fn, data):
                         writeString(f, customInst['fn']) #Sound fn
                         writeNumeric(f, BYTE, customInst['pitch']) #Pitch
                         writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
+            #Appendix
+            if 'appendix' in data: f.write(data['appendix'])
+    print(time() - start)
 
 if __name__ == "__main__":
     import sys
