@@ -1,14 +1,11 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.0">
   <object class="tk.Toplevel" id="toplevel">
-    <property name="class_">test</property>
-    <property name="geometry">550x550</property>
-    <property name="height">550</property>
-    <property name="minsize">200|200</property>
+    <property name="geometry">600x600</property>
+    <property name="minsize">350|350</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
     <property name="title" translatable="yes">NBS Tool</property>
-    <property name="width">550</property>
     <child>
       <object class="tk.Frame" id="mainFrame">
         <layout manager="pack">
@@ -19,7 +16,6 @@
         </layout>
         <child>
           <object class="tk.LabelFrame" id="fileFrame">
-            <property name="height">100</property>
             <property name="labelanchor">nw</property>
             <property name="text" translatable="yes">Files</property>
             <property name="width">200</property>
@@ -31,7 +27,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="pygubu.builder.widgets.tkscrollbarhelper" id="tkscrollbarhelper_3">
+              <object class="pygubu.builder.widgets.tkscrollbarhelper" id="tkscrollbarhelper">
                 <property name="scrolltype">both</property>
                 <property name="usemousewheel">false</property>
                 <layout manager="pack">
@@ -43,9 +39,7 @@
                 </layout>
                 <child>
                   <object class="ttk.Treeview" id="fileTable">
-                    <property name="minwidth">100</property>
                     <property name="selectmode">extended</property>
-                    <property name="width">105</property>
                     <layout manager="pack">
                       <property name="expand">true</property>
                       <property name="fill">both</property>
@@ -185,7 +179,7 @@
             <property name="labelanchor">nw</property>
             <property name="text" translatable="yes">Tools</property>
             <layout manager="pack">
-              <property name="expand">true</property>
+              <property name="expand">false</property>
               <property name="fill">both</property>
               <property name="padx">5</property>
               <property name="pady">5</property>
@@ -196,37 +190,27 @@
               <object class="ttk.Notebook" id="toolNotebook">
                 <layout manager="pack">
                   <property name="expand">true</property>
-                  <property name="fill">both</property>
+                  <property name="fill">x</property>
                   <property name="padx">5</property>
                   <property name="pady">5</property>
                   <property name="propagate">True</property>
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Notebook.Tab" id="metadataTab">
-                    <property name="text" translatable="yes">Metadata</property>
-                    <child>
-                      <object class="ttk.Frame" id="metadataFrame">
-                        <layout manager="pack">
-                          <property name="propagate">True</property>
-                          <property name="side">top</property>
-                        </layout>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
                   <object class="ttk.Notebook.Tab" id="formatTab">
                     <property name="text" translatable="yes">Format</property>
                     <child>
                       <object class="tk.Frame" id="formatFrame">
-                        <layout manager="pack">
+                        <layout manager="grid">
+                          <property name="column">1</property>
+                          <property name="columnspan">2</property>
                           <property name="propagate">True</property>
-                          <property name="side">top</property>
+                          <property name="row">1</property>
+                          <property name="rowspan">2</property>
                         </layout>
                         <child>
                           <object class="tk.Label" id="formatLabel">
-                            <property name="text" translatable="yes">Changes files's format to:</property>
+                            <property name="text" translatable="yes">Changes files format to:</property>
                             <layout manager="pack">
                               <property name="padx">5</property>
                               <property name="pady">5</property>
@@ -237,7 +221,21 @@
                         </child>
                         <child>
                           <object class="ttk.Combobox" id="formatCombo">
+                            <property name="state">readonly</property>
+                            <property name="textvariable">string:formatComboCurrent</property>
                             <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="customwidgets.wrapmessage" id="wrapmessage_1">
+                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
+</property>
+                            <layout manager="pack">
+                              <property name="expand">true</property>
+                              <property name="fill">both</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -314,8 +312,9 @@
         <child>
           <object class="ttk.Sizegrip" id="sizegrip_1">
             <layout manager="pack">
+              <property name="anchor">se</property>
               <property name="propagate">True</property>
-              <property name="side">right</property>
+              <property name="side">bottom</property>
             </layout>
           </object>
         </child>
@@ -323,7 +322,6 @@
     </child>
   </object>
   <object class="tk.Menu" id="menubar">
-    <property name="cursor">arrow</property>
     <property name="tearoff">false</property>
   </object>
 </interface>

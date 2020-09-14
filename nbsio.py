@@ -30,11 +30,11 @@ SHORT = Struct('<h')
 SHORT_SIGNED = Struct('<H')
 INT = Struct('<i')
 
-VERSION = 4
+NBS_VERSION = 4
 
 beginInst = False
 
-def read_numeric(f: BinaryIO, fmt: Struct):
+def read_numeric(f: BinaryIO, fmt: Struct) -> int:
     '''Read the following bytes from file and return a number.'''
     
     raw = f.read(fmt.size)
@@ -42,7 +42,7 @@ def read_numeric(f: BinaryIO, fmt: Struct):
     if beginInst: print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
     return fmt.unpack(raw)[0]
 
-def read_string(f: BinaryIO):
+def read_string(f: BinaryIO) -> str:
     '''Read the following bytes from file and return a ASCII string.'''
     
     length = read_numeric(f, INT)
@@ -61,13 +61,15 @@ def readnbsheader(f: BinaryIO) -> dict:
     #Header
     first = readNumeric(f, SHORT) #Sign
     if first != 0: #File is old type
-        headers['file_version'] = 0
+        headers['file_version'] = file_version = 0
         headers['vani_inst'] = 10
         headers['length'] = first
     else: #File is new type
-        headers['file_version'] = readNumeric(f, BYTE) #Version
+        headers['file_version'] = file_version = readNumeric(f, BYTE) #Version
+        if file_version > NBS_VERSION:
+            raise NotImplementedError("This format version ({}) is not supported.".format(file_version))
         headers['vani_inst'] = readNumeric(f, BYTE)
-    if headers['file_version'] >= 3:
+    if file_version >= 3:
         headers['length'] = readNumeric(f, SHORT)
     headers['height'] = readNumeric(f, SHORT) #Height
     headers['name'] = readString(f) #Name
@@ -84,7 +86,7 @@ def readnbsheader(f: BinaryIO) -> dict:
     headers['block_added'] = readNumeric(f, INT) #Total block added
     headers['block_removed'] = readNumeric(f, INT) #Total block removed
     headers['import_name'] = readString(f) #MIDI file name
-    if headers['file_version'] >= 4:
+    if file_version >= 4:
         headers['loop'] = readNumeric(f, BYTE) #Loop enabled
         headers['loop_max'] =  readNumeric(f, BYTE) #Max loop count
         headers['loop_start'] =  readNumeric(f, SHORT) #Loop start tick
@@ -174,7 +176,7 @@ def readnbs(fn) -> dict:
     if appendix: data['appendix'] = appendix
     return data
     
-def DataPostprocess(data):
+def DataPostprocess(data: dict) -> dict:
     # headers = data['headers']
     notes = data['notes']
     usedInsts = [[], []]
@@ -195,10 +197,10 @@ def DataPostprocess(data):
     # data['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
     return data
 
-def write_numeric(f, fmt, v):
+def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
     f.write(fmt.pack(v))
 
-def write_string(f, v):
+def write_string(f: BinaryIO, v) -> None:
     write_numeric(f, INT, len(v))
     f.write(v.encode())
     
@@ -219,7 +221,7 @@ def writenbs(fn: str, data: dict) -> None:
             if file_version != 0:
                 writeNumeric(f, SHORT, 0)
                 writeNumeric(f, BYTE, file_version) #Version
-                writeNumeric(f, BYTE, headers['vani_inst'])
+                writeNumeric(f, BYTE, headers.get('vani_inst', 10))
             if (file_version == 0) or (file_version >= 3):
                 writeNumeric(f, SHORT, headers['length']) #Length
             writeNumeric(f, SHORT, headers['height']) #Height
@@ -238,9 +240,9 @@ def writenbs(fn: str, data: dict) -> None:
             writeNumeric(f, INT, headers['block_removed']) #Total block removed
             writeString(f, headers['import_name']) #MIDI file name
             if file_version >= 4:
-                writeNumeric(f, BYTE, headers['loop']) #Loop enabled
-                writeNumeric(f, BYTE, headers['loop_max']) #Max loop count
-                writeNumeric(f, SHORT, headers['loop_start']) #Loop start tick
+                writeNumeric(f, BYTE, headers.get('loop', False)) #Loop enabled
+                writeNumeric(f, BYTE, headers.get('loop_max', 0)) #Max loop count
+                writeNumeric(f, SHORT, headers.get('loop_start', 0)) #Loop start tick
             #Notes
             sortedNotes = sorted(notes, key = itemgetter('tick', 'layer') )
             tick = layer = -1
@@ -258,9 +260,9 @@ def writenbs(fn: str, data: dict) -> None:
                     writeNumeric(f, BYTE, note['inst'])
                     writeNumeric(f, BYTE, note['key'])#-21
                     if file_version >= 4:
-                        writeNumeric(f, BYTE, note['vel'])
-                        writeNumeric(f, BYTE, note['pan'])
-                        writeNumeric(f, SHORT_SIGNED, note['pitch'])
+                        writeNumeric(f, BYTE, note.get('vel', 100))
+                        writeNumeric(f, BYTE, note.get('pan', 100))
+                        writeNumeric(f, SHORT_SIGNED, note.get('pitch', 0))
             # writeNumeric(f, SHORT, 0)
             # writeNumeric(f, SHORT, 0)
             writeNumeric(f, INT, 0)
@@ -268,10 +270,10 @@ def writenbs(fn: str, data: dict) -> None:
             for layer in layers:
                 writeString(f, layer['name']) #Layer name
                 if file_version >= 4:
-                    writeNumeric(f, BYTE, layer['lock']) #Lock
+                    writeNumeric(f, BYTE, layer.get('lock', False)) #Lock
                 writeNumeric(f, BYTE, layer['volume']) #Volume
                 if file_version >= 2:
-                    writeNumeric(f, BYTE, layer['stereo']) #Stereo
+                    writeNumeric(f, BYTE, layer.get('stereo', 100)) #Stereo
             #Custom instrument
             if len(customInsts) == 0: writeNumeric(f, BYTE, 0)
             else:

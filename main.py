@@ -48,7 +48,7 @@ import music21 as m21
 import music21.stream as m21s
 import music21.instrument as m21i
 
-from nbsio import readnbs, writenbs, DataPostprocess
+from nbsio import readnbs, writenbs, DataPostprocess, NBS_VERSION
 from ncfio import writencf
 
 # Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
@@ -73,7 +73,10 @@ class MainWindow:
     def __init__(self):
         self.builder = builder = pygubu.Builder()
         builder.add_from_file(resource_path('toplevel.ui'))
+        print("The following exception is not an error:")
+        print('='*20)
         self.toplevel = builder.get_object('toplevel')
+        print('='*20)
         self.mainwin = builder.get_object('mainFrame')
         
         self.toplevel.title("NBS Tool")
@@ -89,20 +92,29 @@ class MainWindow:
             except Exception:
                 pass
         
-        self.setupMenuBar()
+        builder.import_variables(self)
+
+        self.initMenuBar()
+        self.initFormatTab()
         self.windowBind()
         
+        applyBtn = builder.get_object('applyBtn')
+
         def on_fileTable_select(event):
             selectionNotEmpty = len(event.widget.selection()) > 0
             if selectionNotEmpty:
                 builder.get_object('saveFilesBtn')["state"] = "normal"
                 builder.get_object('removeEntriesBtn')["state"] = "normal"
+                applyBtn["state"] = "normal"
             else:
                 builder.get_object('saveFilesBtn')["state"] = "disabled"
                 builder.get_object('removeEntriesBtn')["state"] = "disabled"
+                applyBtn["state"] = "disabled"
         
         fileTable = builder.get_object('fileTable')
         fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
+
+        applyBtn.configure(command=self.applyTool)
         
         builder.connect_callbacks(self)
         
@@ -115,7 +127,7 @@ class MainWindow:
         self.filePaths = []
         self.songsData = []
 
-    def setupMenuBar(self):
+    def initMenuBar(self):
         # 'File' menu
         self.menuBar = menuBar = self.builder.get_object('menubar')
         self.toplevel.configure(menu=menuBar)
@@ -209,37 +221,10 @@ class MainWindow:
                 del self.filePaths[i]
                 del self.songsData[i]        
 
-    def tabs(self):
-        # "General" tab
-        self.GeneralTab = tk.Frame(self.NbTabs)
-
-        self.GeneralTab.rowconfigure(0)
-        self.GeneralTab.rowconfigure(1, weight=1)
-
-        self.GeneralTab.columnconfigure(0, weight=1, uniform='a')
-        self.GeneralTab.columnconfigure(1, weight=1, uniform='a')
-
-        self.GeneralTabElements()
-        self.NbTabs.add(self.GeneralTab, text="General")
-
-        # "Tools" tab
-        self.ToolsTab = tk.Frame(self.NbTabs)
-
-        self.ToolsTab.rowconfigure(0, weight=1, uniform='b')
-        self.ToolsTab.rowconfigure(1, weight=1, uniform='b')
-        self.ToolsTab.rowconfigure(2)
-
-        self.ToolsTab.columnconfigure(0, weight=1, uniform='b')
-        self.ToolsTab.columnconfigure(1, weight=1, uniform='b')
-
-        self.ToolsTabElements()
-        self.NbTabs.add(self.ToolsTab, text="Tools")
-
-        # "Export" tab
-        self.ExportTab = tk.Frame(self.NbTabs)
-
-        self.ExportTabElements()
-        self.NbTabs.add(self.ExportTab, text="Export")
+    def initFormatTab(self):
+        combobox = self.builder.get_object('formatCombo')
+        combobox.configure(values=("(not selected)", '4', '3', '2', '1', "Classic"))
+        combobox.current(0)
 
     def GeneralTabElements(self):
         fpadx, fpady = 10, 10
@@ -496,9 +481,6 @@ class MainWindow:
         toplevel.bind('<Control-Shift-S>', self.saveAll)
 
         # Bind class
-        mainwin.bind_class("Message", "<Configure>",
-                        lambda e: e.widget.configure(width=e.width-10))
-
         for tkclass in ('TButton', 'Checkbutton', 'Radiobutton'):
             mainwin.bind_class(tkclass, '<Return>', lambda e: e.widget.event_generate(
                 '<space>', when='tail'))
@@ -584,6 +566,17 @@ class MainWindow:
             if id <= 1:
                 self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get(
                 ) == 0 else "normal"
+
+    def applyTool(self):
+        builder = self.builder
+        fileTable = builder.get_object('fileTable')
+        songsData = self.songsData
+        if (formatComboIndex := builder.get_object('formatCombo').current()) > 0:
+            outputVersion = (NBS_VERSION + 1) - formatComboIndex
+            selectedIndexes = (fileTable.index(item) for item in fileTable.selection())
+            for i in selectedIndexes:
+                songsData[i]['headers']['file_version'] = outputVersion
+
 
     def OnApplyTool(self):
         self.ToolsTabButton['state'] = 'disabled'
