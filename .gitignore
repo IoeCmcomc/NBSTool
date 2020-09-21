@@ -333,8 +333,7 @@ ASALocalRun/
 *.nbs
 *.mid
 *.mp3
-add*/
-pack.mcmeta/
+datapacks/
 
 ## Ignore other files/folders.
 #*.ico
@@ -350,5 +349,4 @@ dist/
 main.build/
 main.dist/
 
-sounds/block.note.sax.ogg
 setup.py

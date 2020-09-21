@@ -295,6 +295,7 @@
             </child>
             <child>
               <object class="tk.Button" id="applyBtn">
+                <property name="command">applyTool</property>
                 <property name="cursor">arrow</property>
                 <property name="height">1</property>
                 <property name="text" translatable="yes">Apply</property>

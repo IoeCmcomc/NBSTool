@@ -23,7 +23,6 @@ from pprint import pprint
 from collections import deque
 from operator import itemgetter
 from typing import BinaryIO
-from time import time
 
 BYTE = Struct('<b')
 SHORT = Struct('<h')
@@ -32,14 +31,12 @@ INT = Struct('<i')
 
 NBS_VERSION = 4
 
-beginInst = False
-
 def read_numeric(f: BinaryIO, fmt: Struct) -> int:
     '''Read the following bytes from file and return a number.'''
     
     raw = f.read(fmt.size)
     rawInt = int.from_bytes(raw, byteorder='little', signed=True)
-    if beginInst: print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
+    # print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
     return fmt.unpack(raw)[0]
 
 def read_string(f: BinaryIO) -> str:
@@ -47,7 +44,7 @@ def read_string(f: BinaryIO) -> str:
     
     length = read_numeric(f, INT)
     raw = f.read(length)
-    if beginInst: print("{0:<20}{1}".format(length, raw))
+    # print("{0:<20}{1}".format(length, raw))
     return raw.decode('unicode_escape') # ONBS doesn't support UTF-8
 
 def readnbsheader(f: BinaryIO) -> dict:
@@ -100,7 +97,7 @@ def readnbs(fn) -> dict:
     usedInsts = [[], []]
     hasPerc = False
     layers = deque()
-    customInsts = deque()
+    customInsts = []
     appendix = None
     readNumeric = read_numeric
     readString = read_string
@@ -143,7 +140,8 @@ def readnbs(fn) -> dict:
                         if inst not in usedInsts[0]: usedInsts[0].append(inst)
                     notes.append({'tick':tick, 'layer':layer, 'inst':inst, 'key':key, 'vel':vel, 'pan':pan, 'pitch':pitch, 'isPerc':isPerc})
                 maxLayer = max(layer, maxLayer)
-            if headers['length'] is None: headers['length'] = tick + 1
+            # if headers['length'] is None:
+            headers['length'] = tick + 1
             # indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(headers['length']+1) ])
             #Layers
             for i in range(headers['height']):
@@ -207,7 +205,6 @@ def write_string(f: BinaryIO, v) -> None:
 def writenbs(fn: str, data: dict) -> None:
     '''Save nbs data to a file on disk with the path given.'''
 
-    start = time()
     if fn != '' and data is not None:
         writeNumeric = write_numeric
         writeString = write_string
@@ -286,7 +283,6 @@ def writenbs(fn: str, data: dict) -> None:
                         writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
             #Appendix
             if 'appendix' in data: f.write(data['appendix'])
-    print(time() - start)
 
 if __name__ == "__main__":
     import sys

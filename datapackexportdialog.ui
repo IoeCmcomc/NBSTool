@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.0">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">true</property>
+    <property name="title" translatable="yes">Datapack export - NBSTool</property>
+    <property name="width">200</property>
+    <child>
+      <object class="tk.Frame" id="frame">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">10</property>
+          <property name="pady">5</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.Label" id="label">
+            <property name="text" translatable="yes">Unique scorebroad ID:</property>
+            <layout manager="pack">
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Entry" id="IDEntry">
+            <property name="takefocus">true</property>
+            <property name="validate">key</property>
+            <layout manager="pack">
+              <property name="fill">x</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Button" id="exportBtn">
+            <property name="command">export</property>
+            <property name="state">disabled</property>
+            <property name="text" translatable="yes">Export</property>
+            <property name="width">10</property>
+            <layout manager="pack">
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
