@@ -44,33 +44,32 @@ from math import floor, log2
 from datetime import timedelta
 
 from PIL import Image, ImageTk
-import music21 as m21
-import music21.stream as m21s
-import music21.instrument as m21i
 
-from nbsio import readnbs, writenbs, DataPostprocess, NBS_VERSION
+from nbsio import NBS_VERSION, NbsSong
 from ncfio import writencf
 
 vaniNoteSounds = [
-	{'filename': 'harp.ogg', 'name': 'harp'},
-	{'filename': 'dbass.ogg', 'name': 'bass'},
-	{'filename': 'bdrum.ogg', 'name': 'basedrum'},
-	{'filename': 'sdrum.ogg', 'name': 'snare'},
-	{'filename': 'click.ogg', 'name': 'hat'},
-	{'filename': 'guitar.ogg', 'name': 'guitar'},
-	{'filename': 'flute.ogg', 'name': 'flute'},
-	{'filename': 'bell.ogg', 'name': 'bell'},
-	{'filename': 'icechime.ogg', 'name': 'chime'},
-	{'filename': 'xylobone.ogg', 'name': 'xylophone'},
-	{'filename': 'iron_xylophone.ogg', 'name': 'iron_xylophone'},
-	{'filename': 'cow_bell.ogg', 'name': 'cow_bell'},
-	{'filename': 'didgeridoo.ogg', 'name': 'didgeridoo'},
-	{'filename': 'bit.ogg', 'name': 'bit'},
-	{'filename': 'banjo.ogg', 'name': 'banjo'},
-	{'filename': 'pling.ogg', 'name': 'pling'}
+    {'filename': 'harp.ogg', 'name': 'harp'},
+    {'filename': 'dbass.ogg', 'name': 'bass'},
+    {'filename': 'bdrum.ogg', 'name': 'basedrum'},
+    {'filename': 'sdrum.ogg', 'name': 'snare'},
+    {'filename': 'click.ogg', 'name': 'hat'},
+    {'filename': 'guitar.ogg', 'name': 'guitar'},
+    {'filename': 'flute.ogg', 'name': 'flute'},
+    {'filename': 'bell.ogg', 'name': 'bell'},
+    {'filename': 'icechime.ogg', 'name': 'chime'},
+    {'filename': 'xylobone.ogg', 'name': 'xylophone'},
+    {'filename': 'iron_xylophone.ogg', 'name': 'iron_xylophone'},
+    {'filename': 'cow_bell.ogg', 'name': 'cow_bell'},
+    {'filename': 'didgeridoo.ogg', 'name': 'didgeridoo'},
+    {'filename': 'bit.ogg', 'name': 'bit'},
+    {'filename': 'banjo.ogg', 'name': 'banjo'},
+    {'filename': 'pling.ogg', 'name': 'pling'}
 ]
 
 # Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
+
+
 def resource_path(*args):
     if getattr(sys, 'frozen', False):
         datadir = os.path.dirname(sys.executable)
@@ -93,12 +92,12 @@ class MainWindow:
         self.toplevel = builder.get_object('toplevel')
         print('='*20)
         self.mainwin = builder.get_object('mainFrame')
-        
+
         self.fileTable = builder.get_object('fileTable')
         applyBtn = builder.get_object('applyBtn')
-        
+
         self.toplevel.title("NBS Tool")
-        WindowGeo(self.toplevel)
+        centerToplevel(self.toplevel)
         self.style = ttk.Style()
         # self.style.theme_use("default")
         try:
@@ -109,7 +108,7 @@ class MainWindow:
                 self.style.theme_use("winnative")
             except Exception:
                 pass
-        
+
         builder.import_variables(self)
 
         self.initMenuBar()
@@ -129,12 +128,13 @@ class MainWindow:
                 builder.get_object('saveFilesBtn')["state"] = "disabled"
                 builder.get_object('removeEntriesBtn')["state"] = "disabled"
                 applyBtn["state"] = "disabled"
-            self.exportMenu.entryconfig(1, state="normal" if selectionLen == 1 else "disable")
-        
+            self.exportMenu.entryconfig(
+                1, state="normal" if selectionLen == 1 else "disable")
+
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
-        
+
         builder.connect_callbacks(self)
-        
+
         self.mainwin.lift()
         self.mainwin.focus_force()
         self.mainwin.grab_set()
@@ -148,7 +148,7 @@ class MainWindow:
         # 'File' menu
         self.menuBar = menuBar = self.builder.get_object('menubar')
         self.toplevel.configure(menu=menuBar)
-        
+
         self.fileMenu = tk.Menu(menuBar, tearoff=False)
         self.menuBar.add_cascade(label="File", menu=self.fileMenu)
 
@@ -161,13 +161,13 @@ class MainWindow:
         self.fileMenu.add_separator()
         self.fileMenu.add_command(
             label="Quit", accelerator="Esc", command=self.onClose)
-            
+
         self.importMenu = tk.Menu(menuBar, tearoff=False)
         self.menuBar.add_cascade(label="Import", menu=self.importMenu)
-        
+
         self.exportMenu = tk.Menu(menuBar, tearoff=False)
         self.menuBar.add_cascade(label="Export", menu=self.exportMenu)
-        
+
         self.exportMenu.add_command(
             label="Export as datapack...", command=self.callDatapackExportDialog, state="disabled")
 
@@ -182,72 +182,88 @@ class MainWindow:
         self.filePaths.clear()
         self.songsData.clear()
         self.addFiles()
-    
-    def addFiles(self, _=None, paths=None):
+
+    def addFiles(self, _=None, paths=()):
         types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
         if len(paths) > 0:
             addedPaths = paths
         else:
             addedPaths = askopenfilenames(filetypes=types)
-        if len(addedPaths) == 0: return
+        if len(addedPaths) == 0:
+            return
         for filePath in addedPaths:
             try:
-                songData = readnbs(filePath)
+                songData = NbsSong(filePath)
                 self.songsData.append(songData)
             except Exception:
-                showerror("Reading file error", "Cannot read or parse file: "+filePath)
+                showerror("Reading file error",
+                          "Cannot read or parse file: "+filePath)
                 print(traceback.format_exc())
                 continue
-            headers = songData['headers']
-            length = timedelta(seconds=floor(headers['length'] / headers['tempo'])) if headers['length'] != None else "Not calculated"
-            name = headers['name']
-            author = headers['author']
-            orig_author = headers['orig_author']
-            self.fileTable.insert("", 'end', text=filePath, values=(length, name, author, orig_author))
+            header = songData['header']
+            length = timedelta(seconds=floor(
+                header['length'] / header['tempo'])) if header['length'] != None else "Not calculated"
+            name = header['name']
+            author = header['author']
+            orig_author = header['orig_author']
+            self.fileTable.insert("", 'end', text=filePath, values=(
+                length, name, author, orig_author))
             self.mainwin.update()
         self.filePaths.extend(addedPaths)
-        self.fileMenu.entryconfig(2, state="normal" if len(self.filePaths) > 0 else "disabled")
+        self.fileMenu.entryconfig(2, state="normal" if len(
+            self.filePaths) > 0 else "disabled")
 
     def saveFiles(self, _=None):
-        if len(self.filePaths) == 0: return
+        if len(self.filePaths) == 0:
+            return
         fileTable = self.fileTable
         if len(selection := fileTable.selection()) > 0:
             if len(selection) == 1:
-                filePath = os.path.basename(self.filePaths[fileTable.index(selection[0])])
-                types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
-                path = asksaveasfilename(filetypes=types, initialfile=filePath, defaultextension=".nbs")
+                filePath = os.path.basename(
+                    self.filePaths[fileTable.index(selection[0])])
+                types = [('Note Block Studio files', '*.nbs'),
+                         ('All files', '*')]
+                path = asksaveasfilename(
+                    filetypes=types, initialfile=filePath, defaultextension=".nbs")
             else:
                 path = askdirectory(title="Select folder to save")
-            if path == '': return
+            if path == '':
+                return
             Path(path).mkdir(parents=True, exist_ok=True)
             for item in selection:
                 i = fileTable.index(item)
                 filePath = self.filePaths[i]
-                writenbs(os.path.join(path, os.path.basename(filePath)), self.songsData[i])
+                self.songsData[i].write(os.path.join(
+                    path, os.path.basename(filePath)))
 
     def saveAll(self, _=None):
-        if len(self.filePaths) == 0: return
+        if len(self.filePaths) == 0:
+            return
         path = askdirectory(title="Select folder to save")
-        if path == '': return
+        if path == '':
+            return
         Path(path).mkdir(parents=True, exist_ok=True)
         for i, filePath in enumerate(self.filePaths):
-            writenbs(os.path.join(path, os.path.basename(filePath)), self.songsData[i])
-            
+            self.songsData[i].write(os.path.join(
+                path, os.path.basename(filePath)))
+
     def removeSelectedFiles(self):
-        if len(self.filePaths) == 0: return
+        if len(self.filePaths) == 0:
+            return
         fileTable = self.fileTable
         if len(selection := fileTable.selection()) > 0:
             for item in reversed(selection):
                 i = fileTable.index(item)
                 fileTable.delete(item)
                 del self.filePaths[i]
-                del self.songsData[i]        
+                del self.songsData[i]
 
     def initFormatTab(self):
         combobox = self.builder.get_object('formatCombo')
-        combobox.configure(values=("(not selected)", '4', '3', '2', '1', "Classic"))
+        combobox.configure(
+            values=("(not selected)", '4', '3', '2', '1', "Classic"))
         combobox.current(0)
-        
+
     def callDatapackExportDialog(self):
         dialog = DatapackExportDialog(self.toplevel, self)
         dialog.run()
@@ -381,7 +397,7 @@ class MainWindow:
 
         self.var.export.type.file = \
             [('Musical Instrument Digital files', '*.mid'),
-             ('Nokia Composer Format', '*.txt'),]
+             ('Nokia Composer Format', '*.txt'), ]
         self.var.export.type.dtp = ['Wireless note block song', 'other']
         self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=[
                                             "{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
@@ -491,17 +507,20 @@ class MainWindow:
                 '<space>', when='tail'))
 
         mainwin.bind_class("TCombobox", "<Return>",
-                        lambda e: e.widget.event_generate('<Down>'))
+                           lambda e: e.widget.event_generate('<Down>'))
 
         for tkclass in ("Entry", "Text", "ScrolledText", "TCombobox"):
             mainwin.bind_class(tkclass, "<Button-3>", self.popupmenus)
 
         mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
-                        self._on_tab_changed)
-                        
-        mainwin.bind_class("Treeview", "<Shift-Down>", self._on_treeview_shift_down)
-        mainwin.bind_class("Treeview", "<Shift-Up>", self._on_treeview_shift_up)
-        mainwin.bind_class("Treeview", "<Button-1>", self._on_treeview_left_click, add='+')
+                           self._on_tab_changed)
+
+        mainwin.bind_class("Treeview", "<Shift-Down>",
+                           self._on_treeview_shift_down)
+        mainwin.bind_class("Treeview", "<Shift-Up>",
+                           self._on_treeview_shift_up)
+        mainwin.bind_class("Treeview", "<Button-1>",
+                           self._on_treeview_left_click, add='+')
 
     # Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
     def _on_tab_changed(self, event):
@@ -509,13 +528,14 @@ class MainWindow:
 
         tab = event.widget.nametowidget(event.widget.select())
         event.widget.configure(height=tab.winfo_reqheight())
-        
+
     # Credit: https://stackoverflow.com/questions/57939932/treeview-how-to-select-multiple-rows-using-cursor-up-and-down-keys
     def _on_treeview_shift_down(self, event):
         tree = event.widget
         cur_item = tree.focus()
         next_item = tree.next(cur_item)
-        if next_item == '': return 'break'
+        if next_item == '':
+            return 'break'
         selection = tree.selection()
         if next_item in selection:
             tree.selection_remove(cur_item)
@@ -524,12 +544,13 @@ class MainWindow:
         tree.selection_add(next_item)
         tree.focus(next_item)
         tree.see(next_item)
-        
+
     def _on_treeview_shift_up(self, event):
         tree = event.widget
         cur_item = tree.focus()
         prev_item = tree.prev(cur_item)
-        if prev_item == '': return 'break'
+        if prev_item == '':
+            return 'break'
         selection = tree.selection()
         if prev_item in selection:
             tree.selection_remove(cur_item)
@@ -538,12 +559,12 @@ class MainWindow:
         tree.selection_add(prev_item)
         tree.focus(prev_item)
         tree.see(prev_item)
-        
+
     def _on_treeview_left_click(self, event):
         tree = event.widget
         if tree.identify_row(event.y) == '':
             tree.selection_set(tuple())
-        
+
     def popupmenus(self, event):
         w = event.widget
         self.popupMenu = tk.Menu(self.mainwin, tearoff=False)
@@ -578,15 +599,15 @@ class MainWindow:
         songsData = self.songsData
         if (formatComboIndex := builder.get_object('formatCombo').current()) > 0:
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
-            selectedIndexes = (fileTable.index(item) for item in fileTable.selection())
+            selectedIndexes = (fileTable.index(item)
+                               for item in fileTable.selection())
             for i in selectedIndexes:
-                songsData[i]['headers']['file_version'] = outputVersion
-
+                songsData[i]['header']['file_version'] = outputVersion
 
     def OnApplyTool(self):
         self.ToolsTabButton['state'] = 'disabled'
         data = self.inputFileData
-        ticklen = data['headers']['length']
+        ticklen = data['header']['length']
         layerlen = data['maxLayer']
         instOpti = self.InstToolCombox.current()
         for note in data['notes']:
@@ -626,7 +647,7 @@ class MainWindow:
         data['notes'] = sorted(
             data['notes'], key=operator.itemgetter('tick', 'layer'))
 
-        data = DataPostprocess(data)
+        data.correctData()
         self.ToolsTabButton['state'] = 'normal'
 
     def toggleExpOptiGrp(self, n=None, m=None, y=None):
@@ -724,41 +745,45 @@ class DatapackExportDialog:
     def __init__(self, master, parent):
         self.master = master
         self.parent = parent
-    
+
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
         builder.add_from_file(resource_path('datapackexportdialog.ui'))
 
         self.dialog = builder.get_object('dialog', master)
-        WindowGeo(self.dialog.toplevel)
-        
+        centerToplevel(self.dialog.toplevel)
+
         button = builder.get_object('exportBtn')
         button.configure(command=self.export)
         if len(parent.fileTable.selection()) == 0:
             button["state"] = "disabled"
-        
+
         def wnbsIDVaildate(P):
             isVaild = bool(re.match("^(\d|\w|[-_])*$", P))
-            button["state"] = "normal" if isVaild and (14 >= len(P) > 0) else "disabled"
+            button["state"] = "normal" if isVaild and (
+                14 >= len(P) > 0) else "disabled"
             return isVaild
-        
+
         self.entry = entry = builder.get_object('IDEntry')
         vcmd = (master.register(wnbsIDVaildate), '%P')
         entry.configure(validatecommand=vcmd)
-        
+
         builder.connect_callbacks(self)
-        
+
     def run(self):
         self.builder.get_object('dialog').run()
-        
+
     def export(self, _=None):
         self.dialog.close()
         fileTable = self.parent.fileTable
         index = fileTable.index(fileTable.selection()[0])
-        
+
         path = askdirectory(title="Select folder to save")
-        if path == '': return
-        exportDatapack(self.parent.songsData[index], os.path.join(path, self.entry.get()), self.entry.get(), 'wnbs')
+        if path == '':
+            return
+        exportDatapack(self.parent.songsData[index], os.path.join(
+            path, self.entry.get()), self.entry.get(), 'wnbs')
+
 
 class FlexCheckbutton(tk.Checkbutton):
     def __init__(self, *args, **kwargs):
@@ -787,6 +812,7 @@ class FlexCheckbutton(tk.Checkbutton):
         if self.multiline:
             self.bind("<Configure>", lambda event: self.configure(width=event.width-10,
                                                                   justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999))
+
 
 class StackingWidget(tk.Frame):
     def __init__(self, parent, **kwargs):
@@ -826,7 +852,7 @@ class StackingWidget(tk.Frame):
             self.switch(key)
 
 
-def WindowGeo(obj, width=None, height=None, mwidth=None, mheight=None):
+def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     # Credit: https://stackoverflow.com/questions/3129322/how-do-i-get-monitor-resolution-in-python/56913005#56913005
     def get_curr_screen_size():
         """
@@ -914,157 +940,8 @@ def compactNotes(data, sepInst=1, groupPerc=1):
 
 
 def exportMIDI(cls, path, byLayer=False):
-    data = copy.deepcopy(cls.inputFileData)
-    byLayer = bool(byLayer)
+    pass
 
-    if not byLayer:
-        data = DataPostprocess(data)
-        data = compactNotes(data)
-
-    UniqInstEachLayer = {}
-    for note in data['notes']:
-        if note['layer'] not in UniqInstEachLayer:
-            if note['isPerc']:
-                UniqInstEachLayer[note['layer']] = -1
-            else:
-                UniqInstEachLayer[note['layer']] = note['inst']
-        else:
-            if not note['isPerc']:
-                note['inst'] = UniqInstEachLayer[note['layer']]
-
-    lenTrack = data['maxLayer'] + 1
-    for i in range(lenTrack):
-        if i not in UniqInstEachLayer:
-            UniqInstEachLayer[i] = 0
-
-    main_score = m21s.Score()
-
-    percussions = (
-        #(percussion_key, instrument, key)
-        (35, 2, 64),
-        (36, 2, 60),
-        (37, 4, 60),
-        (38, 3, 62),
-        #(39, 4, 60),
-        (40, 3, 58),
-        #(41, 2, 60),
-        (42, 3, 76),
-        (43, 2, 67),
-        #(44, 3, 76),
-        (45, 2, 69),
-        (46, 2, 72),
-        (47, 2, 74),
-        (48, 2, 77),
-        (49, 2, 71),
-        (50, 3, 77),
-        (51, 3, 78),
-        (52, 3, 62),
-        (53, 3, 67),
-        (54, 3, 72),
-        (55, 3, 73),
-        (56, 4, 55),
-        #(57, 3, 67),
-        (58, 4, 56),
-        #(59, 3, 67),
-        (60, 4, 63),
-        (61, 4, 57),
-        (62, 4, 62),
-        (63, 2, 76),
-        (64, 3, 69),
-        #(65, 3, 67),
-        #(66, 3, 62),
-        #(67, 4, 62),
-        (68, 4, 58),
-        (69, 4, 74),
-        (70, 4, 77),
-        (73, 3, 71),
-        (74, 4, 65),
-        (75, 4, 72),
-        (76, 4, 64),
-        (77, 4, 59),
-        (80, 4, 71),
-        (81, 4, 76),
-        (82, 3, 78)
-    )
-
-    instrument_codes = {-1: m21i.Percussion,
-                        0: m21i.Harp,
-                        1: m21i.AcousticBass,
-                        5: m21i.Guitar,
-                        6: m21i.Flute,
-                        7: m21i.Handbells,
-                        8: m21i.ChurchBells,
-                        9: m21i.Xylophone,
-                        10: m21i.Xylophone,
-                        11: m21i.Piano,
-                        12: m21i.Piano,
-                        13: m21i.Piano,
-                        14: m21i.Banjo,
-                        15: m21i.Piano,
-                        }
-
-    timeSign = data['headers']['time_sign']
-    time = 0
-    tempo = data['headers']['tempo'] * 60 / timeSign
-    volume = 127
-
-    c = 0
-    for i in range(lenTrack):
-        staff = m21s.Part()
-        staff.append(m21.tempo.MetronomeMark(number=tempo))  # Tempo
-        staff.timeSignature = m21.meter.TimeSignature(
-            '{}/4'.format(timeSign))  # Time signature
-        staff.clef = m21.clef.TrebleClef()  # Clef
-        try:
-            staff.append(instrument_codes[UniqInstEachLayer[i]]())
-        except KeyError:
-            staff.append(m21i.Piano())
-        main_score.append(staff)
-
-    for i, note in enumerate(data['notes']):
-        time = note['tick'] / timeSign
-        pitch = note['key'] + 21
-        track = note['layer']
-
-        if note['isPerc']:
-            for a, b, c in percussions:
-                if c == pitch and b == note['inst']:
-                    pitch = a
-
-        if byLayer:
-            volume = int(data['layers'][note['layer']]['volume'] / 100 * 127)
-
-        #print("track: {}, channel: {}, pitch: {}, time: {}, duration: {}, volume: {}".format(track, channel, pitch, time, duration, volume))
-
-        a_note = m21.note.Note()
-        a_note.pitch.midi = pitch  # Pitch
-        a_note.duration.quarterLength = 1 / 4  # Duration
-        a_note.volume = volume
-        main_score[track].append(a_note)
-        a_note.offset = time
-
-    mt = m21.metadata.Metadata()
-    mt.title = mt.popularTitle = 'Title'
-    mt.composer = 'Composer'
-    main_score.insert(0, mt)
-
-    #fn = main_score.write("midi", path)
-
-    mid = m21.midi.translate.streamToMidiFile(main_score)
-
-    if data['hasPerc']:
-        for i in range(lenTrack):
-            if UniqInstEachLayer[i] == -1:
-                for el in mid.tracks[i].events:
-                    el.channel = 10
-
-
-    mid.open(path, 'wb')
-    mid.write()
-    mid.close()
-
-    #exper_s = m21.midi.translate.midiFileToStream(mid)
-    #exper_s.write("midi", path+'_test.mid')
 
 def exportDatapack(data, path, bname, mode=None, master=None):
     def writejson(path, jsout):
@@ -1089,10 +966,24 @@ def exportDatapack(data, path, bname, mode=None, master=None):
         else:
             return
 
-    def wnbs():
-        scoreObj = bname[:13]
-        speed = int(min(data['headers']['tempo'] * 4, 120))
-        length = data['headers']['length']
+    path = os.path.join(*os.path.normpath(path).split())
+    bname = os.path.basename(path)
+
+    data.correctData()
+    data = compactNotes(data, groupPerc=False)
+
+    noteSounds = vaniNoteSounds + data['customInsts']
+
+    instLayers = {}
+    for note in data['notes']:
+        if note['inst'] not in instLayers:
+            instLayers[note['inst']] = [note['layer']]
+        elif note['layer'] not in instLayers[note['inst']]:
+            instLayers[note['inst']].append(note['layer'])
+
+            scoreObj = bname[:13]
+        speed = int(min(data['header']['tempo'] * 4, 120))
+        length = data['header']['length']
 
         makeFolderTree(
             {path: {
@@ -1157,19 +1048,20 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
             while note['tick'] != tick:
                 tick += 1
                 colNotes[tick] = []
-        
+
         for tick in range(length):
             text = ""
             if tick in colNotes:
                 currNotes = colNotes[tick]
                 for note in currNotes:
                     text += \
-"""execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+                        """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
 """.format(obj=scoreObj, tick=tick, inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=noteSounds[note['inst']]['name'], key=max(33, min(57, note['key'])) - 33)
             if tick < length-1:
-                text += "scoreboard players set @s {}_t {}".format(scoreObj, tick)
+                text += "scoreboard players set @s {}_t {}".format(
+                    scoreObj, tick)
             else:
                 text += "execute run function {}:stop".format(bname)
             if text != "":
@@ -1229,33 +1121,16 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
                 else:
                     break
 
-    path = os.path.join(*os.path.normpath(path).split())
-    bname = os.path.basename(path)
-
-    data = DataPostprocess(data)
-    data = compactNotes(data, groupPerc=False)
-
-    noteSounds = vaniNoteSounds + data['customInsts']
-
-    instLayers = {}
-    for note in data['notes']:
-        if note['inst'] not in instLayers:
-            instLayers[note['inst']] = [note['layer']]
-        elif note['layer'] not in instLayers[note['inst']]:
-            instLayers[note['inst']].append(note['layer'])
-
-    if mode:
-        locals()[mode]()
 
 if __name__ == "__main__":
-    
+
     app = MainWindow()
     print('Creating app...')
 
     print(sys.argv)
 
     if len(sys.argv) == 2:
-        app.addFiles(paths=[sys.argv[1],])
+        app.addFiles(paths=[sys.argv[1], ])
 
     print('Ready')
     app.mainwin.mainloop()

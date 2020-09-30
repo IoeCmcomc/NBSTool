@@ -1,0 +1,4 @@
+addict==2.3.0
+Pillow==7.0.0
+pygubu==0.10.2
+pygubu-designer==0.10
