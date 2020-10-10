@@ -113,6 +113,7 @@ class MainWindow:
 
         self.initMenuBar()
         self.initFormatTab()
+        self.initFlipTab()
         self.windowBind()
 
         def on_fileTable_select(event):
@@ -200,7 +201,7 @@ class MainWindow:
                           "Cannot read or parse file: "+filePath)
                 print(traceback.format_exc())
                 continue
-            header = songData['header']
+            header = songData.header
             length = timedelta(seconds=floor(
                 header['length'] / header['tempo'])) if header['length'] != None else "Not calculated"
             name = header['name']
@@ -225,6 +226,8 @@ class MainWindow:
                          ('All files', '*')]
                 path = asksaveasfilename(
                     filetypes=types, initialfile=filePath, defaultextension=".nbs")
+                self.songsData[fileTable.index(selection[0])].write(path)
+                return
             else:
                 path = askdirectory(title="Select folder to save")
             if path == '':
@@ -263,6 +266,10 @@ class MainWindow:
         combobox.configure(
             values=("(not selected)", '4', '3', '2', '1', "Classic"))
         combobox.current(0)
+
+    def initFlipTab(self):
+        self.builder.get_object('flipHorizontallyCheck').deselect()
+        self.builder.get_object('flipVerticallyCheck').deselect()
 
     def callDatapackExportDialog(self):
         dialog = DatapackExportDialog(self.toplevel, self)
@@ -595,14 +602,39 @@ class MainWindow:
 
     def applyTool(self):
         builder = self.builder
-        fileTable = builder.get_object('fileTable')
+        builder.get_object('applyBtn')['state'] = 'disabled'
+        fileTable = self.fileTable
         songsData = self.songsData
+        selectedIndexes = (fileTable.index(item)
+                               for item in fileTable.selection())
+
+        outputVersion = -1
+
         if (formatComboIndex := builder.get_object('formatCombo').current()) > 0:
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
-            selectedIndexes = (fileTable.index(item)
-                               for item in fileTable.selection())
-            for i in selectedIndexes:
-                songsData[i]['header']['file_version'] = outputVersion
+        for i in selectedIndexes:
+            songData = songsData[i]
+            length = songData.header['length']
+            maxLayer = songData.maxLayer
+        
+            if outputVersion > -1:
+                songData.header['file_version'] = outputVersion
+            for note in songData.notes:
+                if bool(self.flipHorizontallyCheckVar.get()):
+                    note['tick'] = length - note['tick']
+                if bool(self.flipVerticallyCheckVar.get()):
+                    note['layer'] = maxLayer - note['layer']
+            
+            if self.arrangeMode.get():
+                for note in songData.notes:
+                    if self.arrangeMode.get() == 'collapse':
+                        pass
+            
+            songData.sortNotes()
+                
+        builder.get_object('applyBtn')['state'] = 'normal'
+        
+        print('Applied!')
 
     def OnApplyTool(self):
         self.ToolsTabButton['state'] = 'disabled'
@@ -644,8 +676,7 @@ class MainWindow:
             data = compactNotes(
                 data, self.var.tool.compact.opt1.get(), self.var.tool.compact.opt1_1.get())
         # Sort notes
-        data['notes'] = sorted(
-            data['notes'], key=operator.itemgetter('tick', 'layer'))
+        
 
         data.correctData()
         self.ToolsTabButton['state'] = 'normal'

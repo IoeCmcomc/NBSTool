@@ -187,7 +187,7 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="ttk.Notebook" id="toolNotebook">
+              <object class="ttk.Notebook" id="arrangeFrame">
                 <layout manager="pack">
                   <property name="expand">true</property>
                   <property name="fill">x</property>
@@ -201,12 +201,9 @@
                     <property name="text" translatable="yes">Format</property>
                     <child>
                       <object class="tk.Frame" id="formatFrame">
-                        <layout manager="grid">
-                          <property name="column">1</property>
-                          <property name="columnspan">2</property>
+                        <layout manager="pack">
                           <property name="propagate">True</property>
-                          <property name="row">1</property>
-                          <property name="rowspan">2</property>
+                          <property name="side">top</property>
                         </layout>
                         <child>
                           <object class="tk.Label" id="formatLabel">
@@ -267,8 +264,9 @@
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Checkbutton" id="FlipHorizontallyCheck">
+                          <object class="tk.Checkbutton" id="flipHorizontallyCheck">
                             <property name="text" translatable="yes">Horizontally</property>
+                            <property name="variable">string:flipHorizontallyCheckVar</property>
                             <layout manager="pack">
                               <property name="anchor">n</property>
                               <property name="padx">10</property>
@@ -278,10 +276,66 @@
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Checkbutton" id="FlipVerticallyCheck">
+                          <object class="tk.Checkbutton" id="flipVerticallyCheck">
                             <property name="text" translatable="yes">Vertically</property>
+                            <property name="variable">string:flipVerticallyCheckVar</property>
                             <layout manager="pack">
                               <property name="padx">10</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="arrangeTab">
+                    <property name="text" translatable="yes">Arrange</property>
+                    <child>
+                      <object class="tk.Frame" id="frame_1">
+                        <property name="height">200</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="tk.Radiobutton" id="notArrangeRadio">
+                            <property name="text" translatable="yes">Not arrange</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="padx">5</property>
+                              <property name="pady">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Radiobutton" id="collapseNotesRadio">
+                            <property name="text" translatable="yes">Collapse all notes</property>
+                            <property name="value">collpase</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="padx">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Radiobutton" id="instArrangeRadio">
+                            <property name="text" translatable="yes">Arrange by instruments</property>
+                            <property name="value">instruments</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="padx">5</property>
+                              <property name="pady">5</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -298,6 +352,7 @@
                 <property name="command">applyTool</property>
                 <property name="cursor">arrow</property>
                 <property name="height">1</property>
+                <property name="state">disabled</property>
                 <property name="text" translatable="yes">Apply</property>
                 <property name="width">10</property>
                 <layout manager="pack">

@@ -49,6 +49,13 @@ def read_string(f: BinaryIO) -> str:
     # print("{0:<20}{1}".format(length, raw))
     return raw.decode('unicode_escape') # ONBS doesn't support UTF-8
 
+def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
+    f.write(fmt.pack(v))
+
+def write_string(f: BinaryIO, v) -> None:
+    write_numeric(f, INT, len(v))
+    f.write(v.encode())
+
 class NbsSong(Dict):
     def __init__(self, f=None):
         self.header = Dict({
@@ -206,15 +213,17 @@ class NbsSong(Dict):
                     f.close()
                 except:
                     pass
-        self.notes = notes
-        self.layers = layers
-        self.customInsts = customInsts
-        self.hasPerc = hasPerc
-        self.maxLayer = maxLayer
-        self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
+        self.notes, self.layers, self.customInsts, self.hasPerc, self.maxLayer, self.usedInsts = \
+            notes, layers, customInsts, hasPerc, maxLayer, (tuple(usedInsts[0]), tuple(usedInsts[1]))
         if appendix: self.appendix = appendix
-        
+     
+    def sortNotes(self) -> None:
+        self.notes = sorted(self.notes, key=itemgetter('tick', 'layer', 'key', 'inst'))
+     
     def correctData(self) -> None:
+        '''Make song data consistent.'''
+        
+        self.sortNotes()
         notes = self.notes
         usedInsts = [[], []]
         maxLayer = 0
@@ -272,10 +281,9 @@ class NbsSong(Dict):
                     writeNumeric(f, BYTE, header.get('loop_max', 0)) #Max loop count
                     writeNumeric(f, SHORT, header.get('loop_start', 0)) #Loop start tick
                 #Notes
-                sortedNotes = sorted(notes, key = itemgetter('tick', 'layer') )
                 tick = layer = -1
-                fstNote = sortedNotes[0]
-                for note in sortedNotes:
+                fstNote = notes[0]
+                for note in notes:
                     if tick != note['tick']:
                         if note != fstNote:
                             writeNumeric(f, SHORT, 0)
@@ -313,14 +321,7 @@ class NbsSong(Dict):
                             writeNumeric(f, BYTE, customInst['pitch']) #Pitch
                             writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
                 #Appendix
-                if 'appendix' in data: f.write(data['appendix'])
-
-def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
-    f.write(fmt.pack(v))
-
-def write_string(f: BinaryIO, v) -> None:
-    write_numeric(f, INT, len(v))
-    f.write(v.encode())
+                if self.appendix: f.write(self.appendix)
 
 if __name__ == "__main__":
     import sys
@@ -329,5 +330,3 @@ if __name__ == "__main__":
         else: in_ra = sys.argv[2]
         data = NbsSong(sys.argv[1])
         if in_ra: pprint(data)
-    pprint(NbsSong())
-    print(NbsSong('Hold The Line.nbs'))
