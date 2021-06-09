@@ -1,13 +1,13 @@
 # This file is a part of:
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-#  ███▄▄▄▄   ▀█████████▄     ▄████████     ███      ▄██████▄   ▄██████▄   ▄█       
-#  ███▀▀▀██▄   ███    ███   ███    ███ ▀█████████▄ ███    ███ ███    ███ ███       
-#  ███   ███   ███    ███   ███    █▀     ▀███▀▀██ ███    ███ ███    ███ ███       
-#  ███   ███  ▄███▄▄▄██▀    ███            ███   ▀ ███    ███ ███    ███ ███       
-#  ███   ███ ▀▀███▀▀▀██▄  ▀███████████     ███     ███    ███ ███    ███ ███       
-#  ███   ███   ███    ██▄          ███     ███     ███    ███ ███    ███ ███       
-#  ███   ███   ███    ███    ▄█    ███     ███     ███    ███ ███    ███ ███▌    ▄ 
-#   ▀█   █▀  ▄█████████▀   ▄████████▀     ▄████▀    ▀██████▀   ▀██████▀  █████▄▄██ 
+#  ███▄▄▄▄   ▀█████████▄     ▄████████     ███      ▄██████▄   ▄██████▄   ▄█
+#  ███▀▀▀██▄   ███    ███   ███    ███ ▀█████████▄ ███    ███ ███    ███ ███
+#  ███   ███   ███    ███   ███    █▀     ▀███▀▀██ ███    ███ ███    ███ ███
+#  ███   ███  ▄███▄▄▄██▀    ███            ███   ▀ ███    ███ ███    ███ ███
+#  ███   ███ ▀▀███▀▀▀██▄  ▀███████████     ███     ███    ███ ███    ███ ███
+#  ███   ███   ███    ██▄          ███     ███     ███    ███ ███    ███ ███
+#  ███   ███   ███    ███    ▄█    ███     ███     ███    ███ ███    ███ ███▌    ▄
+#   ▀█   █▀  ▄█████████▀   ▄████████▀     ▄████▀    ▀██████▀   ▀██████▀  █████▄▄██
 #__________________________________________________________________________________
 # NBSTool is a tool to work with .nbs (Note Block Studio) files.
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
@@ -31,11 +31,11 @@ SHORT = Struct('<h')
 SHORT_SIGNED = Struct('<H')
 INT = Struct('<i')
 
-NBS_VERSION = 4
+NBS_VERSION = 5
 
 def read_numeric(f: BinaryIO, fmt: Struct) -> int:
     '''Read the following bytes from file and return a number.'''
-    
+
     raw = f.read(fmt.size)
     rawInt = int.from_bytes(raw, byteorder='little', signed=True)
     # print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
@@ -43,7 +43,7 @@ def read_numeric(f: BinaryIO, fmt: Struct) -> int:
 
 def read_string(f: BinaryIO) -> str:
     '''Read the following bytes from file and return a ASCII string.'''
-    
+
     length = read_numeric(f, INT)
     raw = f.read(length)
     # print("{0:<20}{1}".format(length, raw))
@@ -59,8 +59,8 @@ def write_string(f: BinaryIO, v) -> None:
 class NbsSong(Dict):
     def __init__(self, f=None):
         self.header = Dict({
-            'file_version': 4,
-            'vani_inst': 10,
+            'file_version': 5,
+            'vani_inst': 16,
             'length': 0,
             'length': 0,
             'height': 0,
@@ -85,10 +85,10 @@ class NbsSong(Dict):
         self.customInsts = []
         self.appendix = None
         if f: self.read(f)
-        
+
     def __repr__(self):
         return "<NbsSong notes={}, layers={}, customInsts={}>".format(len(self.notes), len(self.layers), len(self.customInsts))
-    
+
     def readHeader(self, f: BinaryIO) -> None:
         '''Read a .nbs file header from a file object'''
 
@@ -96,7 +96,7 @@ class NbsSong(Dict):
         header['length'] = None
         readNumeric = read_numeric
         readString = read_string
-        
+
         #Header
         first = readNumeric(f, SHORT) #Sign
         if first != 0: #File is old type
@@ -114,7 +114,7 @@ class NbsSong(Dict):
         header['name'] = readString(f) #Name
         header['author'] = readString(f) #Author
         header['orig_author'] = readString(f) #OriginalAuthor
-        header['description'] = readString(f) #Description 
+        header['description'] = readString(f) #Description
         header['tempo'] = readNumeric(f, SHORT)/100 #Tempo
         header['auto_save'] = readNumeric(f, BYTE) == 1 #auto_save enabled
         header['auto_save_time'] = readNumeric(f, BYTE) #auto_save duration
@@ -130,7 +130,7 @@ class NbsSong(Dict):
             header['loop_max'] =  readNumeric(f, BYTE) #Max loop count
             header['loop_start'] =  readNumeric(f, SHORT) #Loop start tick
         self.header = header
-    
+
     def read(self, fn) -> None:
         '''Read a .nbs file from disk or URL.'''
 
@@ -143,7 +143,7 @@ class NbsSong(Dict):
         appendix = None
         readNumeric = read_numeric
         readString = read_string
-        
+
         if fn != '':
             if fn.__class__.__name__ == 'HTTPResponse':
                 f = fn
@@ -216,13 +216,13 @@ class NbsSong(Dict):
         self.notes, self.layers, self.customInsts, self.hasPerc, self.maxLayer, self.usedInsts = \
             notes, layers, customInsts, hasPerc, maxLayer, (tuple(usedInsts[0]), tuple(usedInsts[1]))
         if appendix: self.appendix = appendix
-     
+
     def sortNotes(self) -> None:
         self.notes = sorted(self.notes, key=itemgetter('tick', 'layer', 'key', 'inst'))
-     
+
     def correctData(self) -> None:
         '''Make song data consistent.'''
-        
+
         self.sortNotes()
         notes = self.notes
         usedInsts = [[], []]
@@ -241,7 +241,7 @@ class NbsSong(Dict):
         self['maxLayer'] = maxLayer
         self['usedInsts'] = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         # self['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
-    
+
     def write(self, fn: str) -> None:
         '''Save nbs data to a file on disk with the path given.'''
 
@@ -252,7 +252,7 @@ class NbsSong(Dict):
             header, notes, layers, customInsts = \
             self['header'], self['notes'], self['layers'], self['customInsts']
             file_version = header['file_version']
-            
+
             with open(fn, "wb") as f:
                 #Header
                 if file_version != 0:
@@ -265,7 +265,7 @@ class NbsSong(Dict):
                 writeString(f, header['name']) #Name
                 writeString(f, header['author']) #Author
                 writeString(f, header['orig_author']) #OriginalAuthor
-                writeString(f, header['description']) #Description 
+                writeString(f, header['description']) #Description
                 writeNumeric(f, SHORT, int(header['tempo']*100)) #Tempo
                 writeNumeric(f, BYTE, header['auto_save']) #auto_save enabled
                 writeNumeric(f, BYTE, header['auto_save_time']) #auto_save duration

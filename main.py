@@ -264,7 +264,7 @@ class MainWindow:
     def initFormatTab(self):
         combobox = self.builder.get_object('formatCombo')
         combobox.configure(
-            values=("(not selected)", '4', '3', '2', '1', "Classic"))
+            values=("(not selected)", '5', '4', '3', '2', '1', "Classic"))
         combobox.current(0)
 
     def initFlipTab(self):
@@ -616,25 +616,41 @@ class MainWindow:
             songData = songsData[i]
             length = songData.header['length']
             maxLayer = songData.maxLayer
-        
+
             if outputVersion > -1:
                 songData.header['file_version'] = outputVersion
+
             for note in songData.notes:
                 if bool(self.flipHorizontallyCheckVar.get()):
                     note['tick'] = length - note['tick']
                 if bool(self.flipVerticallyCheckVar.get()):
                     note['layer'] = maxLayer - note['layer']
-            
-            if self.arrangeMode.get():
-                for note in songData.notes:
-                    if self.arrangeMode.get() == 'collapse':
-                        pass
-            
+
             songData.sortNotes()
-                
+
+            print(self.arrangeMode.get())
+            if self.arrangeMode.get() == 'collapse':
+                self.collapseNotes(songData.notes)
+            elif self.arrangeMode.get() == 'instruments':
+                compactNotes(songData, True)
+
+            songData.sortNotes()
+
         builder.get_object('applyBtn')['state'] = 'normal'
-        
+
         print('Applied!')
+
+    def collapseNotes(self, notes) -> None:
+        layer = 0
+        prevNote = {'layer': -1, 'tick': -1}
+        for note in notes:
+            if note['tick'] == prevNote['tick']:
+                layer += 1
+                note['layer'] = layer
+            else:
+                layer = 0
+                note['layer'] = layer
+                prevNote = note
 
     def OnApplyTool(self):
         self.ToolsTabButton['state'] = 'disabled'
@@ -676,7 +692,7 @@ class MainWindow:
             data = compactNotes(
                 data, self.var.tool.compact.opt1.get(), self.var.tool.compact.opt1_1.get())
         # Sort notes
-        
+
 
         data.correctData()
         self.ToolsTabButton['state'] = 'normal'
@@ -915,60 +931,46 @@ def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     obj.update_idletasks()
 
 
-def compactNotes(data, sepInst=1, groupPerc=1):
-    sepInst, groupPerc = bool(sepInst), bool(groupPerc)
-    r = data
-    PrevNote = {'layer': -1, 'tick': -1}
-    if sepInst:
-        OuterLayer = 0
-        iter = r['usedInsts'][0]
-        if not groupPerc:
-            iter += r['usedInsts'][1]
-        for inst in iter:
-            #print('Instrument: {}'.format(inst))
-            InnerLayer = LocalLayer = c = 0
-            #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-            for note in r['notes']:
-                if note['inst'] == inst:
-                    c += 1
-                    if note['tick'] == PrevNote['tick']:
-                        LocalLayer += 1
-                        InnerLayer = max(InnerLayer, LocalLayer)
-                        note['layer'] = LocalLayer + OuterLayer
-                    else:
-                        LocalLayer = 0
-                        note['layer'] = LocalLayer + OuterLayer
-                        PrevNote = note
-                    #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-            OuterLayer += InnerLayer + 1
-            #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-        if groupPerc:
-            InnerLayer = LocalLayer = c = 0
-            for note in r['notes']:
-                if note['inst'] in r['usedInsts'][1]:
-                    c += 1
-                    if note['tick'] == PrevNote['tick']:
-                        LocalLayer += 1
-                        InnerLayer = max(InnerLayer, LocalLayer)
-                        note['layer'] = LocalLayer + OuterLayer
-                    else:
-                        LocalLayer = 0
-                        note['layer'] = LocalLayer + OuterLayer
-                        PrevNote = note
-            OuterLayer += InnerLayer + 1
-        r['maxLayer'] = OuterLayer - 1
-    else:
-        layer = 0
-        for note in r['notes']:
-            if note['tick'] == PrevNote['tick']:
-                layer += 1
-                note['layer'] = layer
-            else:
-                layer = 0
-                note['layer'] = layer
-                PrevNote = note
-    return r
-
+def compactNotes(data, groupPerc=1) -> None:
+    groupPerc = bool(groupPerc)
+    prevNote = {'layer': -1, 'tick': -1}
+    outerLayer = 0
+    it = data['usedInsts'][0]
+    if not groupPerc:
+        it += data['usedInsts'][1]
+    for inst in it:
+        #print('Instrument: {}'.format(inst))
+        innerLayer = localLayer = c = 0
+        #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
+        for note in data['notes']:
+            if note['inst'] == inst:
+                c += 1
+                if note['tick'] == prevNote['tick']:
+                    localLayer += 1
+                    innerLayer = max(innerLayer, localLayer)
+                    note['layer'] = localLayer + outerLayer
+                else:
+                    localLayer = 0
+                    note['layer'] = localLayer + outerLayer
+                    prevNote = note
+                #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
+        outerLayer += innerLayer + 1
+        #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
+    if groupPerc:
+        innerLayer = localLayer = c = 0
+        for note in data['notes']:
+            if note['inst'] in data['usedInsts'][1]:
+                c += 1
+                if note['tick'] == prevNote['tick']:
+                    localLayer += 1
+                    innerLayer = max(innerLayer, localLayer)
+                    note['layer'] = localLayer + outerLayer
+                else:
+                    localLayer = 0
+                    note['layer'] = localLayer + outerLayer
+                    prevNote = note
+        outerLayer += innerLayer + 1
+    data['maxLayer'] = outerLayer - 1
 
 def exportMIDI(cls, path, byLayer=False):
     pass
@@ -1001,7 +1003,7 @@ def exportDatapack(data, path, bname, mode=None, master=None):
     bname = os.path.basename(path)
 
     data.correctData()
-    data = compactNotes(data, groupPerc=False)
+    compactNotes(data, groupPerc=False)
 
     noteSounds = vaniNoteSounds + data['customInsts']
 

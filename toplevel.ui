@@ -304,6 +304,7 @@
                         <child>
                           <object class="tk.Radiobutton" id="notArrangeRadio">
                             <property name="text" translatable="yes">Not arrange</property>
+                            <property name="value">none</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
@@ -317,7 +318,7 @@
                         <child>
                           <object class="tk.Radiobutton" id="collapseNotesRadio">
                             <property name="text" translatable="yes">Collapse all notes</property>
-                            <property name="value">collpase</property>
+                            <property name="value">collapse</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
