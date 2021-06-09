@@ -23,15 +23,19 @@ from pprint import pprint
 from collections import deque
 from operator import itemgetter
 from typing import BinaryIO
+import warnings
+from warnings import warn
 
 from addict import Dict
 
-BYTE = Struct('<b')
-SHORT = Struct('<h')
-SHORT_SIGNED = Struct('<H')
-INT = Struct('<i')
+BYTE = Struct('<B')
+SHORT = Struct('<H')
+SHORT_SIGNED = Struct('<h')
+INT = Struct('<I')
 
 NBS_VERSION = 5
+
+warnings.filterwarnings(action='once')
 
 def read_numeric(f: BinaryIO, fmt: Struct) -> int:
     '''Read the following bytes from file and return a number.'''
@@ -53,21 +57,27 @@ def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
     f.write(fmt.pack(v))
 
 def write_string(f: BinaryIO, v) -> None:
+    if not v.isascii():
+        warn("The string '{}' will be written to file as '{}'.".format(v, v.encode("ascii", "replace")))
+        v = v.encode("ascii", "replace")
+    else:
+        v = v.encode()
     write_numeric(f, INT, len(v))
-    f.write(v.encode())
+    f.write(v)
 
 class NbsSong(Dict):
     def __init__(self, f=None):
         self.header = Dict({
-            'file_version': 5,
+            'file_version': NBS_VERSION,
             'vani_inst': 16,
-            'length': 0,
             'length': 0,
             'height': 0,
             'name': '',
             'author': '',
             'orig_author': '',
             'description': '',
+            'auto_save': False,
+            'auto_save_time': 0,
             'tempo': 10,
             'time_sign': 4,
             'minutes_spent': 0,
@@ -126,7 +136,7 @@ class NbsSong(Dict):
         header['block_removed'] = readNumeric(f, INT) #Total block removed
         header['import_name'] = readString(f) #MIDI file name
         if file_version >= 4:
-            header['loop'] = readNumeric(f, BYTE) #Loop enabled
+            header['loop'] = readNumeric(f, BYTE) == 1 #Loop enabled
             header['loop_max'] =  readNumeric(f, BYTE) #Max loop count
             header['loop_start'] =  readNumeric(f, SHORT) #Loop start tick
         self.header = header
@@ -225,8 +235,10 @@ class NbsSong(Dict):
 
         self.sortNotes()
         notes = self.notes
+        header = self.header
         usedInsts = [[], []]
         maxLayer = 0
+        tick = -1
         self.hasPerc = False
         for i, note in enumerate(notes):
             tick, inst, layer = note['tick'], note['inst'], note['layer']
@@ -237,9 +249,13 @@ class NbsSong(Dict):
                 note['isPerc'] = False
                 if inst not in usedInsts[0]: usedInsts[0].append(inst)
             maxLayer = max(layer, maxLayer)
-        self['header']['length'] = tick
-        self['maxLayer'] = maxLayer
-        self['usedInsts'] = (tuple(usedInsts[0]), tuple(usedInsts[1]))
+
+        header.length = tick
+        header.height = len(self.layers)
+        header.vani_inst = 16 if (len(usedInsts[0]) + len(usedInsts[1]) > 10) else 10
+        self.maxLayer = maxLayer
+
+        self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         # self['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
 
     def write(self, fn: str) -> None:
