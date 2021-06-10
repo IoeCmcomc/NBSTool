@@ -36,6 +36,7 @@ from tkinter.messagebox import showerror
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory, askopenfilenames
 
 import pygubu
+from pygubu import Builder
 
 from time import time
 from pprint import pprint
@@ -68,8 +69,6 @@ vaniNoteSounds = [
 ]
 
 # Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
-
-
 def resource_path(*args):
     if getattr(sys, 'frozen', False):
         datadir = os.path.dirname(sys.executable)
@@ -83,17 +82,18 @@ def resource_path(*args):
     return r
 
 
-class MainWindow:
+class MainWindow():
     def __init__(self):
-        self.builder = builder = pygubu.Builder()
+        builder: Builder = pygubu.Builder()
+        self.builder: Builder = builder
         builder.add_from_file(resource_path('toplevel.ui'))
         print("The following exception is not an error:")
         print('='*20)
-        self.toplevel = builder.get_object('toplevel')
+        self.toplevel: tk.Toplevel = builder.get_object('toplevel')
         print('='*20)
-        self.mainwin = builder.get_object('mainFrame')
+        self.mainwin: tk.Frame = builder.get_object('mainFrame')
 
-        self.fileTable = builder.get_object('fileTable')
+        self.fileTable: ttk.Treeview = builder.get_object('fileTable')
         applyBtn = builder.get_object('applyBtn')
 
         self.toplevel.title("NBS Tool")
@@ -109,10 +109,11 @@ class MainWindow:
             except Exception:
                 pass
 
+        self.initMenuBar()
+
         builder.import_variables(self)
         builder.connect_callbacks(self)
 
-        self.initMenuBar()
         self.initFormatTab()
         self.initFlipTab()
         self.initArrangeTab()
@@ -122,17 +123,18 @@ class MainWindow:
             selectionLen = len(event.widget.selection())
             selectionNotEmpty = len(event.widget.selection()) > 0
             if selectionNotEmpty:
-                self.fileMenu.entryconfig(1, state="normal")
+                builder.get_object('fileMenu').entryconfig(1, state="normal")
                 builder.get_object('saveFilesBtn')["state"] = "normal"
                 builder.get_object('removeEntriesBtn')["state"] = "normal"
                 applyBtn["state"] = "normal"
             else:
-                self.fileMenu.entryconfig(1, state="disabled")
+                builder.get_object('fileMenu').entryconfig(1, state="disabled")
                 builder.get_object('saveFilesBtn')["state"] = "disabled"
                 builder.get_object('removeEntriesBtn')["state"] = "disabled"
                 applyBtn["state"] = "disabled"
-            self.exportMenu.entryconfig(
-                1, state="normal" if selectionLen == 1 else "disable")
+            exportMenu: tk.Menu = builder.get_object('exportMenu')
+            exportMenu.entryconfig(0, state="normal" if selectionLen == 1 else "disable")
+            exportMenu.entryconfig(1, state="normal" if selectionLen > 0 else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -146,37 +148,8 @@ class MainWindow:
         self.songsData = []
 
     def initMenuBar(self):
-        # 'File' menu
         self.menuBar = menuBar = self.builder.get_object('menubar')
         self.toplevel.configure(menu=menuBar)
-
-        self.fileMenu = tk.Menu(menuBar, tearoff=False)
-        self.menuBar.add_cascade(label="File", menu=self.fileMenu)
-
-        self.fileMenu.add_command(
-            label="Open", accelerator="Ctrl+O", command=self.openFiles)
-        self.fileMenu.add_command(
-            label="Save", accelerator="Ctrl+S", command=self.saveAll, state="disabled")
-        self.fileMenu.add_command(
-            label="Save all", accelerator="Ctrl+Shift+S", command=self.saveAll, state="disabled")
-        self.fileMenu.add_separator()
-        self.fileMenu.add_command(
-            label="Quit", accelerator="Esc", command=self.onClose)
-
-        self.importMenu = tk.Menu(menuBar, tearoff=False)
-        self.menuBar.add_cascade(label="Import", menu=self.importMenu)
-
-        self.exportMenu = tk.Menu(menuBar, tearoff=False)
-        self.menuBar.add_cascade(label="Export", menu=self.exportMenu)
-
-        self.exportMenu.add_command(
-            label="Export as datapack...", command=self.callDatapackExportDialog, state="disabled")
-
-        self.helpMenu = tk.Menu(menuBar, tearoff=False)
-        self.menuBar.add_cascade(label="Help", menu=self.helpMenu)
-
-        self.helpMenu.add_command(
-            label="About")
 
     def openFiles(self, _=None):
         self.fileTable.delete(*self.fileTable.get_children())
@@ -186,6 +159,7 @@ class MainWindow:
 
     def addFiles(self, _=None, paths=()):
         types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
+        addedPaths = []
         if len(paths) > 0:
             addedPaths = paths
         else:
@@ -211,7 +185,7 @@ class MainWindow:
                 length, name, author, orig_author))
             self.mainwin.update()
         self.filePaths.extend(addedPaths)
-        self.fileMenu.entryconfig(2, state="normal" if len(
+        self.builder.get_object('fileMenu').entryconfig(2, state="normal" if len(
             self.filePaths) > 0 else "disabled")
 
     def saveFiles(self, _=None):
@@ -260,6 +234,7 @@ class MainWindow:
                 fileTable.delete(item)
                 del self.filePaths[i]
                 del self.songsData[i]
+        fileTable.selection_remove(fileTable.selection())
 
     def initFormatTab(self):
         combobox = self.builder.get_object('formatCombo')

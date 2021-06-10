@@ -399,5 +399,98 @@
   </object>
   <object class="tk.Menu" id="menubar">
     <property name="tearoff">false</property>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="fileMenu">
+        <property name="label" translatable="yes">File</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="open">
+            <property name="accelerator">Ctrl+O</property>
+            <property name="command" type="command" cbtype="simple">openFiles</property>
+            <property name="label" translatable="yes">Open</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="save">
+            <property name="accelerator">Ctrl+S</property>
+            <property name="command" type="command" cbtype="simple">saveFiles</property>
+            <property name="label" translatable="yes">Save</property>
+            <property name="state">disabled</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="saveAll">
+            <property name="accelerator">Ctrl+Shift+S</property>
+            <property name="command" type="command" cbtype="simple">saveAll</property>
+            <property name="label" translatable="yes">Save all</property>
+            <property name="state">disabled</property>
+            <property name="underline">5</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Separator" id="separator1" />
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="quit">
+            <property name="accelerator">Esc</property>
+            <property name="command" type="command" cbtype="simple">onClose</property>
+            <property name="label" translatable="yes">Quit</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="importMenu">
+        <property name="label" translatable="yes">Import</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="importMuseScore">
+            <property name="command" type="command" cbtype="simple">callDatapackExportDialog</property>
+            <property name="label" translatable="yes">from MuseScore files...</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="exportMenu">
+        <property name="label" translatable="yes">Export</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="exportDtp">
+            <property name="label" translatable="yes">as datapack...</property>
+            <property name="state">disabled</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="exportMidi">
+            <property name="label" translatable="yes">as MIDI file...</property>
+            <property name="state">disabled</property>
+            <property name="underline">3</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="helpMenu">
+        <property name="label" translatable="yes">Help</property>
+        <property name="specialmenu">help</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="about">
+            <property name="label" translatable="yes">About</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
   </object>
 </interface>
