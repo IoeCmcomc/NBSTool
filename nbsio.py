@@ -76,9 +76,9 @@ class NbsSong(Dict):
             'author': '',
             'orig_author': '',
             'description': '',
-            'auto_save': False,
-            'auto_save_time': 0,
-            'tempo': 10,
+            'auto_save': True,
+            'auto_save_time': 10,
+            'tempo': 1000, # 10 TPS
             'time_sign': 4,
             'minutes_spent': 0,
             'left_clicks': 0,

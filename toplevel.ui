@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.0">
+<interface version="1.1">
   <object class="tk.Toplevel" id="toplevel">
-    <property name="geometry">600x600</property>
-    <property name="minsize">350|350</property>
+    <property name="geometry">600x620</property>
+    <property name="minsize">350|370</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
     <property name="title" translatable="yes">NBS Tool</property>
@@ -20,6 +20,7 @@
             <property name="text" translatable="yes">Files</property>
             <property name="width">200</property>
             <layout manager="pack">
+              <property name="expand">true</property>
               <property name="fill">both</property>
               <property name="padx">5</property>
               <property name="pady">5</property>
@@ -29,8 +30,9 @@
             <child>
               <object class="pygubu.builder.widgets.tkscrollbarhelper" id="tkscrollbarhelper">
                 <property name="scrolltype">both</property>
-                <property name="usemousewheel">false</property>
+                <property name="usemousewheel">true</property>
                 <layout manager="pack">
+                  <property name="expand">true</property>
                   <property name="fill">both</property>
                   <property name="padx">5</property>
                   <property name="pady">5</property>
@@ -42,7 +44,6 @@
                     <property name="selectmode">extended</property>
                     <layout manager="pack">
                       <property name="expand">true</property>
-                      <property name="fill">both</property>
                       <property name="propagate">True</property>
                       <property name="side">top</property>
                     </layout>
@@ -112,7 +113,7 @@
             </child>
             <child>
               <object class="tk.Button" id="openFilesBtn">
-                <property name="command">openFiles</property>
+                <property name="command" type="command" cbtype="simple" args="">openFiles</property>
                 <property name="justify">left</property>
                 <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Open...</property>
@@ -128,7 +129,7 @@
             </child>
             <child>
               <object class="tk.Button" id="saveFilesBtn">
-                <property name="command">saveFiles</property>
+                <property name="command" type="command" cbtype="simple" args="">saveFiles</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Save...</property>
                 <property name="width">10</property>
@@ -143,7 +144,7 @@
             </child>
             <child>
               <object class="tk.Button" id="removeEntriesBtn">
-                <property name="command">removeSelectedFiles</property>
+                <property name="command" type="command" cbtype="simple" args="">removeSelectedFiles</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Remove</property>
                 <property name="width">10</property>
@@ -158,7 +159,7 @@
             </child>
             <child>
               <object class="tk.Button" id="addEntriesBtn">
-                <property name="command">addFiles</property>
+                <property name="command" type="command" cbtype="simple" args="">addFiles</property>
                 <property name="compound">top</property>
                 <property name="takefocus">false</property>
                 <property name="text" translatable="yes">Add...</property>
@@ -176,8 +177,10 @@
         </child>
         <child>
           <object class="tk.LabelFrame" id="toolFrame">
+            <property name="height">250</property>
             <property name="labelanchor">nw</property>
             <property name="text" translatable="yes">Tools</property>
+            <property name="width">200</property>
             <layout manager="pack">
               <property name="expand">false</property>
               <property name="fill">both</property>
@@ -201,6 +204,7 @@
                     <property name="text" translatable="yes">Format</property>
                     <child>
                       <object class="tk.Frame" id="formatFrame">
+                        <property name="width">200</property>
                         <layout manager="pack">
                           <property name="propagate">True</property>
                           <property name="side">top</property>
@@ -231,8 +235,7 @@
                             <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
 </property>
                             <layout manager="pack">
-                              <property name="expand">true</property>
-                              <property name="fill">both</property>
+                              <property name="fill">x</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -247,6 +250,7 @@
                     <property name="text" translatable="yes">Flip</property>
                     <child>
                       <object class="tk.Frame" id="flipFrame">
+                        <property name="width">200</property>
                         <layout manager="pack">
                           <property name="propagate">True</property>
                           <property name="side">top</property>
@@ -266,7 +270,7 @@
                         <child>
                           <object class="tk.Checkbutton" id="flipHorizontallyCheck">
                             <property name="text" translatable="yes">Horizontally</property>
-                            <property name="variable">string:flipHorizontallyCheckVar</property>
+                            <property name="variable">boolean:flipHorizontallyCheckVar</property>
                             <layout manager="pack">
                               <property name="anchor">n</property>
                               <property name="padx">10</property>
@@ -278,7 +282,7 @@
                         <child>
                           <object class="tk.Checkbutton" id="flipVerticallyCheck">
                             <property name="text" translatable="yes">Vertically</property>
-                            <property name="variable">string:flipVerticallyCheckVar</property>
+                            <property name="variable">boolean:flipVerticallyCheckVar</property>
                             <layout manager="pack">
                               <property name="padx">10</property>
                               <property name="propagate">True</property>
@@ -303,6 +307,7 @@
                         </layout>
                         <child>
                           <object class="tk.Radiobutton" id="notArrangeRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Not arrange</property>
                             <property name="value">none</property>
                             <property name="variable">string:arrangeMode</property>
@@ -317,6 +322,7 @@
                         </child>
                         <child>
                           <object class="tk.Radiobutton" id="collapseNotesRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Collapse all notes</property>
                             <property name="value">collapse</property>
                             <property name="variable">string:arrangeMode</property>
@@ -330,13 +336,27 @@
                         </child>
                         <child>
                           <object class="tk.Radiobutton" id="instArrangeRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Arrange by instruments</property>
                             <property name="value">instruments</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
                               <property name="padx">5</property>
-                              <property name="pady">5</property>
+                              <property name="pady">0</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Checkbutton" id="arrangeGroupPrec">
+                            <property name="state">disabled</property>
+                            <property name="text" translatable="yes">Treats percussions as an instrument</property>
+                            <property name="variable">boolean:groupPerc</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="padx">25</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -350,9 +370,8 @@
             </child>
             <child>
               <object class="tk.Button" id="applyBtn">
-                <property name="command">applyTool</property>
+                <property name="command" type="command" cbtype="simple" args="">applyTool</property>
                 <property name="cursor">arrow</property>
-                <property name="height">1</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Apply</property>
                 <property name="width">10</property>

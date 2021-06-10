@@ -110,10 +110,12 @@ class MainWindow:
                 pass
 
         builder.import_variables(self)
+        builder.connect_callbacks(self)
 
         self.initMenuBar()
         self.initFormatTab()
         self.initFlipTab()
+        self.initArrangeTab()
         self.windowBind()
 
         def on_fileTable_select(event):
@@ -133,8 +135,6 @@ class MainWindow:
                 1, state="normal" if selectionLen == 1 else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
-
-        builder.connect_callbacks(self)
 
         self.mainwin.lift()
         self.mainwin.focus_force()
@@ -270,6 +270,10 @@ class MainWindow:
     def initFlipTab(self):
         self.builder.get_object('flipHorizontallyCheck').deselect()
         self.builder.get_object('flipVerticallyCheck').deselect()
+
+    def initArrangeTab(self):
+        self.builder.get_object('notArrangeRadio').select()
+        self.builder.get_object('arrangeGroupPrec').deselect()
 
     def callDatapackExportDialog(self):
         dialog = DatapackExportDialog(self.toplevel, self)
@@ -600,6 +604,10 @@ class MainWindow:
                 self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get(
                 ) == 0 else "normal"
 
+    def onArrangeModeChanged(self):
+        self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (self.arrangeMode.get() == 'instruments') else 'disabled'
+
+
     def applyTool(self):
         builder = self.builder
         builder.get_object('applyBtn')['state'] = 'disabled'
@@ -621,9 +629,9 @@ class MainWindow:
                 songData.header['file_version'] = outputVersion
 
             for note in songData.notes:
-                if bool(self.flipHorizontallyCheckVar.get()):
+                if self.flipHorizontallyCheckVar.get():
                     note['tick'] = length - note['tick']
-                if bool(self.flipVerticallyCheckVar.get()):
+                if self.flipVerticallyCheckVar.get():
                     note['layer'] = maxLayer - note['layer']
 
             songData.sortNotes()
@@ -632,7 +640,7 @@ class MainWindow:
             if self.arrangeMode.get() == 'collapse':
                 self.collapseNotes(songData.notes)
             elif self.arrangeMode.get() == 'instruments':
-                compactNotes(songData, True)
+                compactNotes(songData, self.groupPerc)
 
             songData.sortNotes()
 
