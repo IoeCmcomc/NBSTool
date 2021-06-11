@@ -26,6 +26,7 @@ import copy
 import traceback
 import re
 import json
+import asyncio
 
 from pathlib import Path
 
@@ -40,9 +41,10 @@ from pygubu import Builder
 
 from time import time
 from pprint import pprint
-from random import randrange
+from random import randrange, randint
 from math import floor, log2
 from datetime import timedelta
+from copy import deepcopy
 
 from PIL import Image, ImageTk
 
@@ -582,46 +584,68 @@ class MainWindow():
     def onArrangeModeChanged(self):
         self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (self.arrangeMode.get() == 'instruments') else 'disabled'
 
-
     def applyTool(self):
-        builder = self.builder
+        builder: Builder = self.builder
         builder.get_object('applyBtn')['state'] = 'disabled'
         fileTable = self.fileTable
-        songsData = self.songsData
-        selectedIndexes = (fileTable.index(item)
-                               for item in fileTable.selection())
+        changedSongData = {}
+        selectedIndexes: set = [fileTable.index(item)
+                               for item in fileTable.selection()]
+        selectionLen = len(selectedIndexes)
 
         outputVersion = -1
 
         if (formatComboIndex := builder.get_object('formatCombo').current()) > 0:
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
-        for i in selectedIndexes:
-            songData = songsData[i]
-            length = songData.header['length']
-            maxLayer = songData.maxLayer
 
-            if outputVersion > -1:
-                songData.header['file_version'] = outputVersion
+        async def work(dialog: ProgressDialog = None):
+            print("async work() start")
+            try:
+                for i, index in enumerate(selectedIndexes):
+                    dialog.totalProgress.set(i)
+                    fileName = os.path.split(self.filePaths[i])[1]
+                    dialog.currentText.set("Current file: {}".format(fileName))
+                    dialog.totalText.set("Processing {} / {} files".format(i+1, selectionLen))
+                    dialog.currentProgress.set(0)
+                    songData = deepcopy(self.songsData[index])
+                    dialog.setCurrentPercentage(randint(20, 25))
+                    await asyncio.sleep(0.001)
+                    dialog.currentMax = len(songData.notes)*2
+                    length = songData.header['length']
+                    maxLayer = songData.maxLayer
 
-            for note in songData.notes:
-                if self.flipHorizontallyCheckVar.get():
-                    note['tick'] = length - note['tick']
-                if self.flipVerticallyCheckVar.get():
-                    note['layer'] = maxLayer - note['layer']
+                    if outputVersion > -1:
+                        songData.header['file_version'] = outputVersion
+                    if self.flipHorizontallyCheckVar.get() or self.flipVerticallyCheckVar.get():
+                        for note in songData.notes:
+                            if self.flipHorizontallyCheckVar.get():
+                                note['tick'] = length - note['tick']
+                            if self.flipVerticallyCheckVar.get():
+                                note['layer'] = maxLayer - note['layer']
+                            dialog.currentProgress.set(dialog.currentProgress.get()+1)
+                    songData.sortNotes()
+                    if self.arrangeMode.get() == 'collapse':
+                        self.collapseNotes(songData.notes)
+                    elif self.arrangeMode.get() == 'instruments':
+                        compactNotes(songData, self.groupPerc)
+                    dialog.setCurrentPercentage(randint(75, 85))
+                    await asyncio.sleep(0.001)
+                    songData.sortNotes()
+                    changedSongData[index] = songData
+                    await asyncio.sleep(0.001)
 
-            songData.sortNotes()
+                for k, v in changedSongData.items():
+                    self.songsData[k] = v
+                dialog.totalProgress.set(i+1)
+            except asyncio.CancelledError:
+                raise
+            finally:
+                builder.get_object('applyBtn')['state'] = 'normal'
 
-            print(self.arrangeMode.get())
-            if self.arrangeMode.get() == 'collapse':
-                self.collapseNotes(songData.notes)
-            elif self.arrangeMode.get() == 'instruments':
-                compactNotes(songData, self.groupPerc)
-
-            songData.sortNotes()
-
-        builder.get_object('applyBtn')['state'] = 'normal'
-
-        print('Applied!')
+        dialog = ProgressDialog(self.toplevel, self)
+        dialog.d.toplevel.title("Applying tools to {} files".format(selectionLen))
+        dialog.totalMax = selectionLen
+        dialog.run(work)
 
     def collapseNotes(self, notes) -> None:
         layer = 0
@@ -813,6 +837,74 @@ class DatapackExportDialog:
             return
         exportDatapack(self.parent.songsData[index], os.path.join(
             path, self.entry.get()), self.entry.get(), 'wnbs')
+
+class ProgressDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+        self.work = None
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('progressdialog.ui'))
+
+        self.d = builder.get_object('dialog1', master)
+        self.d.toplevel.protocol('WM_DELETE_WINDOW', self.onCancel)
+        # centerToplevel(self.dialog.toplevel)
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+    @property
+    def currentMax(self) -> int:
+        return self.builder.get_object('currentProgressBar')['maximum']
+
+    @currentMax.setter
+    def currentMax(self, value: int) -> None:
+        self.builder.get_object('currentProgressBar')['maximum'] = value
+
+    @property
+    def totalMax(self) -> int:
+        return self.builder.get_object('totalProgressBar')['maximum']
+
+    @totalMax.setter
+    def totalMax(self, value: int) -> None:
+        self.builder.get_object('totalProgressBar')['maximum'] = value
+
+    def run(self, func=None):
+        self.builder.get_object('dialog1').run()
+        if asyncio.iscoroutinefunction(func):
+            self.work = func
+            self.d.toplevel.after(0, self.startWork)
+
+    def startWork(self) -> None:
+        if self.totalProgress.get() >= self.totalMax:
+            self.d.destroy()
+            return
+        asyncio.run(self.updateProgress())
+        print("startWork() about to after")
+        self.d.toplevel.after(0, self.startWork)
+
+    async def updateProgress(self) -> None:
+        print("async updateProgressDialog() start")
+        self.task = asyncio.create_task(self.work(dialog=self))
+        while True: # wait the async task finish
+            done, pending = await asyncio.wait({self.task}, timeout=0)
+            self.d.toplevel.update()
+            if self.task in done:
+                await self.task
+                break
+
+    def setCurrentPercentage(self, value: int) -> None:
+        self.currentProgress.set(round(self.currentMax * value / 100))
+
+    def onCancel(self) -> None:
+        try:
+            allTasks = asyncio.all_tasks()
+            for task in allTasks:
+                task.cancel()
+        except RuntimeError:  # if you have cancel the task it will raise RuntimeError
+            pass
+        self.d.destroy()
 
 
 class FlexCheckbutton(tk.Checkbutton):

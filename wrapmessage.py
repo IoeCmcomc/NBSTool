@@ -39,13 +39,12 @@ class WrapMessage(Message):
         return super().cget(key)
     
     def _adjustWidth(self, event):
-        print(self.padding)
         event.widget.configure(width=event.width-self.padding)
         
         
 if __name__ == '__main__':
     root = tk.Tk()
     msg = WrapMessage(root)
-    msg.configure(padding=40, text="This is a WrapMessage.")
+    msg.configure(padding=40, text="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus gravida libero ac commodo molestie. Donec iaculis velit sem, consequat bibendum libero cursus ut. Nulla ullamcorper placerat libero malesuada dignissim. Aliquam et hendrerit erat, non aliquet mi. Ut eu urna ligula. Donec mattis sollicitudin purus. Proin tellus libero, interdum porta mauris ac, interdum gravida sapien. Proin maximus purus ut dui ultrices, eget blandit est consectetur.")
     msg.pack(fill='both', expand=True)
     root.mainloop()

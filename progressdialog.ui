@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="pygubu.builder.widgets.dialog" id="dialog1">
+    <property name="height">100</property>
+    <property name="modal">true</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="anchor">nw</property>
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">10</property>
+          <property name="pady">10</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Frame" id="frame3">
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Label" id="curentLabel">
+            <property name="text" translatable="yes">Curent:</property>
+            <property name="textvariable">string:currentText</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Progressbar" id="currentProgressBar">
+            <property name="orient">horizontal</property>
+            <property name="variable">int:currentProgress</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="fill">x</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Label" id="totalLabel">
+            <property name="text" translatable="yes">Total:</property>
+            <property name="textvariable">string:totalText</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Progressbar" id="totalProgressBar">
+            <property name="length">400</property>
+            <property name="orient">horizontal</property>
+            <property name="variable">int:totalProgress</property>
+            <layout manager="pack">
+              <property name="fill">x</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Frame" id="frame4">
+            <property name="height">15</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Button" id="cancelButton">
+            <property name="command" type="command" cbtype="simple">onCancel</property>
+            <property name="padx">20</property>
+            <property name="text" translatable="yes">Cancel</property>
+            <layout manager="pack">
+              <property name="anchor">ne</property>
+              <property name="pady">0</property>
+              <property name="propagate">True</property>
+              <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
