@@ -94,6 +94,9 @@ class MainWindow():
         self.toplevel: tk.Toplevel = builder.get_object('toplevel')
         print('='*20)
         self.mainwin: tk.Frame = builder.get_object('mainFrame')
+        style = ttk.Style(self.toplevel)
+        style.layout('Barless.TNotebook.Tab', []) # turn off tabs
+        style.configure('Barless.TNotebook', borderwidth=0, highlightthickness=0)
 
         self.fileTable: ttk.Treeview = builder.get_object('fileTable')
         applyBtn = builder.get_object('applyBtn')
@@ -117,26 +120,30 @@ class MainWindow():
         builder.connect_callbacks(self)
 
         self.initFormatTab()
+        self.initHeaderTab()
         self.initFlipTab()
         self.initArrangeTab()
         self.windowBind()
 
         def on_fileTable_select(event):
-            selectionLen = len(event.widget.selection())
-            selectionNotEmpty = len(event.widget.selection()) > 0
+            selection: tuple = event.widget.selection()
+            selectionLen = len(selection)
+            selectionNotEmpty = selectionLen > 0
             if selectionNotEmpty:
                 builder.get_object('fileMenu').entryconfig(1, state="normal")
                 builder.get_object('saveFilesBtn')["state"] = "normal"
                 builder.get_object('removeEntriesBtn')["state"] = "normal"
+                self.updateHeaderNotebook([event.widget.index(item) for item in selection])
                 applyBtn["state"] = "normal"
             else:
                 builder.get_object('fileMenu').entryconfig(1, state="disabled")
                 builder.get_object('saveFilesBtn')["state"] = "disabled"
                 builder.get_object('removeEntriesBtn')["state"] = "disabled"
+                builder.get_object('headerNotebook').select(0)
                 applyBtn["state"] = "disabled"
             exportMenu: tk.Menu = builder.get_object('exportMenu')
             exportMenu.entryconfig(0, state="normal" if selectionLen == 1 else "disable")
-            exportMenu.entryconfig(1, state="normal" if selectionLen > 0 else "disable")
+            exportMenu.entryconfig(1, state="normal" if selectionNotEmpty else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -149,6 +156,74 @@ class MainWindow():
         self.filePaths = []
         self.songsData = []
 
+    def isInteger(self, value) -> bool:
+        print("isInteger", value, value == '' or value.isdigit())
+        return value == '' or value.isdigit()
+
+    def selectedFilesVersion(self, selection: tuple) -> int:
+        fileVersion = -1
+        for i in selection:
+            header = self.songsData[i].header
+            ver: int = header.file_version
+            if (ver != fileVersion) and (fileVersion != -1):
+                return -1
+            else:
+                fileVersion = ver
+        return fileVersion
+
+    def updateHeaderNotebook(self, selection: tuple) -> None:
+        def updateCheckbutton(i: int, var: tk.StringVar, widget: ttk.Checkbutton, value: bool) -> bool:
+            ret = i > 0 and var.get() != str(value)
+            if ret:
+                widget.state(['alternate'])
+            else:
+                var.set(value)
+            return not ret
+
+        def updateSpinbox(i: int, var: tk.StringVar, value: int) -> None:
+            var.set('' if (i > 0 and var.get() != str(value)) else value)
+
+        get_object = self.builder.get_object
+        notebook: ttk.Notebook = self.builder.get_object('headerNotebook')
+        fileVersion = self.selectedFilesVersion(selection)
+        if fileVersion == -1:
+            notebook.select(0)
+            return
+        notebook.select(1)
+        for i, index in enumerate(selection):
+            header = self.songsData[index].header
+            if fileVersion >= 4:
+                loop: int = header.loop
+                checkBox: ttk.Checkbutton = get_object('headerLoopCheck')
+                get_object('headerLoopCheck')['state'] = 'normal'
+                for child in get_object('headerLoopFrame').winfo_children():
+                    if child is not checkBox:
+                        child.configure(state='normal' if loop else 'disabled')
+                if updateCheckbutton(i, self.headerLoop, checkBox, loop):
+                    updateSpinbox(i, self.headerLoopCount, header.loop_max)
+                    updateSpinbox(i, self.headerLoopStart, header.loop_start)
+            else:
+                # Credit: https://stackoverflow.com/questions/24942760/is-there-a-way-to-gray-out-disable-a-tkinter-frame
+                for child in get_object('headerLoopFrame').winfo_children():
+                    child.configure(state='disable')
+
+            autoSave = header.auto_save
+            label = get_object('headerAutosaveLabel')
+            spinbox = get_object('headerAutosaveSpin')
+            label['state'] = 'disabled'
+            spinbox['state'] = 'disabled'
+            if updateCheckbutton(i, self.headerAutosave, get_object('headerAutosaveCheck'), autoSave):
+                updateSpinbox(i, self.headerAutosaveInterval, header.auto_save_time)
+                label['state'] = 'normal' if autoSave else 'disabled'
+                spinbox['state'] = 'normal' if autoSave else 'disabled'
+
+            updateSpinbox(i, self.headerMinuteSpent, header.minutes_spent)
+            updateSpinbox(i, self.headerLeftClicks, header.left_clicks)
+            updateSpinbox(i, self.headerRightClicks, header.right_clicks)
+            updateSpinbox(i, self.headerBlockAdded, header.block_added)
+            updateSpinbox(i, self.headerBlockRemoved, header.block_removed)
+
+
     def initMenuBar(self):
         self.menuBar = menuBar = self.builder.get_object('menubar')
         self.toplevel.configure(menu=menuBar)
@@ -160,7 +235,7 @@ class MainWindow():
         self.addFiles()
 
     def addFiles(self, _=None, paths=()):
-        types = [('Note Block Studio files', '*.nbs'), ('All files', '*')]
+        types = [("Note Block Studio files", '*.nbs'), ('All files', '*')]
         addedPaths = []
         if len(paths) > 0:
             addedPaths = paths
@@ -202,6 +277,8 @@ class MainWindow():
                          ('All files', '*')]
                 path = asksaveasfilename(
                     filetypes=types, initialfile=filePath, defaultextension=".nbs")
+                if path == '':
+                    return
                 self.songsData[fileTable.index(selection[0])].write(path)
                 return
             else:
@@ -243,6 +320,10 @@ class MainWindow():
         combobox.configure(
             values=("(not selected)", '5', '4', '3', '2', '1', "Classic"))
         combobox.current(0)
+
+    def initHeaderTab(self):
+            self.builder.get_object('headerAutosaveCheck').state(['alternate'])
+            self.builder.get_object('headerLoopCheck').state(['alternate'])
 
     def initFlipTab(self):
         self.builder.get_object('flipHorizontallyCheck').deselect()
@@ -519,7 +600,7 @@ class MainWindow():
 
     # Credit: https://stackoverflow.com/questions/57939932/treeview-how-to-select-multiple-rows-using-cursor-up-and-down-keys
     def _on_treeview_shift_down(self, event):
-        tree = event.widget
+        tree: ttk.Treeview = event.widget
         cur_item = tree.focus()
         next_item = tree.next(cur_item)
         if next_item == '':
@@ -534,7 +615,7 @@ class MainWindow():
         tree.see(next_item)
 
     def _on_treeview_shift_up(self, event):
-        tree = event.widget
+        tree: ttk.Treeview = event.widget
         cur_item = tree.focus()
         prev_item = tree.prev(cur_item)
         if prev_item == '':
@@ -589,7 +670,7 @@ class MainWindow():
         builder.get_object('applyBtn')['state'] = 'disabled'
         fileTable = self.fileTable
         changedSongData = {}
-        selectedIndexes: set = [fileTable.index(item)
+        selectedIndexes = [fileTable.index(item)
                                for item in fileTable.selection()]
         selectionLen = len(selectedIndexes)
 
@@ -813,7 +894,7 @@ class DatapackExportDialog:
             button["state"] = "disabled"
 
         def wnbsIDVaildate(P):
-            isVaild = bool(re.match("^(\d|\w|[-_])*$", P))
+            isVaild = bool(re.match("^(\d|\w|[-_.])+$", P))
             button["state"] = "normal" if isVaild and (
                 14 >= len(P) > 0) else "disabled"
             return isVaild
