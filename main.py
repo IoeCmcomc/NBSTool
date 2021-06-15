@@ -140,6 +140,7 @@ class MainWindow():
                 builder.get_object('saveFilesBtn')["state"] = "disabled"
                 builder.get_object('removeEntriesBtn')["state"] = "disabled"
                 builder.get_object('headerNotebook').select(0)
+                self.selectedFilesVerStr.set("No file are selected.")
                 applyBtn["state"] = "disabled"
             exportMenu: tk.Menu = builder.get_object('exportMenu')
             exportMenu.entryconfig(0, state="normal" if selectionLen == 1 else "disable")
@@ -188,7 +189,9 @@ class MainWindow():
         fileVersion = self.selectedFilesVersion(selection)
         if fileVersion == -1:
             notebook.select(0)
+            self.selectedFilesVerStr.set("Selected file(s) don't have the same version number.")
             return
+        self.selectedFilesVerStr.set("Selected file(s) format version: {: >8}".format(fileVersion if fileVersion > 0 else 'Classic'))
         notebook.select(1)
         for i, index in enumerate(selection):
             header = self.songsData[index].header
@@ -318,7 +321,7 @@ class MainWindow():
     def initFormatTab(self):
         combobox = self.builder.get_object('formatCombo')
         combobox.configure(
-            values=("(not selected)", '5', '4', '3', '2', '1', "Classic"))
+            values=("(not selected)", *range(NBS_VERSION, 1-1, -1), "Classic"))
         combobox.current(0)
 
     def initHeaderTab(self):

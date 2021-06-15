@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.1">
   <object class="tk.Toplevel" id="toplevel">
-    <property name="geometry">620x690</property>
+    <property name="geometry">620x670</property>
     <property name="minsize">350|370</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
@@ -204,17 +204,38 @@
                     <property name="text" translatable="yes">Format</property>
                     <child>
                       <object class="tk.Frame" id="formatFrame">
+                        <property name="pady">10</property>
                         <property name="width">200</property>
                         <layout manager="pack">
                           <property name="propagate">True</property>
                           <property name="side">top</property>
                         </layout>
                         <child>
-                          <object class="tk.Label" id="formatLabel">
-                            <property name="text" translatable="yes">Changes files format to:</property>
+                          <object class="ttk.Label" id="formatVersion">
+                            <property name="text" translatable="yes">No file selected.</property>
+                            <property name="textvariable">string:selectedFilesVerStr</property>
                             <layout manager="pack">
-                              <property name="padx">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Separator" id="separator2">
+                            <property name="orient">horizontal</property>
+                            <layout manager="pack">
+                              <property name="fill">x</property>
+                              <property name="padx">10</property>
                               <property name="pady">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Label" id="formatLabel">
+                            <property name="text" translatable="yes">Changes files format version to:</property>
+                            <layout manager="pack">
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -241,16 +262,6 @@
                             </layout>
                           </object>
                         </child>
-                        <child>
-                          <object class="ttk.Frame" id="frame3">
-                            <property name="height">200</property>
-                            <property name="width">200</property>
-                            <layout manager="pack">
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
                       </object>
                     </child>
                   </object>
@@ -259,7 +270,7 @@
                   <object class="ttk.Notebook.Tab" id="headerTab">
                     <property name="text" translatable="yes">Header</property>
                     <child>
-                      <object class="tk.Frame" id="frame1">
+                      <object class="tk.Frame" id="headerFrame">
                         <property name="height">200</property>
                         <property name="width">200</property>
                         <layout manager="pack">
