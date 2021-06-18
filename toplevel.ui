@@ -200,73 +200,6 @@
                   <property name="side">top</property>
                 </layout>
                 <child>
-                  <object class="ttk.Notebook.Tab" id="formatTab">
-                    <property name="text" translatable="yes">Format</property>
-                    <child>
-                      <object class="tk.Frame" id="formatFrame">
-                        <property name="pady">10</property>
-                        <property name="width">200</property>
-                        <layout manager="pack">
-                          <property name="propagate">True</property>
-                          <property name="side">top</property>
-                        </layout>
-                        <child>
-                          <object class="ttk.Label" id="formatVersion">
-                            <property name="text" translatable="yes">No file selected.</property>
-                            <property name="textvariable">string:selectedFilesVerStr</property>
-                            <layout manager="pack">
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="ttk.Separator" id="separator2">
-                            <property name="orient">horizontal</property>
-                            <layout manager="pack">
-                              <property name="fill">x</property>
-                              <property name="padx">10</property>
-                              <property name="pady">5</property>
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="tk.Label" id="formatLabel">
-                            <property name="text" translatable="yes">Changes files format version to:</property>
-                            <layout manager="pack">
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="ttk.Combobox" id="formatCombo">
-                            <property name="state">readonly</property>
-                            <property name="textvariable">string:formatComboCurrent</property>
-                            <layout manager="pack">
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
-                        <child>
-                          <object class="customwidgets.wrapmessage" id="wrapmessage_1">
-                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
-</property>
-                            <layout manager="pack">
-                              <property name="fill">x</property>
-                              <property name="propagate">True</property>
-                              <property name="side">top</property>
-                            </layout>
-                          </object>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
-                </child>
-                <child>
                   <object class="ttk.Notebook.Tab" id="headerTab">
                     <property name="text" translatable="yes">Header</property>
                     <child>
@@ -347,6 +280,7 @@
                                         </layout>
                                         <child>
                                           <object class="ttk.Checkbutton" id="headerAutosaveCheck">
+                                            <property name="command" type="command" cbtype="simple">onAutosaveCheckBtn</property>
                                             <property name="text" translatable="yes">Enabled</property>
                                             <property name="variable">boolean:headerAutosave</property>
                                             <layout manager="grid">
@@ -584,6 +518,7 @@
                                         </layout>
                                         <child>
                                           <object class="ttk.Checkbutton" id="headerLoopCheck">
+                                            <property name="command" type="command" cbtype="simple">onLoopCheckBtn</property>
                                             <property name="text" translatable="yes">Enabled</property>
                                             <property name="variable">boolean:headerLoop</property>
                                             <layout manager="grid">
@@ -662,6 +597,73 @@
                                 </child>
                               </object>
                             </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="formatTab">
+                    <property name="text" translatable="yes">Format</property>
+                    <child>
+                      <object class="tk.Frame" id="formatFrame">
+                        <property name="pady">10</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Label" id="formatVersion">
+                            <property name="text" translatable="yes">No file selected.</property>
+                            <property name="textvariable">string:selectedFilesVerStr</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Separator" id="separator2">
+                            <property name="orient">horizontal</property>
+                            <layout manager="pack">
+                              <property name="fill">x</property>
+                              <property name="padx">10</property>
+                              <property name="pady">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Label" id="formatLabel">
+                            <property name="text" translatable="yes">Changes files format version to:</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Combobox" id="formatCombo">
+                            <property name="state">readonly</property>
+                            <property name="textvariable">string:formatComboCurrent</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="customwidgets.wrapmessage" id="wrapmessage_1">
+                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
+</property>
+                            <layout manager="pack">
+                              <property name="fill">x</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
                           </object>
                         </child>
                       </object>

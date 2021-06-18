@@ -126,14 +126,17 @@ class MainWindow():
         self.windowBind()
 
         def on_fileTable_select(event):
-            selection: tuple = event.widget.selection()
+            fileTable: ttk.Treeview = event.widget
+            if fileTable['selectmode'] == 'none':
+                return
+            selection: tuple = fileTable.selection()
             selectionLen = len(selection)
             selectionNotEmpty = selectionLen > 0
             if selectionNotEmpty:
                 builder.get_object('fileMenu').entryconfig(1, state="normal")
                 builder.get_object('saveFilesBtn')["state"] = "normal"
                 builder.get_object('removeEntriesBtn')["state"] = "normal"
-                self.updateHeaderNotebook([event.widget.index(item) for item in selection])
+                self.updateHeaderNotebook([fileTable.index(item) for item in selection])
                 applyBtn["state"] = "normal"
             else:
                 builder.get_object('fileMenu').entryconfig(1, state="disabled")
@@ -156,12 +159,13 @@ class MainWindow():
         self.VERSION = '0.7.0'
         self.filePaths = []
         self.songsData = []
+        self.selectedFilesVersion = -1
 
     def isInteger(self, value) -> bool:
         print("isInteger", value, value == '' or value.isdigit())
         return value == '' or value.isdigit()
 
-    def selectedFilesVersion(self, selection: tuple) -> int:
+    def getSelectedFilesVersion(self, selection: tuple) -> int:
         fileVersion = -1
         for i in selection:
             header = self.songsData[i].header
@@ -174,7 +178,7 @@ class MainWindow():
 
     def updateHeaderNotebook(self, selection: tuple) -> None:
         def updateCheckbutton(i: int, var: tk.StringVar, widget: ttk.Checkbutton, value: bool) -> bool:
-            ret = i > 0 and var.get() != str(value)
+            ret = (i > 0) and (var.get() != value)
             if ret:
                 widget.state(['alternate'])
             else:
@@ -182,43 +186,38 @@ class MainWindow():
             return not ret
 
         def updateSpinbox(i: int, var: tk.StringVar, value: int) -> None:
-            var.set('' if (i > 0 and var.get() != str(value)) else value)
+            var.set('' if ((i > 0) and (var.get() != str(value))) else value)
 
         get_object = self.builder.get_object
         notebook: ttk.Notebook = self.builder.get_object('headerNotebook')
-        fileVersion = self.selectedFilesVersion(selection)
+        fileVersion = self.getSelectedFilesVersion(selection)
         if fileVersion == -1:
             notebook.select(0)
             self.selectedFilesVerStr.set("Selected file(s) don't have the same version number.")
+            self.selectedFilesVersion = -1
             return
+        self.selectedFilesVersion = fileVersion
         self.selectedFilesVerStr.set("Selected file(s) format version: {: >8}".format(fileVersion if fileVersion > 0 else 'Classic'))
         notebook.select(1)
         for i, index in enumerate(selection):
             header = self.songsData[index].header
             if fileVersion >= 4:
-                loop: int = header.loop
+                loop = header.loop
                 checkBox: ttk.Checkbutton = get_object('headerLoopCheck')
-                get_object('headerLoopCheck')['state'] = 'normal'
-                for child in get_object('headerLoopFrame').winfo_children():
-                    if child is not checkBox:
-                        child.configure(state='normal' if loop else 'disabled')
+                checkBox['state'] = 'normal'
                 if updateCheckbutton(i, self.headerLoop, checkBox, loop):
                     updateSpinbox(i, self.headerLoopCount, header.loop_max)
                     updateSpinbox(i, self.headerLoopStart, header.loop_start)
+                self.onLoopCheckBtn()
             else:
                 # Credit: https://stackoverflow.com/questions/24942760/is-there-a-way-to-gray-out-disable-a-tkinter-frame
                 for child in get_object('headerLoopFrame').winfo_children():
                     child.configure(state='disable')
 
             autoSave = header.auto_save
-            label = get_object('headerAutosaveLabel')
-            spinbox = get_object('headerAutosaveSpin')
-            label['state'] = 'disabled'
-            spinbox['state'] = 'disabled'
             if updateCheckbutton(i, self.headerAutosave, get_object('headerAutosaveCheck'), autoSave):
                 updateSpinbox(i, self.headerAutosaveInterval, header.auto_save_time)
-                label['state'] = 'normal' if autoSave else 'disabled'
-                spinbox['state'] = 'normal' if autoSave else 'disabled'
+            self.onAutosaveCheckBtn()
 
             updateSpinbox(i, self.headerMinuteSpent, header.minutes_spent)
             updateSpinbox(i, self.headerLeftClicks, header.left_clicks)
@@ -226,10 +225,32 @@ class MainWindow():
             updateSpinbox(i, self.headerBlockAdded, header.block_added)
             updateSpinbox(i, self.headerBlockRemoved, header.block_removed)
 
+    def onAutosaveCheckBtn(self):
+        label = self.builder.get_object('headerAutosaveLabel')
+        spinbox = self.builder.get_object('headerAutosaveSpin')
+        state = 'normal' if ((not 'alternate' in self.builder.get_object('headerAutosaveCheck').state()) and self.headerAutosave.get()) else 'disabled'
+        label['state'] = state
+        spinbox['state'] = state
+
+    def onLoopCheckBtn(self):
+        checkBox: ttk.Checkbutton = self.builder.get_object('headerLoopCheck')
+        loop = self.headerLoop.get()
+        state = 'normal' if ((not 'alternate' in self.builder.get_object('headerLoopCheck').state()) and self.headerLoop.get()) else 'disabled'
+        for child in self.builder.get_object('headerLoopFrame').winfo_children():
+            if child is not checkBox:
+                child.configure(state=state)
 
     def initMenuBar(self):
         self.menuBar = menuBar = self.builder.get_object('menubar')
         self.toplevel.configure(menu=menuBar)
+
+    def disabledFileTable(self):
+        self.fileTable.state(('disabled',))
+        self.fileTable['selectmode'] = 'none'
+
+    def enableFileTable(self):
+        self.fileTable.state(('!disabled',))
+        self.fileTable['selectmode'] = 'extended'
 
     def openFiles(self, _=None):
         self.fileTable.delete(*self.fileTable.get_children())
@@ -246,6 +267,8 @@ class MainWindow():
             addedPaths = askopenfilenames(filetypes=types)
         if len(addedPaths) == 0:
             return
+        self.builder.get_object('applyBtn')['state'] = 'disabled'
+        self.disabledFileTable()
         for filePath in addedPaths:
             try:
                 songData = NbsSong(filePath)
@@ -265,6 +288,8 @@ class MainWindow():
                 length, name, author, orig_author))
             self.mainwin.update()
         self.filePaths.extend(addedPaths)
+        self.enableFileTable()
+        self.builder.get_object('applyBtn')['state'] = 'normal'
         self.builder.get_object('fileMenu').entryconfig(2, state="normal" if len(
             self.filePaths) > 0 else "disabled")
 
@@ -282,18 +307,26 @@ class MainWindow():
                     filetypes=types, initialfile=filePath, defaultextension=".nbs")
                 if path == '':
                     return
+                self.builder.get_object('applyBtn')['state'] = 'disabled'
+                self.disabledFileTable()
+                self.mainwin.update()
                 self.songsData[fileTable.index(selection[0])].write(path)
+                self.enableFileTable()
+                self.builder.get_object('applyBtn')['state'] = 'normal'
                 return
             else:
                 path = askdirectory(title="Select folder to save")
             if path == '':
                 return
             Path(path).mkdir(parents=True, exist_ok=True)
+            self.disabledFileTable()
             for item in selection:
                 i = fileTable.index(item)
                 filePath = self.filePaths[i]
                 self.songsData[i].write(os.path.join(
                     path, os.path.basename(filePath)))
+            self.enableFileTable()
+            self.builder.get_object('applyBtn')['state'] = 'normal'
 
     def saveAll(self, _=None):
         if len(self.filePaths) == 0:
@@ -302,9 +335,14 @@ class MainWindow():
         if path == '':
             return
         Path(path).mkdir(parents=True, exist_ok=True)
+        self.builder.get_object('applyBtn')['state'] = 'disabled'
+        self.disabledFileTable()
+        self.mainwin.update()
         for i, filePath in enumerate(self.filePaths):
             self.songsData[i].write(os.path.join(
                 path, os.path.basename(filePath)))
+        self.enableFileTable()
+        self.builder.get_object('applyBtn')['state'] = 'normal'
 
     def removeSelectedFiles(self):
         if len(self.filePaths) == 0:
@@ -669,37 +707,42 @@ class MainWindow():
         self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (self.arrangeMode.get() == 'instruments') else 'disabled'
 
     def applyTool(self):
-        builder: Builder = self.builder
-        builder.get_object('applyBtn')['state'] = 'disabled'
+        get_object = self.builder.get_object
+        get_object('applyBtn')['state'] = 'disabled'
         fileTable = self.fileTable
         changedSongData = {}
         selectedIndexes = [fileTable.index(item)
                                for item in fileTable.selection()]
         selectionLen = len(selectedIndexes)
-
         outputVersion = -1
 
-        if (formatComboIndex := builder.get_object('formatCombo').current()) > 0:
+        if (formatComboIndex := get_object('formatCombo').current()) > 0:
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
 
         async def work(dialog: ProgressDialog = None):
             print("async work() start")
             try:
+                notebook : ttk.Notebook = get_object('headerNotebook')
+                headerModifiable = notebook.index(notebook.select()) == 1
                 for i, index in enumerate(selectedIndexes):
                     dialog.totalProgress.set(i)
                     fileName = os.path.split(self.filePaths[i])[1]
                     dialog.currentText.set("Current file: {}".format(fileName))
                     dialog.totalText.set("Processing {} / {} files".format(i+1, selectionLen))
                     dialog.currentProgress.set(0)
-                    songData = deepcopy(self.songsData[index])
+                    songData: NbsSong = deepcopy(self.songsData[index])
                     dialog.setCurrentPercentage(randint(20, 25))
                     await asyncio.sleep(0.001)
                     dialog.currentMax = len(songData.notes)*2
                     length = songData.header['length']
                     maxLayer = songData.maxLayer
 
+                    if headerModifiable:
+                        self.modifyHeaders(songData.header)
+
                     if outputVersion > -1:
                         songData.header['file_version'] = outputVersion
+
                     if self.flipHorizontallyCheckVar.get() or self.flipVerticallyCheckVar.get():
                         for note in songData.notes:
                             if self.flipHorizontallyCheckVar.get():
@@ -708,10 +751,12 @@ class MainWindow():
                                 note['layer'] = maxLayer - note['layer']
                             dialog.currentProgress.set(dialog.currentProgress.get()+1)
                     songData.sortNotes()
+
                     if self.arrangeMode.get() == 'collapse':
                         self.collapseNotes(songData.notes)
                     elif self.arrangeMode.get() == 'instruments':
                         compactNotes(songData, self.groupPerc)
+
                     dialog.setCurrentPercentage(randint(75, 85))
                     await asyncio.sleep(0.001)
                     songData.sortNotes()
@@ -724,7 +769,7 @@ class MainWindow():
             except asyncio.CancelledError:
                 raise
             finally:
-                builder.get_object('applyBtn')['state'] = 'normal'
+                get_object('applyBtn')['state'] = 'normal'
 
         dialog = ProgressDialog(self.toplevel, self)
         dialog.d.toplevel.title("Applying tools to {} files".format(selectionLen))
@@ -742,6 +787,33 @@ class MainWindow():
                 layer = 0
                 note['layer'] = layer
                 prevNote = note
+
+    def modifyHeaders(self, header):
+        def setAttrFromStrVar(key: str, value: str):
+            if value != '' and value.isdigit():
+                try:
+                    setattr(header, key, int(value))
+                except:
+                    print(f'Non-integer value: {value}')
+        get_object = self.builder.get_object
+        if not 'alternate' in get_object('headerAutosaveCheck').state():
+            autoSave = self.headerAutosave.get()
+            header.auto_save = autoSave
+            if autoSave:
+                setAttrFromStrVar('auto_save_time', self.headerAutosaveInterval.get())
+
+        setAttrFromStrVar('minutes_spent', self.headerMinuteSpent.get())
+        setAttrFromStrVar('left_clicks', self.headerLeftClicks.get())
+        setAttrFromStrVar('right_clicks', self.headerRightClicks.get())
+        setAttrFromStrVar('block_added', self.headerBlockAdded.get())
+        setAttrFromStrVar('block_removed', self.headerBlockRemoved.get())
+
+        if not 'alternate' in get_object('headerLoopCheck').state():
+            loop = self.headerLoop.get()
+            header.loop = loop
+            if loop:
+                setAttrFromStrVar('loop_max', self.headerLoopCount.get())
+                setAttrFromStrVar('loop_start', self.headerLoopStart.get())
 
     def OnApplyTool(self):
         self.ToolsTabButton['state'] = 'disabled'

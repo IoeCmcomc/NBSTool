@@ -102,7 +102,7 @@ class NbsSong(Dict):
     def readHeader(self, f: BinaryIO) -> None:
         '''Read a .nbs file header from a file object'''
 
-        header = Dict()
+        header = self.header
         header['length'] = None
         readNumeric = read_numeric
         readString = read_string
@@ -238,10 +238,12 @@ class NbsSong(Dict):
         header = self.header
         usedInsts = [[], []]
         maxLayer = 0
+        maxInst = 0
         tick = -1
         self.hasPerc = False
         for i, note in enumerate(notes):
             tick, inst, layer = note['tick'], note['inst'], note['layer']
+            maxInst = max(maxInst, inst)
             if inst in {2, 3, 4}:
                 self.hasPerc = note['isPerc'] = True
                 if inst not in usedInsts[1]: usedInsts[1].append(inst)
@@ -252,9 +254,8 @@ class NbsSong(Dict):
 
         header.length = tick
         header.height = len(self.layers)
-        header.vani_inst = 16 if (len(usedInsts[0]) + len(usedInsts[1]) > 10) else 10
+        header.vani_inst = 16 if header.file_version > 0 else 10
         self.maxLayer = maxLayer
-
         self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         # self['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
 
