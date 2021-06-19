@@ -897,6 +897,7 @@
         </child>
         <child>
           <object class="tk.Menuitem.Command" id="exportMidi">
+            <property name="command" type="command" cbtype="simple">callMidiExportDialog</property>
             <property name="label" translatable="yes">as MIDI file...</property>
             <property name="state">disabled</property>
             <property name="underline">3</property>

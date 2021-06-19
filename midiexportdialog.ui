@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">true</property>
+    <property name="resizable">none</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">3</property>
+          <property name="pady">5</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.LabelFrame" id="labelframe">
+            <property name="text" translatable="yes">Export location</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="tk.Radiobutton" id="radiobutton5">
+                <property name="command" type="command" cbtype="simple">exportModeChanged</property>
+                <property name="justify">left</property>
+                <property name="text" translatable="yes">Export all files in a folder:</property>
+                <property name="value">folder</property>
+                <property name="variable">string:exportMode</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="pygubu.builder.widgets.pathchooserinput" id="pathChooser">
+                <property name="state">disabled</property>
+                <property name="textvariable">string:exportPath</property>
+                <property name="title" translatable="yes">Select folder to export</property>
+                <property name="type">directory</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="fill">x</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Radiobutton" id="radiobutton4">
+                <property name="command" type="command" cbtype="simple">exportModeChanged</property>
+                <property name="justify">left</property>
+                <property name="text" translatable="yes">Export each file in the same folder as the original file. Only ask export paths for untitled files.
+</property>
+                <property name="value">current</property>
+                <property name="variable">string:exportMode</property>
+                <property name="wraplength">500</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="exportBtn">
+            <property name="command" type="command" cbtype="simple">export</property>
+            <property name="default">normal</property>
+            <property name="text" translatable="yes">Export</property>
+            <layout manager="pack">
+              <property name="anchor">ne</property>
+              <property name="padx">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

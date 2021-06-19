@@ -64,7 +64,7 @@
         </child>
         <child>
           <object class="ttk.Progressbar" id="totalProgressBar">
-            <property name="length">400</property>
+            <property name="length">550</property>
             <property name="orient">horizontal</property>
             <property name="variable">int:totalProgress</property>
             <layout manager="pack">

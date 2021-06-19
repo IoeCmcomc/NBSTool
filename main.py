@@ -38,6 +38,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory,
 
 import pygubu
 from pygubu import Builder
+from pygubu.widgets.dialog import Dialog
 
 from time import time
 from pprint import pprint
@@ -50,6 +51,7 @@ from PIL import Image, ImageTk
 
 from nbsio import NBS_VERSION, NbsSong
 from ncfio import writencf
+from nbs2midi import nbs2midi
 
 vaniNoteSounds = [
     {'filename': 'harp.ogg', 'name': 'harp'},
@@ -363,8 +365,8 @@ class MainWindow():
         combobox.current(0)
 
     def initHeaderTab(self):
-            self.builder.get_object('headerAutosaveCheck').state(['alternate'])
-            self.builder.get_object('headerLoopCheck').state(['alternate'])
+        self.builder.get_object('headerAutosaveCheck').state(['alternate'])
+        self.builder.get_object('headerLoopCheck').state(['alternate'])
 
     def initFlipTab(self):
         self.builder.get_object('flipHorizontallyCheck').deselect()
@@ -379,227 +381,10 @@ class MainWindow():
         dialog.run()
         del dialog
 
-    def ToolsTabElements(self):
-        fpadx, fpady = 10, 10
-        padx, pady = 5, 0
-
-        # Flip tool
-        self.FlipToolFrame = tk.LabelFrame(self.ToolsTab, text="Flipping")
-        self.FlipToolFrame.grid(
-            row=0, column=0, sticky='nsew', padx=fpadx, pady=fpady)
-
-        self.FlipToolMess = tk.Message(
-            self.FlipToolFrame, anchor='w', text="Flip the note sequence horizontally (by tick), vertically (by layer) or both: ")
-        self.FlipToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
-
-        self.var.tool.flip.vertical = tk.IntVar()
-        self.FilpToolCheckV = tk.Checkbutton(
-            self.FlipToolFrame, text="Vertically", variable=self.var.tool.flip.vertical)
-        self.FilpToolCheckV.pack(side='left', padx=padx, pady=pady)
-
-        self.var.tool.flip.horizontal = tk.IntVar()
-        self.FilpToolCheckH = tk.Checkbutton(
-            self.FlipToolFrame, text="Horizontally", variable=self.var.tool.flip.horizontal)
-        self.FilpToolCheckH.pack(side='left', padx=padx, pady=pady)
-
-        # Instrument tool
-        self.InstToolFrame = tk.LabelFrame(
-            self.ToolsTab, text="Note's instrument")
-        self.InstToolFrame.grid(
-            row=0, column=1, sticky='nsew', padx=fpadx, pady=fpady)
-
-        self.InstToolMess = tk.Message(
-            self.InstToolFrame, anchor='w', text="Change all note's instrument to:")
-        self.InstToolMess.pack(fill='both', expand=True, padx=padx, pady=pady)
-
-        self.var.tool.opts = opts = [
-            "(not applied)"] + [x['name'] for x in vaniNoteSounds] + ["Random"]
-        self.InstToolCombox = ttk.Combobox(
-            self.InstToolFrame, state='readonly', values=opts)
-        self.InstToolCombox.current(0)
-        self.InstToolCombox.pack(
-            side='left', fill='both', expand=True, padx=padx, pady=pady)
-
-        # Reduce tool
-        self.ReduceToolFrame = tk.LabelFrame(self.ToolsTab, text="Reducing")
-        self.ReduceToolFrame.grid(
-            row=1, column=0, sticky='nsew', padx=fpadx, pady=fpady)
-
-        self.ReduceToolMess = tk.Message(
-            self.ReduceToolFrame, anchor='w', text="Delete as many note as possible to reduce file size.")
-        self.ReduceToolMess.pack(
-            fill='both', expand=True, padx=padx, pady=pady)
-
-        self.var.tool.reduce.opt1 = tk.IntVar()
-        self.CompactToolChkOpt1 = FlexCheckbutton(
-            self.ReduceToolFrame, text="Delete duplicate notes", variable=self.var.tool.reduce.opt1, anchor='w')
-        self.CompactToolChkOpt1.pack(padx=padx, pady=pady)
-
-        self.var.tool.reduce.opt2 = tk.IntVar()
-        self.CompactToolChkOpt2 = FlexCheckbutton(
-            self.ReduceToolFrame, text=" In every tick, delete all notes except the first note", variable=self.var.tool.reduce.opt2, anchor='w')
-        self.CompactToolChkOpt2.pack(padx=padx, pady=pady)
-
-        self.var.tool.reduce.opt3 = tk.IntVar()
-        self.CompactToolChkOpt3 = FlexCheckbutton(
-            self.ReduceToolFrame, text=" In every tick, delete all notes except the last note", variable=self.var.tool.reduce.opt3, anchor='w')
-        self.CompactToolChkOpt3.pack(padx=padx, pady=(pady, 10))
-
-        # Compact tool
-        self.CompactToolFrame = tk.LabelFrame(self.ToolsTab, text="Compacting")
-        self.CompactToolFrame.grid(
-            row=1, column=1, sticky='nsew', padx=fpadx, pady=fpady)
-
-        self.CompactToolMess = tk.Message(
-            self.CompactToolFrame, anchor='w', text="Remove spaces between notes vertically (by layer) and group them by instruments.")
-        self.CompactToolMess.pack(
-            fill='both', expand=True, padx=padx, pady=pady)
-
-        self.var.tool.compact = tk.IntVar()
-        self.CompactToolCheck = FlexCheckbutton(
-            self.CompactToolFrame, text="Compact notes", variable=self.var.tool.compact, command=self.toggleCompactToolOpt, anchor='w')
-        self.CompactToolCheck.pack(padx=padx, pady=pady)
-
-        self.var.tool.compact.opt1 = tk.IntVar()
-        self.CompactToolChkOpt1 = FlexCheckbutton(self.CompactToolFrame, text="Automatic separate notes by instruments (remain some spaces)",
-                                                  variable=self.var.tool.compact.opt1, state='disabled', command=lambda: self.toggleCompactToolOpt(2), anchor='w')
-        self.CompactToolChkOpt1.select()
-        self.CompactToolChkOpt1.pack(padx=padx*5, pady=pady)
-
-        self.var.tool.compact.opt1_1 = tk.IntVar()
-        self.CompactToolChkOpt1_1 = FlexCheckbutton(
-            self.CompactToolFrame, text="Group percussions into one layer", variable=self.var.tool.compact.opt1_1, state='disabled', anchor='w')
-        self.CompactToolChkOpt1_1.select()
-        self.CompactToolChkOpt1_1.pack(padx=padx*5*2, pady=pady)
-
-        # 'Apply' botton
-        self.ToolsTabButton = ttk.Button(
-            self.ToolsTab, text="Apply", state='disabled', command=self.OnApplyTool)
-        self.ToolsTabButton.grid(
-            row=2, column=1, sticky='se', padx=fpadx, pady=fpady)
-
-    def ExportTabElements(self):
-        fpadx, fpady = 10, 10
-        padx, pady = 5, 5
-
-        # Upper frame
-        self.ExpConfigFrame = tk.LabelFrame(self.ExportTab, text="Option")
-        self.ExpConfigFrame.pack(
-            fill='both', expand=True, padx=fpadx, pady=fpady)
-
-        # "Select mode" frame
-        self.ExpConfigGrp1 = tk.Frame(
-            self.ExpConfigFrame, relief='groove', borderwidth=1)
-        self.ExpConfigGrp1.pack(fill='both', padx=fpadx)
-
-        self.ExpConfigLabel = tk.Label(
-            self.ExpConfigGrp1, text="Export the song as a:", anchor='w')
-        self.ExpConfigLabel.pack(side='left', fill='x', padx=padx, pady=pady)
-
-        self.var.export.mode = tk.IntVar()
-        self.ExpConfigMode1 = tk.Radiobutton(
-            self.ExpConfigGrp1, text="File", variable=self.var.export.mode, value=1)
-        self.ExpConfigMode1.pack(side='left', padx=padx, pady=pady)
-        self.ExpConfigMode1.select()
-        self.ExpConfigMode2 = tk.Radiobutton(
-            self.ExpConfigGrp1, text="Datapack", variable=self.var.export.mode, value=0)
-        self.ExpConfigMode2.pack(side='left', padx=padx, pady=pady)
-
-        self.var.export.type.file = \
-            [('Musical Instrument Digital files', '*.mid'),
-             ('Nokia Composer Format', '*.txt'), ]
-        self.var.export.type.dtp = ['Wireless note block song', 'other']
-        self.ExpConfigCombox = ttk.Combobox(self.ExpConfigGrp1, state='readonly', values=[
-                                            "{} ({})".format(tup[0], tup[1]) for tup in self.var.export.type.file])
-        self.ExpConfigCombox.current(0)
-        self.ExpConfigCombox.bind(
-            "<<ComboboxSelected>>", self.toggleExpOptiGrp)
-        self.ExpConfigCombox.pack(side='left', fill='x', padx=padx, pady=pady)
-
-        self.var.export.mode.trace('w', self.toggleExpOptiGrp)
-
-        ttk.Separator(self.ExpConfigFrame, orient="horizontal").pack(
-            fill='x', expand=False, padx=padx*3, pady=pady)
-
-        self.ExpOptiSW = StackingWidget(
-            self.ExpConfigFrame, relief='groove', borderwidth=1)
-        self.ExpOptiSW.pack(fill='both', expand=True, padx=fpadx)
-
-        # Midi export options frame
-        self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Midi')
-        self.ExpOptiSW.pack('Midi', side='top', fill='both', expand=True)
-
-        self.var.export.midi.opt1 = tk.IntVar()
-        self.ExpMidi1Rad1 = tk.Radiobutton(
-            self.ExpOptiSW['Midi'], text="Sort notes to MIDI tracks by note's layer", variable=self.var.export.midi.opt1, value=1)
-        self.ExpMidi1Rad1.pack(anchor='nw', padx=padx, pady=(pady, 0))
-        self.ExpMidi1Rad2 = tk.Radiobutton(
-            self.ExpOptiSW['Midi'], text="Sort notes to MIDI tracks by note's instrument", variable=self.var.export.midi.opt1, value=0)
-        self.ExpMidi1Rad2.pack(anchor='nw', padx=padx, pady=(0, pady))
-
-        # Nokia export options frame
-        self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'NCF')
-        self.ExpOptiSW.pack('NCF', side='top', fill='both', expand=True)
-
-        self.NCFOutput = ScrolledText(
-            self.ExpOptiSW['NCF'], state="disabled", height=10)
-        self.NCFOutput.pack(fill='both', expand=True)
-
-        # 'Wireless song datapack' export options frame
-        self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Wnbs')
-        self.ExpOptiSW.pack('Wnbs', side='top', fill='both', expand=True)
-
-        self.WnbsIDLabel = tk.Label(
-            self.ExpOptiSW['Wnbs'], text="Unique name:")
-        self.WnbsIDLabel.pack(anchor='nw', padx=padx, pady=pady)
-
-        #vcmd = (self.register(self.onValidate), '%P')
-        self.WnbsIDEntry = tk.Entry(self.ExpOptiSW['Wnbs'], validate="key",
-                                    validatecommand=(self.register(lambda P: bool(re.match("^(\d|\w|[-_])*$", P))), '%P'))
-        self.WnbsIDEntry.pack(anchor='nw', padx=padx, pady=pady)
-
-        # Other export options frame
-        self.ExpOptiSW.append(tk.Frame(self.ExpOptiSW), 'Other')
-        self.ExpOptiSW.pack('Other', side='top', fill='both', expand=True)
-
-        self.ExpMusicLabel = tk.Label(
-            self.ExpOptiSW['Other'], text="There is no option available.")
-        self.ExpMusicLabel.pack(anchor='nw', padx=padx, pady=pady)
-
-        # Output frame
-        self.ExpOutputFrame = tk.LabelFrame(self.ExportTab, text="Output")
-        self.ExpOutputFrame.pack(fill='both', padx=fpadx, pady=(0, fpady))
-
-        self.ExpOutputLabel = tk.Label(
-            self.ExpOutputFrame, text="File path:", anchor='w', width=8)
-        self.ExpOutputLabel.pack(side='left', fill='x', padx=padx, pady=pady)
-
-        self.ExpOutputEntry = tk.Entry(
-            self.ExpOutputFrame, textvariable=self.exportFilePath)
-        self.ExpOutputEntry.pack(side='left', fill='x', padx=padx, expand=True)
-
-        self.ExpBrowseButton = ttk.Button(
-            self.ExpOutputFrame, text="Browse", command=self.OnBrowseExp)
-        self.ExpBrowseButton.pack(side='left', padx=padx, pady=pady)
-
-        self.ExpSaveButton = ttk.Button(
-            self.ExpOutputFrame, text="Export", command=self.OnExport)
-        self.ExpSaveButton.pack(side='left', padx=padx, pady=pady)
-
-    def footerElements(self):
-        self.footerLabel = tk.Label(self.footer, text="Ready")
-        self.footerLabel.pack(side='left', fill='x')
-        self.var.footerLabel = 0
-
-        self.sizegrip = ttk.Sizegrip(self.footer)
-        self.sizegrip.pack(side='right', anchor='se')
-
-        self.progressbar = ttk.Progressbar(
-            self.footer, orient="horizontal", length=300, mode="determinate")
-        self.progressbar["value"] = 0
-        self.progressbar["maximum"] = 100
-        # self.progressbar.start()
-        # self.progressbar.stop()
+    def callMidiExportDialog(self):
+        dialog = MidiExportDialog(self.toplevel, self)
+        dialog.run()
+        del dialog
 
     def windowBind(self):
         toplevel = self.toplevel
@@ -694,15 +479,6 @@ class MainWindow():
         self.toplevel.quit()
         self.toplevel.destroy()
 
-    def toggleCompactToolOpt(self, id=1):
-        if id <= 2:
-            a = ((self.var.tool.compact.opt1.get() == 0)
-                 or (self.var.tool.compact.get() == 0))
-            self.CompactToolChkOpt1_1["state"] = "disable" if a is True else "normal"
-            if id <= 1:
-                self.CompactToolChkOpt1["state"] = "disable" if self.var.tool.compact.get(
-                ) == 0 else "normal"
-
     def onArrangeModeChanged(self):
         self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (self.arrangeMode.get() == 'instruments') else 'disabled'
 
@@ -772,7 +548,7 @@ class MainWindow():
                 get_object('applyBtn')['state'] = 'normal'
 
         dialog = ProgressDialog(self.toplevel, self)
-        dialog.d.toplevel.title("Applying tools to {} files".format(selectionLen))
+        dialog.d.set_title("Applying tools to {} files".format(selectionLen))
         dialog.totalMax = selectionLen
         dialog.run(work)
 
@@ -815,142 +591,6 @@ class MainWindow():
                 setAttrFromStrVar('loop_max', self.headerLoopCount.get())
                 setAttrFromStrVar('loop_start', self.headerLoopStart.get())
 
-    def OnApplyTool(self):
-        self.ToolsTabButton['state'] = 'disabled'
-        data = self.inputFileData
-        ticklen = data['header']['length']
-        layerlen = data['maxLayer']
-        instOpti = self.InstToolCombox.current()
-        for note in data['notes']:
-            # Flip
-            if bool(self.var.tool.flip.horizontal.get()):
-                note['tick'] = ticklen - note['tick']
-            if bool(self.var.tool.flip.vertical.get()):
-                note['layer'] = layerlen - note['layer']
-
-            # Instrument change
-            if instOpti > 0:
-                note['inst'] = randrange(
-                    len(self.var.tool.opts)-2) if instOpti > len(self.noteSounds) else instOpti-1
-        # Reduce
-        if bool(self.var.tool.reduce.opt2.get()) and bool(self.var.tool.reduce.opt3.get()):
-            data['notes'] = [note for i, note in enumerate(
-                data['notes']) if note == data['notes'][-1] or note['tick'] != data['notes'][i-1]['tick'] or note['tick'] != data['notes'][i+1]['tick']]
-        elif bool(self.var.tool.reduce.opt2.get()):
-            data['notes'] = [note for i, note in enumerate(
-                data['notes']) if note['tick'] != data['notes'][i-1]['tick']]
-        elif bool(self.var.tool.reduce.opt3.get()):
-            data['notes'] = [data['notes'][i-1]
-                             for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]['tick']]
-        if bool(self.var.tool.reduce.opt1.get()):
-            data['notes'] = sorted(data['notes'], key=operator.itemgetter(
-                'tick', 'inst', 'key', 'layer'))
-            data['notes'] = [note for i, note in enumerate(data['notes']) if note['tick'] != data['notes'][i-1]
-                             ['tick'] or note['inst'] != data['notes'][i-1]['inst'] or note['key'] != data['notes'][i-1]['key']]
-            data['notes'] = sorted(
-                data['notes'], key=operator.itemgetter('tick', 'layer'))
-
-        # Compact
-        if bool(self.var.tool.compact.get()):
-            data = compactNotes(
-                data, self.var.tool.compact.opt1.get(), self.var.tool.compact.opt1_1.get())
-        # Sort notes
-
-
-        data.correctData()
-        self.ToolsTabButton['state'] = 'normal'
-
-    def toggleExpOptiGrp(self, n=None, m=None, y=None):
-        asFile = bool(self.var.export.mode.get())
-        key = max(0, self.ExpConfigCombox.current())
-        if asFile:
-            if key == 0:
-                self.ExpOptiSW.switch('Midi')
-            elif key == 1:
-                self.ExpOptiSW.switch('NCF')
-            else:
-                self.ExpOptiSW.switch('Other')
-            self.ExpConfigCombox.configure(values=["{} ({})".format(
-                tup[0], tup[1]) for tup in self.var.export.type.file])
-        else:
-            if key == 0:
-                self.ExpOptiSW.switch('Wnbs')
-            else:
-                self.ExpOptiSW.switch('Other')
-            self.ExpConfigCombox.configure(values=["{} ({})".format(tup[0], tup[1]) if isinstance(
-                tup, tuple) else tup for tup in self.var.export.type.dtp])
-        key = min(key, len(self.ExpConfigCombox['values'])-1)
-        self.ExpConfigCombox.current(key)
-        self.ExpConfigCombox.configure(width=len(self.ExpConfigCombox.get()))
-
-        if self.exportFilePath.get():
-            print(self.exportFilePath.get())
-            fext = (self.var.export.type.file[self.ExpConfigCombox.current()],)[
-                0][1][1:]
-            if asFile:
-                if not self.exportFilePath.get().lower().endswith(self.WnbsIDEntry.get()):
-                    self.exportFilePath.set(
-                        "{}/{}".format(self.exportFilePath.get(), self.WnbsIDEntry.get()))
-                self.WnbsIDEntry.delete(0, 'end')
-                if not self.exportFilePath.get().lower().endswith(fext):
-                    self.exportFilePath.set(
-                        self.exportFilePath.get().split('.')[0] + fext)
-            else:
-                if '.' in self.exportFilePath.get():
-                    self.WnbsIDEntry.delete(0, 'end')
-                    self.WnbsIDEntry.insert(
-                        0, self.exportFilePath.get().split('/')[-1].split('.')[0])
-                    self.exportFilePath.set(
-                        '/'.join(self.exportFilePath.get().split('/')[0:-1]))
-
-    def OnBrowseExp(self):
-        if self.filePath and self.inputFileData:
-            asFile = bool(self.var.export.mode.get())
-            if asFile:
-                curr = (
-                    self.var.export.type.file[self.ExpConfigCombox.current()],)
-                fext = curr[0][1][1:]
-                self.exportFilePath.set(asksaveasfilename(title="Export file", initialfile=os.path.splitext(
-                    os.path.basename(self.filePath))[0]+fext, filetypes=curr))
-            else:
-                curr = [
-                    (self.var.export.type.dtp[self.ExpConfigCombox.current()], '*.'), ]
-                fext = ''
-                self.exportFilePath.set(askdirectory(
-                    title="Export datapack (choose the directory to put the datapack)", initialdir=os.path.dirname(self.filePath), mustexist=False))
-            if self.exportFilePath.get():
-                if asFile:
-                    if not self.exportFilePath.get().lower().endswith(fext):
-                        self.exportFilePath.set(
-                            self.exportFilePath.get().split('.')[0] + fext)
-                else:
-                    if '.' in self.exportFilePath.get().split('/')[-1]:
-                        self.exportFilePath.set(
-                            '/'.join(self.exportFilePath.get().split('/')[0:-1]))
-
-    def OnExport(self):
-        if self.exportFilePath.get() is not None:
-            data, path = self.inputFileData, self.exportFilePath.get()
-            asFile = bool(self.var.export.mode.get())
-            type = self.ExpConfigCombox.current()
-            if asFile:
-                if type == 0:
-                    exportMIDI(self, path, self.var.export.midi.opt1.get())
-                elif type == 1:
-                    with open(path, "w") as f:
-                        f.write(writencf(data))
-                elif type in {2, 3, 4, 5}:
-                    fext = self.var.export.type.file[self.ExpConfigCombox.current(
-                    )][1][2:]
-                    # exportMusic(self, path, fext)
-            else:
-                if type == 0:
-                    exportDatapack(self, os.path.join(
-                        path, self.WnbsIDEntry.get()), 'wnbs')
-
-            self.ExpBrowseButton['state'] = self.ExpSaveButton['state'] = 'normal'
-
-
 class DatapackExportDialog:
     def __init__(self, master, parent):
         self.master = master
@@ -960,8 +600,7 @@ class DatapackExportDialog:
         builder.add_resource_path(resource_path())
         builder.add_from_file(resource_path('datapackexportdialog.ui'))
 
-        self.dialog = builder.get_object('dialog', master)
-        centerToplevel(self.dialog.toplevel)
+        self.d: Dialog = builder.get_object('dialog', master)
 
         button = builder.get_object('exportBtn')
         button.configure(command=self.export)
@@ -981,10 +620,10 @@ class DatapackExportDialog:
         builder.connect_callbacks(self)
 
     def run(self):
-        self.builder.get_object('dialog').run()
+        self.d.run()
 
     def export(self, _=None):
-        self.dialog.close()
+        self.d.close()
         fileTable = self.parent.fileTable
         index = fileTable.index(fileTable.selection()[0])
 
@@ -993,6 +632,81 @@ class DatapackExportDialog:
             return
         exportDatapack(self.parent.songsData[index], os.path.join(
             path, self.entry.get()), self.entry.get(), 'wnbs')
+
+class MidiExportDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('midiexportdialog.ui'))
+
+        self.d: Dialog = builder.get_object('dialog', master)
+        builder.get_object('pathChooser').bind('<<PathChooserPathChanged>>', self.pathChanged)
+
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+        self.exportModeChanged()
+
+    def run(self):
+        self.d.run()
+
+    def exportModeChanged(self):
+        self.isFolderMode = self.exportMode.get() == 'folder'
+        self.builder.get_object('pathChooser')['state'] = 'normal' if self.isFolderMode else 'disabled'
+        self.pathChanged()
+
+    def pathChanged(self, _=None):
+        self.builder.get_object('exportBtn')['state'] = 'normal' if (not self.isFolderMode) or (self.exportPath.get() != '') else 'disabled'
+
+    def export(self, _=None):
+        path = os.path
+        fileTable = self.parent.fileTable
+        indexes = [fileTable.index(i) for i in fileTable.selection()]
+
+        if self.isFolderMode:
+            self.pathChanged()
+            if self.exportPath.get() != '':
+                Path(self.exportPath.get()).mkdir(parents=True, exist_ok=True)
+            else:
+                return
+
+        async def work(dialog: ProgressDialog = None):
+            try:
+                songsData = self.parent.songsData
+                filePaths = self.parent.filePaths
+                for i in indexes:
+                    dialog.totalProgress.set(i)
+                    dialog.totalText.set("Exporting {} / {} files".format(i+1, len(indexes)))
+                    dialog.currentProgress.set(0)
+                    origPath = filePaths[i]
+                    baseName = path.basename(origPath)
+                    if baseName.endswith('.nbs'):
+                        baseName = baseName[:-4]
+                    baseName += '.mid'
+
+                    filePath = ''
+                    if not self.isFolderMode:
+                        filePath = path.join(path.dirname(origPath), baseName)
+                    else:
+                        filePath = path.join(self.exportPath.get(), baseName)
+                    dialog.currentText.set("Current file: {}".format(filePath))
+                    songData = deepcopy(songsData[i])
+                    compactNotes(songData, True)
+                    dialog.currentProgress.set(10) # 10%
+                    await nbs2midi(songData, filePath, dialog)
+                dialog.totalProgress.set(dialog.currentMax)
+            except asyncio.CancelledError:
+                raise
+
+        dialog = ProgressDialog(self.d.toplevel, self)
+        dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialog.d.set_title("Exporting {} files to MIDI".format(len(indexes)))
+        dialog.totalMax = len(indexes)
+        dialog.run(work)
+        dialog.d.destroy()
 
 class ProgressDialog:
     def __init__(self, master, parent):
@@ -1004,9 +718,9 @@ class ProgressDialog:
         builder.add_resource_path(resource_path())
         builder.add_from_file(resource_path('progressdialog.ui'))
 
-        self.d = builder.get_object('dialog1', master)
+        self.d: Dialog = builder.get_object('dialog1', master)
         self.d.toplevel.protocol('WM_DELETE_WINDOW', self.onCancel)
-        # centerToplevel(self.dialog.toplevel)
+
         builder.connect_callbacks(self)
         builder.import_variables(self)
 
@@ -1027,7 +741,7 @@ class ProgressDialog:
         self.builder.get_object('totalProgressBar')['maximum'] = value
 
     def run(self, func=None):
-        self.builder.get_object('dialog1').run()
+        self.builder.get_object('dialog1', self.master).run()
         if asyncio.iscoroutinefunction(func):
             self.work = func
             self.d.toplevel.after(0, self.startWork)
@@ -1090,45 +804,6 @@ class FlexCheckbutton(tk.Checkbutton):
         if self.multiline:
             self.bind("<Configure>", lambda event: self.configure(width=event.width-10,
                                                                   justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999))
-
-
-class StackingWidget(tk.Frame):
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
-        self._frames = {}
-        self._i = 0
-        #self._shown = None
-
-    def __getitem__(self, key):
-        if key in self._frames:
-            return self._frames[key][0]
-        super().__getitem__(key)
-
-    def append(self, frame, key=None):
-        if isinstance(frame, (tk.Widget, ttk.Widget)):
-            if not key:
-                key = self._i
-                self._i += 1
-            self._frames[key] = [frame, None]
-
-    def switch(self, key):
-        for k, (w, o) in self._frames.items():
-            if k == key:
-                if o:
-                    w.pack(**o)
-                else:
-                    w.pack()
-            else:
-                w.pack_forget()
-
-    def pack(self, key=None, **opts):
-        if key:
-            self._frames[key][1] = opts
-        else:
-            super().pack(**opts)
-        if len(self._frames) == 1:
-            self.switch(key)
-
 
 def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     # Credit: https://stackoverflow.com/questions/3129322/how-do-i-get-monitor-resolution-in-python/56913005#56913005
@@ -1202,10 +877,6 @@ def compactNotes(data, groupPerc=1) -> None:
                     prevNote = note
         outerLayer += innerLayer + 1
     data['maxLayer'] = outerLayer - 1
-
-def exportMIDI(cls, path, byLayer=False):
-    pass
-
 
 def exportDatapack(data, path, bname, mode=None, master=None):
     def writejson(path, jsout):
