@@ -1,7 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.1">
   <object class="tk.Toplevel" id="toplevel">
-    <property name="geometry">620x670</property>
     <property name="minsize">350|370</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
@@ -22,7 +21,7 @@
             <layout manager="pack">
               <property name="expand">true</property>
               <property name="fill">both</property>
-              <property name="padx">5</property>
+              <property name="padx">10</property>
               <property name="pady">5</property>
               <property name="propagate">True</property>
               <property name="side">top</property>
@@ -112,62 +111,44 @@
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="openFilesBtn">
-                <property name="command" type="command" cbtype="simple" args="">openFiles</property>
-                <property name="justify">left</property>
-                <property name="takefocus">false</property>
+              <object class="ttk.Button" id="openFilesBtn">
+                <property name="command" type="command" cbtype="simple">openFiles</property>
                 <property name="text" translatable="yes">Open...</property>
-                <property name="width">10</property>
                 <layout manager="pack">
-                  <property name="anchor">w</property>
-                  <property name="padx">5</property>
-                  <property name="pady">5</property>
+                  <property name="padx">3</property>
                   <property name="propagate">True</property>
                   <property name="side">left</property>
                 </layout>
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="saveFilesBtn">
-                <property name="command" type="command" cbtype="simple" args="">saveFiles</property>
+              <object class="ttk.Button" id="saveFilesBtn">
+                <property name="command" type="command" cbtype="simple">saveFiles</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Save...</property>
-                <property name="width">10</property>
                 <layout manager="pack">
-                  <property name="anchor">w</property>
-                  <property name="padx">5</property>
-                  <property name="pady">5</property>
                   <property name="propagate">True</property>
                   <property name="side">left</property>
                 </layout>
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="removeEntriesBtn">
-                <property name="command" type="command" cbtype="simple" args="">removeSelectedFiles</property>
+              <object class="ttk.Button" id="removeEntriesBtn">
+                <property name="command" type="command" cbtype="simple">removeSelectedFiles</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Remove</property>
-                <property name="width">10</property>
                 <layout manager="pack">
-                  <property name="anchor">e</property>
                   <property name="padx">5</property>
-                  <property name="pady">5</property>
                   <property name="propagate">True</property>
                   <property name="side">right</property>
                 </layout>
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="addEntriesBtn">
-                <property name="command" type="command" cbtype="simple" args="">addFiles</property>
-                <property name="compound">top</property>
-                <property name="takefocus">false</property>
+              <object class="ttk.Button" id="addEntriesBtn">
+                <property name="command" type="command" cbtype="simple">addFiles</property>
                 <property name="text" translatable="yes">Add...</property>
-                <property name="width">10</property>
                 <layout manager="pack">
-                  <property name="anchor">e</property>
-                  <property name="padx">5</property>
-                  <property name="pady">5</property>
                   <property name="propagate">True</property>
                   <property name="side">right</property>
                 </layout>
@@ -184,7 +165,7 @@
             <layout manager="pack">
               <property name="expand">true</property>
               <property name="fill">both</property>
-              <property name="padx">5</property>
+              <property name="padx">10</property>
               <property name="pady">5</property>
               <property name="propagate">True</property>
               <property name="side">top</property>
@@ -675,6 +656,8 @@
                     <property name="text" translatable="yes">Flip</property>
                     <child>
                       <object class="tk.Frame" id="flipFrame">
+                        <property name="padx">5</property>
+                        <property name="pady">5</property>
                         <property name="width">200</property>
                         <layout manager="pack">
                           <property name="propagate">True</property>
@@ -685,31 +668,26 @@
                             <property name="justify">left</property>
                             <property name="text" translatable="yes">Filp notes:</property>
                             <layout manager="pack">
-                              <property name="padx">5</property>
-                              <property name="pady">5</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Checkbutton" id="flipHorizontallyCheck">
+                          <object class="ttk.Checkbutton" id="flipHorizontallyCheck">
                             <property name="text" translatable="yes">Horizontally</property>
                             <property name="variable">boolean:flipHorizontallyCheckVar</property>
                             <layout manager="pack">
-                              <property name="anchor">n</property>
-                              <property name="padx">10</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Checkbutton" id="flipVerticallyCheck">
+                          <object class="ttk.Checkbutton" id="flipVerticallyCheck">
                             <property name="text" translatable="yes">Vertically</property>
                             <property name="variable">boolean:flipVerticallyCheckVar</property>
                             <layout manager="pack">
-                              <property name="padx">10</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -725,63 +703,60 @@
                     <child>
                       <object class="tk.Frame" id="frame_1">
                         <property name="height">200</property>
+                        <property name="padx">7</property>
+                        <property name="pady">5</property>
                         <property name="width">200</property>
                         <layout manager="pack">
                           <property name="propagate">True</property>
                           <property name="side">top</property>
                         </layout>
                         <child>
-                          <object class="tk.Radiobutton" id="notArrangeRadio">
+                          <object class="ttk.Radiobutton" id="notArrangeRadio">
                             <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Not arrange</property>
                             <property name="value">none</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
-                              <property name="padx">5</property>
-                              <property name="pady">5</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Radiobutton" id="collapseNotesRadio">
+                          <object class="ttk.Radiobutton" id="collapseNotesRadio">
                             <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Collapse all notes</property>
                             <property name="value">collapse</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
-                              <property name="padx">5</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Radiobutton" id="instArrangeRadio">
+                          <object class="ttk.Radiobutton" id="instArrangeRadio">
                             <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
                             <property name="text" translatable="yes">Arrange by instruments</property>
                             <property name="value">instruments</property>
                             <property name="variable">string:arrangeMode</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
-                              <property name="padx">5</property>
-                              <property name="pady">0</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
                           </object>
                         </child>
                         <child>
-                          <object class="tk.Checkbutton" id="arrangeGroupPrec">
+                          <object class="ttk.Checkbutton" id="arrangeGroupPrec">
                             <property name="state">disabled</property>
                             <property name="text" translatable="yes">Treats percussions as an instrument</property>
                             <property name="variable">boolean:groupPerc</property>
                             <layout manager="pack">
                               <property name="anchor">nw</property>
-                              <property name="padx">25</property>
+                              <property name="padx">20</property>
                               <property name="propagate">True</property>
                               <property name="side">top</property>
                             </layout>
@@ -794,18 +769,15 @@
               </object>
             </child>
             <child>
-              <object class="tk.Button" id="applyBtn">
-                <property name="command" type="command" cbtype="simple" args="">applyTool</property>
-                <property name="cursor">arrow</property>
+              <object class="ttk.Button" id="applyBtn">
+                <property name="command" type="command" cbtype="simple">applyTool</property>
                 <property name="state">disabled</property>
                 <property name="text" translatable="yes">Apply</property>
-                <property name="width">10</property>
                 <layout manager="pack">
-                  <property name="fill">y</property>
-                  <property name="padx">5</property>
-                  <property name="pady">5</property>
+                  <property name="anchor">e</property>
+                  <property name="padx">10</property>
                   <property name="propagate">True</property>
-                  <property name="side">right</property>
+                  <property name="side">top</property>
                 </layout>
               </object>
             </child>

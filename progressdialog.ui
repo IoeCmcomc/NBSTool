@@ -84,19 +84,18 @@
               <property name="propagate">True</property>
               <property name="side">top</property>
             </layout>
-          </object>
-        </child>
-        <child>
-          <object class="tk.Button" id="cancelButton">
-            <property name="command" type="command" cbtype="simple">onCancel</property>
-            <property name="padx">20</property>
-            <property name="text" translatable="yes">Cancel</property>
-            <layout manager="pack">
-              <property name="anchor">ne</property>
-              <property name="pady">0</property>
-              <property name="propagate">True</property>
-              <property name="side">bottom</property>
-            </layout>
+            <child>
+              <object class="ttk.Button" id="cancelButton">
+                <property name="command" type="command" cbtype="simple">onCancel</property>
+                <property name="default">normal</property>
+                <property name="text" translatable="yes">Cancel</property>
+                <layout manager="pack">
+                  <property name="anchor">se</property>
+                  <property name="propagate">True</property>
+                  <property name="side">bottom</property>
+                </layout>
+              </object>
+            </child>
           </object>
         </child>
       </object>

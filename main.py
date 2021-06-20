@@ -271,7 +271,7 @@ class MainWindow():
             return
         self.builder.get_object('applyBtn')['state'] = 'disabled'
         self.disabledFileTable()
-        for filePath in addedPaths:
+        for i, filePath in enumerate(addedPaths):
             try:
                 songData = NbsSong(filePath)
                 self.songsData.append(songData)
@@ -288,7 +288,8 @@ class MainWindow():
             orig_author = header['orig_author']
             self.fileTable.insert("", 'end', text=filePath, values=(
                 length, name, author, orig_author))
-            self.mainwin.update()
+            if i % 3 == 0:
+                self.mainwin.update()
         self.filePaths.extend(addedPaths)
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -369,12 +370,12 @@ class MainWindow():
         self.builder.get_object('headerLoopCheck').state(['alternate'])
 
     def initFlipTab(self):
-        self.builder.get_object('flipHorizontallyCheck').deselect()
-        self.builder.get_object('flipVerticallyCheck').deselect()
+        self.builder.get_object('flipHorizontallyCheck').state(('!selected',))
+        self.builder.get_object('flipVerticallyCheck').state(('!selected',))
 
     def initArrangeTab(self):
-        self.builder.get_object('notArrangeRadio').select()
-        self.builder.get_object('arrangeGroupPrec').deselect()
+        self.arrangeMode.set('none')
+        # self.builder.get_object('arrangeGroupPrec').state(('!selected',))
 
     def callDatapackExportDialog(self):
         dialog = DatapackExportDialog(self.toplevel, self)
@@ -407,8 +408,8 @@ class MainWindow():
         for tkclass in ("Entry", "Text", "ScrolledText", "TCombobox"):
             mainwin.bind_class(tkclass, "<Button-3>", self.popupmenus)
 
-        mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
-                           self._on_tab_changed)
+        # mainwin.bind_class("TNotebook", "<<NotebookTabChanged>>",
+        #                    self._on_tab_changed)
 
         mainwin.bind_class("Treeview", "<Shift-Down>",
                            self._on_treeview_shift_down)
@@ -700,13 +701,13 @@ class MidiExportDialog:
                 dialog.totalProgress.set(dialog.currentMax)
             except asyncio.CancelledError:
                 raise
+            self.d.toplevel.after(1, self.d.destroy)
 
         dialog = ProgressDialog(self.d.toplevel, self)
         dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
         dialog.d.set_title("Exporting {} files to MIDI".format(len(indexes)))
         dialog.totalMax = len(indexes)
         dialog.run(work)
-        dialog.d.destroy()
 
 class ProgressDialog:
     def __init__(self, master, parent):
@@ -916,151 +917,149 @@ def exportDatapack(data, path, bname, mode=None, master=None):
         elif note['layer'] not in instLayers[note['inst']]:
             instLayers[note['inst']].append(note['layer'])
 
-            scoreObj = bname[:13]
-        speed = int(min(data['header']['tempo'] * 4, 120))
-        length = data['header']['length']
+    scoreObj = bname[:13]
+    speed = int(min(data['header']['tempo'] * 4, 120))
+    length = data['header']['length']
 
-        makeFolderTree(
-            {path: {
-                'data': {
-                    bname: {
-                        'functions': {
-                            'notes',
-                            'tree',
-                        },
-                    },
-                    'minecraft': {
-                        'tags': 'functions',
+    makeFolderTree(
+        {path: {
+            'data': {
+                bname: {
+                    'functions': {
+                        'notes',
+                        'tree',
                     },
                 },
+                'minecraft': {
+                    'tags': 'functions',
+                },
             },
-            }
-        )
+        },
+        }
+    )
 
-        writejson(os.path.join(path, 'pack.mcmeta'), {"pack": {
-                  "description": "Note block song made with NBSTool.", "pack_format": 1}})
-        writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
-                               'load.json'), jsout={"values": ["{}:load".format(bname)]})
-        writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
-                               'tick.json'), jsout={"values": ["{}:tick".format(bname)]})
+    writejson(os.path.join(path, 'pack.mcmeta'), {"pack": {
+                "description": "Note block song datapack made with NBSTool.", "pack_format": 6}})
+    writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
+                            'load.json'), jsout={"values": ["{}:load".format(bname)]})
+    writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
+                            'tick.json'), jsout={"values": ["{}:tick".format(bname)]})
 
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
-                        """scoreboard objectives add {0} dummy
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
+                    """scoreboard objectives add {0} dummy
 scoreboard objectives add {0}_t dummy
 scoreboard players set speed {0} {1}""".format(scoreObj, speed))
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tick.mcfunction'),
-                        """execute as @a[tag={0}] run scoreboard players operation @s {0} += speed {0}
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tick.mcfunction'),
+                    """execute as @a[tag={0}] run scoreboard players operation @s {0} += speed {0}
 execute as @a[tag={0}] run function {1}:tree/0_{2}
 execute as @e[type=armor_stand, tag=WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname, 2**(floor(log2(length))+1)-1))
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'play.mcfunction'),
-                        """tag @s add {0}
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'play.mcfunction'),
+                    """tag @s add {0}
 scoreboard players set @s {0}_t -1
 """.format(scoreObj))
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'pause.mcfunction'),
-                        "tag @s remove {}".format(scoreObj))
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'stop.mcfunction'),
-                        """tag @s remove {0}
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'pause.mcfunction'),
+                    "tag @s remove {}".format(scoreObj))
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'stop.mcfunction'),
+                    """tag @s remove {0}
 scoreboard players reset @s {0}
 scoreboard players reset @s {0}_t""".format(scoreObj))
-        writemcfunction(os.path.join(path, 'data', bname, 'functions', 'uninstall.mcfunction'),
-                        """scoreboard objectives remove {0}
+    writemcfunction(os.path.join(path, 'data', bname, 'functions', 'uninstall.mcfunction'),
+                    """scoreboard objectives remove {0}
 scoreboard objectives remove {0}_t""".format(scoreObj))
 
-        text = ''
-        for k, v in instLayers.items():
-            for i in range(len(v)):
-                text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
-                        "{}-{}".format(noteSounds[k]['name'],
-                                       i), "{}-{}".format(k, i)
-                )
-        writemcfunction(os.path.join(path, 'data', bname,
-                                     'functions', 'give.mcfunction'), text)
+    text = ''
+    for k, v in instLayers.items():
+        for i in range(len(v)):
+            text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
+                    "{}-{}".format(noteSounds[k]['name'],
+                                    i), "{}-{}".format(k, i)
+            )
+    writemcfunction(os.path.join(path, 'data', bname,
+                                    'functions', 'give.mcfunction'), text)
 
-        tick = 0
-        colNotes = {tick: []}
-        for note in data['notes']:
-            colNotes[tick].append(note)
-            while note['tick'] != tick:
-                tick += 1
-                colNotes[tick] = []
+    tick = 0
+    colNotes = {tick: []}
+    for note in data['notes']:
+        colNotes[tick].append(note)
+        while note['tick'] != tick:
+            tick += 1
+            colNotes[tick] = []
 
-        for tick in range(length):
-            text = ""
-            if tick in colNotes:
-                currNotes = colNotes[tick]
-                for note in currNotes:
-                    text += \
-                        """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+    for tick in range(length):
+        text = ""
+        if tick in colNotes:
+            currNotes = colNotes[tick]
+            for note in currNotes:
+                text += \
+                    """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
 """.format(obj=scoreObj, tick=tick, inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=noteSounds[note['inst']]['name'], key=max(33, min(57, note['key'])) - 33)
-            if tick < length-1:
-                text += "scoreboard players set @s {}_t {}".format(
-                    scoreObj, tick)
-            else:
-                text += "execute run function {}:stop".format(bname)
-            if text != "":
-                writemcfunction(os.path.join(
-                    path, 'data', bname, 'functions', 'notes', str(tick)+'.mcfunction'), text)
+        if tick < length-1:
+            text += "scoreboard players set @s {}_t {}".format(
+                scoreObj, tick)
+        else:
+            text += "execute run function {}:stop".format(bname)
+        if text != "":
+            writemcfunction(os.path.join(
+                path, 'data', bname, 'functions', 'notes', str(tick)+'.mcfunction'), text)
 
-        steps = floor(log2(length)) + 1
-        pow = 2**steps
-        for step in range(steps):
-            searchrange = floor(pow / (2**step))
-            segments = floor(pow / searchrange)
-            for segment in range(segments):
-                text = ""
-                half = floor(searchrange / 2)
-                lower = searchrange * segment
+    steps = floor(log2(length)) + 1
+    pow = 2**steps
+    for step in range(steps):
+        searchrange = floor(pow / (2**step))
+        segments = floor(pow / searchrange)
+        for segment in range(segments):
+            text = ""
+            half = floor(searchrange / 2)
+            lower = searchrange * segment
 
-                min1 = lower
-                max1 = lower + half - 1
-                min2 = lower + half
-                max2 = lower + searchrange - 1
+            min1 = lower
+            max1 = lower + half - 1
+            min2 = lower + half
+            max2 = lower + searchrange - 1
 
-                if min1 <= length:
-                    if step == steps-1:  # Last step, play the tick
+            if min1 <= length:
+                if step == steps-1:  # Last step, play the tick
+                    try:
+                        if len(colNotes[min1]) > 0:
+                            text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}\n".format(
+                                scoreObj, min1*80, (max1+1)*80+40, min1-1, bname, min1)
+                    except KeyError:
+                        break
+                    if min2 <= length:
                         try:
-                            if len(colNotes[min1]) > 0:
-                                text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}\n".format(
-                                    scoreObj, min1*80, (max1+1)*80+40, min1-1, bname, min1)
+                            if len(colNotes[min2]) > 0:
+                                text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}".format(
+                                    scoreObj, min2*80, (max2+1)*80+40, min2-1, bname, min2)
                         except KeyError:
                             break
-                        if min2 <= length:
-                            try:
-                                if len(colNotes[min2]) > 0:
-                                    text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}".format(
-                                        scoreObj, min2*80, (max2+1)*80+40, min2-1, bname, min2)
-                            except KeyError:
+                else:  # Don't play yet, refine the search
+                    for i in range(min1, min(max1, length)+1):
+                        try:
+                            if len(colNotes[i]) > 0:
+                                text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}\n".format(
+                                    scoreObj, min1*80, (max1+1)*80+40, bname, min1, max1)
                                 break
-                    else:  # Don't play yet, refine the search
-                        for i in range(min1, min(max1, length)+1):
-                            try:
-                                if len(colNotes[i]) > 0:
-                                    text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}\n".format(
-                                        scoreObj, min1*80, (max1+1)*80+40, bname, min1, max1)
-                                    break
-                            except KeyError:
+                        except KeyError:
+                            break
+                    for i in range(min2, min(max2, length)+1):
+                        try:
+                            if len(colNotes[i]) > 0:
+                                text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}".format(
+                                    scoreObj, min2*80, (max2+2)*80+40, bname, min2, max2)
                                 break
-                        for i in range(min2, min(max2, length)+1):
-                            try:
-                                if len(colNotes[i]) > 0:
-                                    text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}".format(
-                                        scoreObj, min2*80, (max2+2)*80+40, bname, min2, max2)
-                                    break
-                            except KeyError:
-                                break
-                    if text != "":
-                        writemcfunction(os.path.join(
-                            path, 'data', bname, 'functions', 'tree', '{}_{}.mcfunction'.format(min1, max2)), text)
-                else:
-                    break
+                        except KeyError:
+                            break
+                if text != "":
+                    writemcfunction(os.path.join(
+                        path, 'data', bname, 'functions', 'tree', '{}_{}.mcfunction'.format(min1, max2)), text)
+            else:
+                break
 
 
 if __name__ == "__main__":
-
     app = MainWindow()
-    print('Creating app...')
 
     print(sys.argv)
 
