@@ -345,12 +345,11 @@ Downloaded song/
 *.pyo
 version.*
 
-.vscode/
-
 build/
 dist/
 test/
 main.build/
 main.dist/
+.mscbackup/
 
 setup.py

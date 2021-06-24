@@ -290,9 +290,8 @@ class MainWindow():
             try:
                 songData = NbsSong(filePath)
                 self.songsData.append(songData)
-            except Exception:
-                showerror("Reading file error",
-                          "Cannot read or parse file: "+filePath)
+            except Exception as e:
+                showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
                 print(traceback.format_exc())
                 continue
             self.addFileInfo(filePath, songData)
@@ -339,14 +338,18 @@ class MainWindow():
             Path(path).mkdir(parents=True, exist_ok=True)
             self.disabledFileTable()
             for item in selection:
-                i = fileTable.index(item)
-                filePath = self.filePaths[i]
-                if filePath == '':
-                    filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
-                    savedPath = os.path.join(path, filePath)
-                    fileTable.item(item, text=savedPath)
-                    self.filePaths[i] = savedPath
-                self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+                try:
+                    i = fileTable.index(item)
+                    filePath = self.filePaths[i]
+                    if filePath == '':
+                        filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                        savedPath = os.path.join(path, filePath)
+                        fileTable.item(item, text=savedPath)
+                        self.filePaths[i] = savedPath
+                    self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+                except Exception as e:
+                    showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                    print(traceback.format_exc())
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -362,12 +365,16 @@ class MainWindow():
         self.mainwin.update()
         items = self.fileTable.get_children()
         for i, filePath in enumerate(self.filePaths):
-            if filePath == '':
-                filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
-                savedPath = os.path.join(path, filePath)
-                self.fileTable.item(items[i], text=savedPath)
-                self.filePaths[i] = savedPath
-            self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+            try:
+                if filePath == '':
+                    filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                    savedPath = os.path.join(path, filePath)
+                    self.fileTable.item(items[i], text=savedPath)
+                    self.filePaths[i] = savedPath
+                self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+            except Exception as e:
+                showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                print(traceback.format_exc())
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -722,11 +729,15 @@ class MidiExportDialog:
                         filePath = path.join(path.dirname(origPath), baseName)
                     else:
                         filePath = path.join(self.exportPath.get(), baseName)
-                    dialog.currentText.set("Current file: {}".format(filePath))
-                    songData = deepcopy(songsData[i])
-                    compactNotes(songData, True)
-                    dialog.currentProgress.set(10) # 10%
-                    await nbs2midi(songData, filePath, dialog)
+                    try:
+                        dialog.currentText.set("Current file: {}".format(filePath))
+                        songData = deepcopy(songsData[i])
+                        compactNotes(songData, True)
+                        dialog.currentProgress.set(10) # 10%
+                        await nbs2midi(songData, filePath, dialog)
+                    except Exception as e:
+                        showerror("Exporting file error", 'Cannot export file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
+                        print(traceback.format_exc())
                 dialog.totalProgress.set(dialog.currentMax)
             except asyncio.CancelledError:
                 raise
@@ -904,8 +915,7 @@ class MuseScoreImportDialog:
                     except asyncio.CancelledError:
                         raise
                     except Exception as e:
-                        print('except Exception as e:', e)
-                        showerror("Importing file error", "Cannot import file \"{}\"\n{}".format(filePath, e))
+                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
                         print(traceback.format_exc())
                         continue
                 dialog.totalProgress.set(dialog.currentMax)
@@ -913,7 +923,6 @@ class MuseScoreImportDialog:
                 raise
             # self.d.toplevel.after(1, self.d.destroy)
 
-        print('Creating dialog')
         dialog = ProgressDialog(self.d.toplevel, self)
         # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
         dialog.d.set_title("Importing {} MuseScore files".format(fileCount))

@@ -236,6 +236,9 @@ durationMap = {
 
 MAX_TEMPO = 30
 
+class FileError(Exception):
+    pass
+
 @lru_cache
 def fraction2length(fraction: str) -> int:
     if isinstance(fraction, str):
@@ -257,7 +260,7 @@ Args:
 
 Return:
     A NbsSong contains meta-information and notes' data (position, pitch, velocity
-        and tuning). None if the conversation fails.
+        and tuning).
     """
 
     if autoExpand:
@@ -276,14 +279,16 @@ Return:
             if filename:
                 with zip.open(filename) as file:
                     xml = etree.parse(file, parser=None)
+            else:
+                raise FileError("This file isn't a MuseScore file or it doesn't contain a MuseScore file.")
     elif filepath.endswith(".mscx"):
         xml = etree.parse(filepath, parser=None)
+    else:
+        raise FileError("This file isn't a MuseScore file")
 
-    if xml is None:
-        return None
     if version := xml.findtext('programVersion'):
-        if version.startswith('2.'):
-            raise NotImplementedError("MuseScore 2 files are not supported. Please use MuseScore 3 to re-save the files before importing.")
+        if not version.startswith('3'):
+            raise NotImplementedError("This file is created by a older version of MuseScore. Please use MuseScore 3 to re-save the files before importing.")
 
     nbs: NbsSong = NbsSong()
 
