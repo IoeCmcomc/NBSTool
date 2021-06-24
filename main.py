@@ -29,6 +29,7 @@ import json
 import asyncio
 
 from pathlib import Path
+from ast import literal_eval
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -52,6 +53,7 @@ from PIL import Image, ImageTk
 from nbsio import NBS_VERSION, NbsSong
 from ncfio import writencf
 from nbs2midi import nbs2midi
+from musescore2nbs import musescore2nbs
 
 vaniNoteSounds = [
     {'filename': 'harp.ogg', 'name': 'harp'},
@@ -71,6 +73,8 @@ vaniNoteSounds = [
     {'filename': 'banjo.ogg', 'name': 'banjo'},
     {'filename': 'pling.ogg', 'name': 'pling'}
 ]
+
+globalIncVar = 0
 
 # Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
 def resource_path(*args):
@@ -260,6 +264,17 @@ class MainWindow():
         self.songsData.clear()
         self.addFiles()
 
+    def addFileInfo(self, filePath: str, songData: NbsSong) -> None:
+        global globalIncVar
+        if filePath == '':
+            globalIncVar += 1
+            filePath = "[Not saved] ({})".format(globalIncVar)
+        header = songData.header
+        length = timedelta(seconds=floor(
+            header['length'] / header['tempo'])) if header['length'] != None else "Not calculated"
+        self.fileTable.insert("", 'end', text=filePath, values=(
+            length, header.name, header.author, header.orig_author))
+
     def addFiles(self, _=None, paths=()):
         types = [("Note Block Studio files", '*.nbs'), ('All files', '*')]
         addedPaths = []
@@ -280,14 +295,7 @@ class MainWindow():
                           "Cannot read or parse file: "+filePath)
                 print(traceback.format_exc())
                 continue
-            header = songData.header
-            length = timedelta(seconds=floor(
-                header['length'] / header['tempo'])) if header['length'] != None else "Not calculated"
-            name = header['name']
-            author = header['author']
-            orig_author = header['orig_author']
-            self.fileTable.insert("", 'end', text=filePath, values=(
-                length, name, author, orig_author))
+            self.addFileInfo(filePath, songData)
             if i % 3 == 0:
                 self.mainwin.update()
         self.filePaths.extend(addedPaths)
@@ -302,18 +310,25 @@ class MainWindow():
         fileTable = self.fileTable
         if len(selection := fileTable.selection()) > 0:
             if len(selection) == 1:
-                filePath = os.path.basename(
-                    self.filePaths[fileTable.index(selection[0])])
+                i = fileTable.index(selection[0])
+                filePath = self.filePaths[i]
                 types = [('Note Block Studio files', '*.nbs'),
                          ('All files', '*')]
+                fileName = ''
+                if filePath != '':
+                    fileName = os.path.basename(filePath)
+                else:
+                    fileName = self.songsData[i].header.import_name
                 path = asksaveasfilename(
-                    filetypes=types, initialfile=filePath, defaultextension=".nbs")
+                    filetypes=types, initialfile=fileName.rsplit('.', 1)[0], defaultextension=".nbs")
                 if path == '':
                     return
+                if filePath == '':
+                    fileTable.item(selection[0], text=os.path.join(path))
                 self.builder.get_object('applyBtn')['state'] = 'disabled'
                 self.disabledFileTable()
                 self.mainwin.update()
-                self.songsData[fileTable.index(selection[0])].write(path)
+                self.songsData[i].write(path)
                 self.enableFileTable()
                 self.builder.get_object('applyBtn')['state'] = 'normal'
                 return
@@ -326,8 +341,12 @@ class MainWindow():
             for item in selection:
                 i = fileTable.index(item)
                 filePath = self.filePaths[i]
-                self.songsData[i].write(os.path.join(
-                    path, os.path.basename(filePath)))
+                if filePath == '':
+                    filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                    savedPath = os.path.join(path, filePath)
+                    fileTable.item(item, text=savedPath)
+                    self.filePaths[i] = savedPath
+                self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -341,9 +360,14 @@ class MainWindow():
         self.builder.get_object('applyBtn')['state'] = 'disabled'
         self.disabledFileTable()
         self.mainwin.update()
+        items = self.fileTable.get_children()
         for i, filePath in enumerate(self.filePaths):
-            self.songsData[i].write(os.path.join(
-                path, os.path.basename(filePath)))
+            if filePath == '':
+                filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                savedPath = os.path.join(path, filePath)
+                self.fileTable.item(items[i], text=savedPath)
+                self.filePaths[i] = savedPath
+            self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -376,6 +400,11 @@ class MainWindow():
     def initArrangeTab(self):
         self.arrangeMode.set('none')
         # self.builder.get_object('arrangeGroupPrec').state(('!selected',))
+
+    def callMuseScoreImportDialog(self):
+        dialog = MuseScoreImportDialog(self.toplevel, self)
+        dialog.run()
+        del dialog
 
     def callDatapackExportDialog(self):
         dialog = DatapackExportDialog(self.toplevel, self)
@@ -777,6 +806,119 @@ class ProgressDialog:
             pass
         self.d.destroy()
 
+def parseFilePaths(string: str) -> list:
+    strLen = len(string)
+    ret = []
+    filePath = ''
+    isQuoted = False
+    for i, char in enumerate(string):
+        i: int
+        char: str
+        if char == '(':
+            isQuoted = True
+        elif char == ')':
+            isQuoted = False
+        elif i+1 == strLen and filePath != '':
+            ret.append(filePath)
+        elif char.isspace():
+            if isQuoted:
+                filePath += char
+            elif filePath != '':
+                ret.append(filePath)
+                filePath = ''
+        else:
+            filePath += char
+    return tuple(ret)
+
+class MuseScoreImportDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('musescoreimportdialog.ui'))
+
+        self.d: Dialog = builder.get_object('dialog', master)
+
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+        self.autoExpand.set(True)
+        self.filePaths.trace_add("write", self.pathChanged)
+
+    def run(self):
+        self.d.run()
+
+    def browse(self):
+        types = (("MuseScore files", ('*.mscz', '*.mscx')), ('All files', '*'),)
+        paths = askopenfilenames(filetypes=types)
+
+        self.filePaths.set(paths)
+
+    def autoExpandChanged(self):
+        self.builder.get_object('expandScale')['state'] = 'disabled' if self.autoExpand.get() else 'normal'
+
+    def pathChanged(self, *args):
+        self.builder.get_object('importBtn')['state'] = 'normal' if (self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
+
+    def onImport(self, _=None):
+        fileTable = self.parent.fileTable
+
+        if not self.autoExpand.get():
+            self.pathChanged()
+            if self.filePaths.get() == '':
+                self.pathChanged()
+                return
+
+        paths = literal_eval(self.filePaths.get())
+        if isinstance(paths, str):
+            paths = parseFilePaths(paths)
+        fileCount = len(paths)
+
+        async def work(dialog: ProgressDialog = None):
+            try:
+                songsData: list = self.parent.songsData
+                filePaths: list = self.parent.filePaths
+                for i, filePath in enumerate(paths):
+                    try:
+                        dialog.totalProgress.set(i)
+                        dialog.totalText.set("Importing {} / {} files".format(i+1, fileCount))
+                        dialog.currentProgress.set(0)
+                        dialog.currentText.set("Current file: {}".format(filePath))
+                        task = asyncio.create_task(musescore2nbs(filePath, self.expandMult.get(), self.autoExpand.get(), dialog))
+                        while True:
+                            done, pending = await asyncio.wait({task}, timeout=0)
+                            if task in done:
+                                songData = task.result()
+                                await task
+                                break
+                        if not songData:
+                            raise Exception("The file {} cannot be read as a vaild XML file.".format(filePath))
+                        dialog.currentProgress.set(80)
+                        await asyncio.sleep(0.001)
+                        songsData.append(songData)
+                        filePaths.append('')
+                        self.parent.addFileInfo('', songData)
+                        await asyncio.sleep(0.001)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:
+                        print('except Exception as e:', e)
+                        showerror("Importing file error", "Cannot import file \"{}\"\n{}".format(filePath, e))
+                        print(traceback.format_exc())
+                        continue
+                dialog.totalProgress.set(dialog.currentMax)
+            except asyncio.CancelledError:
+                raise
+            # self.d.toplevel.after(1, self.d.destroy)
+
+        print('Creating dialog')
+        dialog = ProgressDialog(self.d.toplevel, self)
+        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialog.d.set_title("Importing {} MuseScore files".format(fileCount))
+        dialog.totalMax = fileCount
+        dialog.run(work)
 
 class FlexCheckbutton(tk.Checkbutton):
     def __init__(self, *args, **kwargs):
@@ -897,7 +1039,6 @@ def exportDatapack(data, path, bname, mode=None, master=None):
                 makeFolderTree(v, a + [k])
         elif isinstance(inp, str):
             p = os.path.join(*a, inp)
-            # print(p)
             os.makedirs(p, exist_ok=True)
         else:
             return

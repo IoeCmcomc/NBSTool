@@ -333,6 +333,8 @@ ASALocalRun/
 *.nbs
 *.mid
 *.mp3
+*.mscx
+*.mscz
 datapacks/
 Downloaded song/
 

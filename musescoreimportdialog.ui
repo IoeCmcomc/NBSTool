@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">false</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">200</property>
+        <property name="padding">5</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">5</property>
+          <property name="pady">3</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.LabelFrame" id="labelframe4">
+            <property name="height">200</property>
+            <property name="padx">5</property>
+            <property name="pady">5</property>
+            <property name="text" translatable="yes">Select files</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Entry" id="pathInput">
+                <property name="textvariable">string:filePaths</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">x</property>
+                  <property name="propagate">True</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="browseBtn">
+                <property name="command" type="command" cbtype="simple">browse</property>
+                <property name="text" translatable="yes">Browse...</property>
+                <layout manager="pack">
+                  <property name="propagate">True</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="tk.LabelFrame" id="labelframe5">
+            <property name="height">200</property>
+            <property name="padx">5</property>
+            <property name="pady">5</property>
+            <property name="text" translatable="yes">Options</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="pady">7</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Checkbutton" id="checkbutton1">
+                <property name="command" type="command" cbtype="simple">autoExpandChanged</property>
+                <property name="text" translatable="yes">Automatically expand the spaces between notes to fit as many notes as possible.</property>
+                <property name="variable">boolean:autoExpand</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Scale" id="expandScale">
+                <property name="from_">1</property>
+                <property name="label" translatable="yes">Expand multiplier: 
+(will be ignored if the calculated tempo &gt; 30 TPS)</property>
+                <property name="length">300</property>
+                <property name="orient">horizontal</property>
+                <property name="resolution">1</property>
+                <property name="state">disabled</property>
+                <property name="tickinterval">1</property>
+                <property name="to">30</property>
+                <property name="variable">string:expandMult</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">x</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="importBtn">
+            <property name="command" type="command" cbtype="simple">onImport</property>
+            <property name="state">disabled</property>
+            <property name="text" translatable="yes">Import</property>
+            <layout manager="pack">
+              <property name="anchor">e</property>
+              <property name="propagate">True</property>
+              <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

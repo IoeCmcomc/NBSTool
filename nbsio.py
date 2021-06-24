@@ -28,10 +28,10 @@ from warnings import warn
 
 from addict import Dict
 
-BYTE = Struct('<B')
-SHORT = Struct('<H')
-SHORT_SIGNED = Struct('<h')
-INT = Struct('<I')
+BYTE = Struct('<b')
+SHORT = Struct('<h')
+SHORT_SIGNED = Struct('<H')
+INT = Struct('<i')
 
 NBS_VERSION = 5
 
@@ -261,6 +261,9 @@ class NbsSong(Dict):
 
     def write(self, fn: str) -> None:
         '''Save nbs data to a file on disk with the path given.'''
+
+        if not fn.endswith('.nbs'):
+            fn += '.nbs'
 
         if fn != '' and self.header and self.notes:
             writeNumeric = write_numeric
