@@ -343,7 +343,6 @@ Downloaded song/
 *.spec
 *.bat
 *.pyo
-version.*
 
 build/
 dist/

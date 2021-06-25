@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">true</property>
+    <property name="title" translatable="yes">About this application...</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="pady">10</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="ttk.Label" id="label1">
+            <property name="compound">left</property>
+            <property name="font">{Arial} 57 {}</property>
+            <property name="image">256x256.png</property>
+            <property name="text" translatable="yes">NBSTool </property>
+            <layout manager="pack">
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Label" id="label2">
+            <property name="justify">center</property>
+            <property name="text" translatable="yes">A tool to work with Open Note Block Studio files.
+Version: 0.7.0
+Author: IoeCmcomc</property>
+            <layout manager="pack">
+              <property name="pady">10</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="githubBtn">
+            <property name="command" type="command" cbtype="simple">github</property>
+            <property name="text" translatable="yes">GitHub</property>
+            <layout manager="pack">
+              <property name="propagate">True</property>
+              <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

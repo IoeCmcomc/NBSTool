@@ -13,7 +13,6 @@
 # Author: IoeCmcomc (https://github.com/IoeCmcomc)
 # Programming language: Python
 # License: MIT license
-# Version: 0.7.0
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
@@ -40,6 +39,10 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory,
 import pygubu
 from pygubu import Builder
 from pygubu.widgets.dialog import Dialog
+# Explict import for PyInstaller
+from pygubu.builder import ttkstdwidgets, tkstdwidgets
+from pygubu.builder.widgets import tkscrollbarhelper, dialog, pathchooserinput
+import customwidgets
 
 from time import time
 from pprint import pprint
@@ -94,11 +97,9 @@ class MainWindow():
     def __init__(self):
         builder: Builder = pygubu.Builder()
         self.builder: Builder = builder
-        builder.add_from_file(resource_path('toplevel.ui'))
-        print("The following exception is not an error:")
-        print('='*20)
+        builder.add_resource_path(resource_path())
+        builder.add_from_file('ui/toplevel.ui')
         self.toplevel: tk.Toplevel = builder.get_object('toplevel')
-        print('='*20)
         self.mainwin: tk.Frame = builder.get_object('mainFrame')
         style = ttk.Style(self.toplevel)
         style.layout('Barless.TNotebook.Tab', []) # turn off tabs
@@ -109,16 +110,6 @@ class MainWindow():
 
         self.toplevel.title("NBS Tool")
         centerToplevel(self.toplevel)
-        self.style = ttk.Style()
-        # self.style.theme_use("default")
-        try:
-            self.style.theme_use("vista")
-        except Exception as e:
-            print(repr(e), e.__class__.__name__)
-            try:
-                self.style.theme_use("winnative")
-            except Exception:
-                pass
 
         self.initMenuBar()
 
@@ -423,6 +414,10 @@ class MainWindow():
         dialog.run()
         del dialog
 
+    def callAboutDialog(self):
+        dialog = AboutDialog(self.toplevel, self)
+        del dialog
+
     def windowBind(self):
         toplevel = self.toplevel
         mainwin = self.mainwin
@@ -628,6 +623,7 @@ class MainWindow():
                 setAttrFromStrVar('loop_max', self.headerLoopCount.get())
                 setAttrFromStrVar('loop_start', self.headerLoopStart.get())
 
+
 class DatapackExportDialog:
     def __init__(self, master, parent):
         self.master = master
@@ -635,7 +631,7 @@ class DatapackExportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('datapackexportdialog.ui'))
+        builder.add_from_file(resource_path('ui/datapackexportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
 
@@ -670,6 +666,7 @@ class DatapackExportDialog:
         exportDatapack(self.parent.songsData[index], os.path.join(
             path, self.entry.get()), self.entry.get(), 'wnbs')
 
+
 class MidiExportDialog:
     def __init__(self, master, parent):
         self.master = master
@@ -677,7 +674,7 @@ class MidiExportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('midiexportdialog.ui'))
+        builder.add_from_file(resource_path('ui/midiexportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
         builder.get_object('pathChooser').bind('<<PathChooserPathChanged>>', self.pathChanged)
@@ -749,6 +746,7 @@ class MidiExportDialog:
         dialog.totalMax = len(indexes)
         dialog.run(work)
 
+
 class ProgressDialog:
     def __init__(self, master, parent):
         self.master = master
@@ -757,7 +755,7 @@ class ProgressDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('progressdialog.ui'))
+        builder.add_from_file(resource_path('ui/progressdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog1', master)
         self.d.toplevel.protocol('WM_DELETE_WINDOW', self.onCancel)
@@ -817,6 +815,7 @@ class ProgressDialog:
             pass
         self.d.destroy()
 
+
 def parseFilePaths(string: str) -> list:
     strLen = len(string)
     ret = []
@@ -841,6 +840,7 @@ def parseFilePaths(string: str) -> list:
             filePath += char
     return tuple(ret)
 
+
 class MuseScoreImportDialog:
     def __init__(self, master, parent):
         self.master = master
@@ -848,7 +848,7 @@ class MuseScoreImportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('musescoreimportdialog.ui'))
+        builder.add_from_file(resource_path('ui/musescoreimportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
 
@@ -928,6 +928,24 @@ class MuseScoreImportDialog:
         dialog.d.set_title("Importing {} MuseScore files".format(fileCount))
         dialog.totalMax = fileCount
         dialog.run(work)
+
+
+class AboutDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('ui/aboutdialog.ui'))
+
+        self.d: Dialog = builder.get_object('dialog', master)
+        builder.connect_callbacks(self)
+        self.d.run()
+
+    def github(self):
+        webbrowser.open_new_tab("https://github.com/IoeCmcomc/NBSTool")
+
 
 class FlexCheckbutton(tk.Checkbutton):
     def __init__(self, *args, **kwargs):

@@ -1,6 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.1">
   <object class="tk.Toplevel" id="toplevel">
+    <property name="iconbitmap">icon.ico</property>
+    <property name="iconphoto">256x256.png</property>
     <property name="minsize">350|370</property>
     <property name="resizable">both</property>
     <property name="takefocus">false</property>
@@ -886,6 +888,7 @@
         <property name="underline">0</property>
         <child>
           <object class="tk.Menuitem.Command" id="about">
+            <property name="command" type="command" cbtype="simple">callAboutDialog</property>
             <property name="label" translatable="yes">About</property>
             <property name="underline">0</property>
           </object>
