@@ -79,17 +79,11 @@ vaniNoteSounds = [
 
 globalIncVar = 0
 
-# Credit: https://stackoverflow.com/questions/42474560/pyinstaller-single-exe-file-ico-image-in-title-of-tkinter-main-window
 def resource_path(*args):
     if getattr(sys, 'frozen', False):
-        datadir = os.path.dirname(sys.executable)
-        r = os.path.join(datadir, *args)
+        r = os.path.join(sys._MEIPASS, *args)
     else:
-        try:
-            r = os.path.join(sys._MEIPASS, *args)
-        except Exception:
-            r = os.path.join(os.path.abspath("."), *args)
-    # print(r)
+        r = os.path.join(os.path.abspath('.'), *args)
     return r
 
 
@@ -98,7 +92,7 @@ class MainWindow():
         builder: Builder = pygubu.Builder()
         self.builder: Builder = builder
         builder.add_resource_path(resource_path())
-        builder.add_from_file('ui/toplevel.ui')
+        builder.add_from_file(resource_path('ui/toplevel.ui'))
         self.toplevel: tk.Toplevel = builder.get_object('toplevel')
         self.mainwin: tk.Frame = builder.get_object('mainFrame')
         style = ttk.Style(self.toplevel)
@@ -153,7 +147,7 @@ class MainWindow():
         self.mainwin.grab_set()
         self.mainwin.grab_release()
 
-        self.VERSION = '0.7.0'
+        self.VERSION = '1.0.0'
         self.filePaths = []
         self.songsData = []
         self.selectedFilesVersion = -1
