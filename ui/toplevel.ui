@@ -1,0 +1,899 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.1">
+  <object class="tk.Toplevel" id="toplevel">
+    <property name="iconbitmap">icon.ico</property>
+    <property name="iconphoto">256x256.png</property>
+    <property name="minsize">350|370</property>
+    <property name="resizable">both</property>
+    <property name="takefocus">false</property>
+    <property name="title" translatable="yes">NBS Tool</property>
+    <child>
+      <object class="tk.Frame" id="mainFrame">
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="propagate">True</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.LabelFrame" id="fileFrame">
+            <property name="labelanchor">nw</property>
+            <property name="text" translatable="yes">Files</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="pygubu.builder.widgets.tkscrollbarhelper" id="tkscrollbarhelper">
+                <property name="scrolltype">both</property>
+                <property name="usemousewheel">true</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="pady">5</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Treeview" id="fileTable">
+                    <property name="selectmode">extended</property>
+                    <layout manager="pack">
+                      <property name="expand">true</property>
+                      <property name="propagate">True</property>
+                      <property name="side">top</property>
+                    </layout>
+                    <child>
+                      <object class="ttk.Treeview.Column" id="filePathColumn">
+                        <property name="column_anchor">w</property>
+                        <property name="heading_anchor">w</property>
+                        <property name="minwidth">20</property>
+                        <property name="stretch">true</property>
+                        <property name="text" translatable="yes">File path</property>
+                        <property name="tree_column">true</property>
+                        <property name="visible">true</property>
+                        <property name="width">200</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Treeview.Column" id="songLengthColumn">
+                        <property name="column_anchor">e</property>
+                        <property name="heading_anchor">w</property>
+                        <property name="minwidth">50</property>
+                        <property name="stretch">false</property>
+                        <property name="text" translatable="yes">Length</property>
+                        <property name="tree_column">false</property>
+                        <property name="visible">true</property>
+                        <property name="width">80</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Treeview.Column" id="songNameColumn">
+                        <property name="column_anchor">w</property>
+                        <property name="heading_anchor">w</property>
+                        <property name="minwidth">20</property>
+                        <property name="stretch">true</property>
+                        <property name="text" translatable="yes">Name</property>
+                        <property name="tree_column">false</property>
+                        <property name="visible">true</property>
+                        <property name="width">150</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Treeview.Column" id="songAuthorColumn">
+                        <property name="column_anchor">w</property>
+                        <property name="heading_anchor">w</property>
+                        <property name="minwidth">20</property>
+                        <property name="stretch">true</property>
+                        <property name="text" translatable="yes">Author</property>
+                        <property name="tree_column">false</property>
+                        <property name="visible">true</property>
+                        <property name="width">150</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="ttk.Treeview.Column" id="songOrgiAuthorColumn">
+                        <property name="column_anchor">w</property>
+                        <property name="heading_anchor">w</property>
+                        <property name="minwidth">20</property>
+                        <property name="stretch">true</property>
+                        <property name="text" translatable="yes">Original author</property>
+                        <property name="tree_column">false</property>
+                        <property name="visible">true</property>
+                        <property name="width">200</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="openFilesBtn">
+                <property name="command" type="command" cbtype="simple">openFiles</property>
+                <property name="text" translatable="yes">Open...</property>
+                <layout manager="pack">
+                  <property name="padx">3</property>
+                  <property name="propagate">True</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="saveFilesBtn">
+                <property name="command" type="command" cbtype="simple">saveFiles</property>
+                <property name="state">disabled</property>
+                <property name="text" translatable="yes">Save...</property>
+                <layout manager="pack">
+                  <property name="propagate">True</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="removeEntriesBtn">
+                <property name="command" type="command" cbtype="simple">removeSelectedFiles</property>
+                <property name="state">disabled</property>
+                <property name="text" translatable="yes">Remove</property>
+                <layout manager="pack">
+                  <property name="padx">5</property>
+                  <property name="propagate">True</property>
+                  <property name="side">right</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="addEntriesBtn">
+                <property name="command" type="command" cbtype="simple">addFiles</property>
+                <property name="text" translatable="yes">Add...</property>
+                <layout manager="pack">
+                  <property name="propagate">True</property>
+                  <property name="side">right</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="tk.LabelFrame" id="toolFrame">
+            <property name="height">250</property>
+            <property name="labelanchor">nw</property>
+            <property name="text" translatable="yes">Tools</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">10</property>
+              <property name="pady">5</property>
+              <property name="propagate">True</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Notebook" id="arrangeFrame">
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">both</property>
+                  <property name="padx">5</property>
+                  <property name="pady">3</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="headerTab">
+                    <property name="text" translatable="yes">Header</property>
+                    <child>
+                      <object class="tk.Frame" id="headerFrame">
+                        <property name="height">200</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Notebook" id="headerNotebook">
+                            <property name="height">200</property>
+                            <property name="style">Barless.TNotebook</property>
+                            <property name="width">200</property>
+                            <layout manager="pack">
+                              <property name="expand">true</property>
+                              <property name="fill">both</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                            <child>
+                              <object class="ttk.Notebook.Tab" id="tab1">
+                                <child>
+                                  <object class="tk.Frame" id="frame2">
+                                    <property name="borderwidth">0</property>
+                                    <property name="height">200</property>
+                                    <property name="highlightthickness">0</property>
+                                    <property name="relief">flat</property>
+                                    <property name="width">200</property>
+                                    <layout manager="pack">
+                                      <property name="propagate">True</property>
+                                      <property name="side">top</property>
+                                    </layout>
+                                    <child>
+                                      <object class="customwidgets.wrapmessage" id="wrapmessage1">
+                                        <property name="justify">center</property>
+                                        <property name="text" translatable="yes">At least one file must be selected and all selected files must have the same format number in order to modify header data.</property>
+                                        <layout manager="pack">
+                                          <property name="fill">x</property>
+                                          <property name="padx">20</property>
+                                          <property name="pady">10</property>
+                                          <property name="propagate">True</property>
+                                          <property name="side">top</property>
+                                        </layout>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="ttk.Notebook.Tab" id="tab2">
+                                <child>
+                                  <object class="tk.Frame" id="frame4">
+                                    <property name="height">200</property>
+                                    <property name="padx">5</property>
+                                    <property name="pady">5</property>
+                                    <property name="width">200</property>
+                                    <layout manager="pack">
+                                      <property name="propagate">True</property>
+                                      <property name="side">top</property>
+                                    </layout>
+                                    <child>
+                                      <object class="tk.LabelFrame" id="labelframe1">
+                                        <property name="height">200</property>
+                                        <property name="labelanchor">sw</property>
+                                        <property name="padx">5</property>
+                                        <property name="text" translatable="yes">Auto-save</property>
+                                        <property name="width">200</property>
+                                        <layout manager="pack">
+                                          <property name="expand">true</property>
+                                          <property name="fill">both</property>
+                                          <property name="padx">3</property>
+                                          <property name="pady">3</property>
+                                          <property name="propagate">True</property>
+                                          <property name="side">left</property>
+                                        </layout>
+                                        <child>
+                                          <object class="ttk.Checkbutton" id="headerAutosaveCheck">
+                                            <property name="command" type="command" cbtype="simple">onAutosaveCheckBtn</property>
+                                            <property name="text" translatable="yes">Enabled</property>
+                                            <property name="variable">boolean:headerAutosave</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="columnspan">2</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="headerAutosaveLabel">
+                                            <property name="state">disabled</property>
+                                            <property name="text" translatable="yes">Inteval:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="headerAutosaveSpin">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="state">disabled</property>
+                                            <property name="textvariable">string:headerAutosaveInterval</property>
+                                            <property name="to">255</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">4</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="minsize">0</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="tk.LabelFrame" id="labelframe3">
+                                        <property name="height">200</property>
+                                        <property name="labelanchor">sw</property>
+                                        <property name="text" translatable="yes">Stats</property>
+                                        <property name="width">200</property>
+                                        <layout manager="pack">
+                                          <property name="expand">true</property>
+                                          <property name="fill">both</property>
+                                          <property name="padx">3</property>
+                                          <property name="pady">3</property>
+                                          <property name="propagate">True</property>
+                                          <property name="side">left</property>
+                                        </layout>
+                                        <child>
+                                          <object class="ttk.Label" id="label2">
+                                            <property name="text" translatable="yes">Minutes spent:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">0</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="pad">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                              <property type="row" id="0" name="pad">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label3">
+                                            <property name="text" translatable="yes">Left-clicks:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="pad">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label4">
+                                            <property name="text" translatable="yes">Right-clicks:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">2</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="pad">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label5">
+                                            <property name="text" translatable="yes">Note blocks added:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">3</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="pad">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label6">
+                                            <property name="text" translatable="yes">Note blocks removed:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">4</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="pad">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox2">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerMinuteSpent</property>
+                                            <property name="to">2147483647</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">11</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">0</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                              <property type="row" id="0" name="pad">0</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox3">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="text" translatable="yes">
+</property>
+                                            <property name="textvariable">string:headerLeftClicks</property>
+                                            <property name="to">2147483647</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">11</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox4">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerRightClicks</property>
+                                            <property name="to">2147483647</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">11</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">2</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox5">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerBlockAdded</property>
+                                            <property name="to">2147483647</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">11</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">3</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox6">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerBlockRemoved</property>
+                                            <property name="to">2147483647</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">11</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">4</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                    <child>
+                                      <object class="tk.LabelFrame" id="headerLoopFrame">
+                                        <property name="height">200</property>
+                                        <property name="labelanchor">sw</property>
+                                        <property name="text" translatable="yes">Loop</property>
+                                        <property name="width">200</property>
+                                        <layout manager="pack">
+                                          <property name="expand">true</property>
+                                          <property name="fill">both</property>
+                                          <property name="padx">3</property>
+                                          <property name="pady">3</property>
+                                          <property name="propagate">True</property>
+                                          <property name="side">left</property>
+                                        </layout>
+                                        <child>
+                                          <object class="ttk.Checkbutton" id="headerLoopCheck">
+                                            <property name="command" type="command" cbtype="simple">onLoopCheckBtn</property>
+                                            <property name="text" translatable="yes">Enabled</property>
+                                            <property name="variable">boolean:headerLoop</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="columnspan">2</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">0</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label7">
+                                            <property name="text" translatable="yes">Max loop count:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">w</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Label" id="label8">
+                                            <property name="text" translatable="yes">Loop start tick:</property>
+                                            <layout manager="grid">
+                                              <property name="column">0</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">2</property>
+                                              <property name="sticky">sw</property>
+                                              <property type="col" id="0" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox7">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerLoopCount</property>
+                                            <property name="to">255</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">4</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">1</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                        <child>
+                                          <object class="ttk.Spinbox" id="spinbox8">
+                                            <property name="from_">0</property>
+                                            <property name="increment">1</property>
+                                            <property name="textvariable">string:headerLoopStart</property>
+                                            <property name="to">32767
+</property>
+                                            <property name="validate">focusout</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="width">6</property>
+                                            <layout manager="grid">
+                                              <property name="column">1</property>
+                                              <property name="propagate">True</property>
+                                              <property name="row">2</property>
+                                              <property name="sticky">e</property>
+                                              <property type="col" id="1" name="weight">1</property>
+                                            </layout>
+                                          </object>
+                                        </child>
+                                      </object>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="formatTab">
+                    <property name="text" translatable="yes">Format</property>
+                    <child>
+                      <object class="tk.Frame" id="formatFrame">
+                        <property name="pady">10</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Label" id="formatVersion">
+                            <property name="text" translatable="yes">No file selected.</property>
+                            <property name="textvariable">string:selectedFilesVerStr</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Separator" id="separator2">
+                            <property name="orient">horizontal</property>
+                            <layout manager="pack">
+                              <property name="fill">x</property>
+                              <property name="padx">10</property>
+                              <property name="pady">5</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="tk.Label" id="formatLabel">
+                            <property name="text" translatable="yes">Changes files format version to:</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Combobox" id="formatCombo">
+                            <property name="state">readonly</property>
+                            <property name="textvariable">string:formatComboCurrent</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="customwidgets.wrapmessage" id="wrapmessage_1">
+                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
+</property>
+                            <layout manager="pack">
+                              <property name="fill">x</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="flipTab">
+                    <property name="text" translatable="yes">Flip</property>
+                    <child>
+                      <object class="tk.Frame" id="flipFrame">
+                        <property name="padx">5</property>
+                        <property name="pady">5</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="tk.Label" id="flipLabel">
+                            <property name="justify">left</property>
+                            <property name="text" translatable="yes">Filp notes:</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Checkbutton" id="flipHorizontallyCheck">
+                            <property name="text" translatable="yes">Horizontally</property>
+                            <property name="variable">boolean:flipHorizontallyCheckVar</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Checkbutton" id="flipVerticallyCheck">
+                            <property name="text" translatable="yes">Vertically</property>
+                            <property name="variable">boolean:flipVerticallyCheckVar</property>
+                            <layout manager="pack">
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="arrangeTab">
+                    <property name="text" translatable="yes">Arrange</property>
+                    <child>
+                      <object class="tk.Frame" id="frame_1">
+                        <property name="height">200</property>
+                        <property name="padx">7</property>
+                        <property name="pady">5</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="propagate">True</property>
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Radiobutton" id="notArrangeRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
+                            <property name="text" translatable="yes">Not arrange</property>
+                            <property name="value">none</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Radiobutton" id="collapseNotesRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
+                            <property name="text" translatable="yes">Collapse all notes</property>
+                            <property name="value">collapse</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Radiobutton" id="instArrangeRadio">
+                            <property name="command" type="command" cbtype="simple">onArrangeModeChanged</property>
+                            <property name="text" translatable="yes">Arrange by instruments</property>
+                            <property name="value">instruments</property>
+                            <property name="variable">string:arrangeMode</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Checkbutton" id="arrangeGroupPrec">
+                            <property name="state">disabled</property>
+                            <property name="text" translatable="yes">Treats percussions as an instrument</property>
+                            <property name="variable">boolean:groupPerc</property>
+                            <layout manager="pack">
+                              <property name="anchor">nw</property>
+                              <property name="padx">20</property>
+                              <property name="propagate">True</property>
+                              <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="applyBtn">
+                <property name="command" type="command" cbtype="simple">applyTool</property>
+                <property name="state">disabled</property>
+                <property name="text" translatable="yes">Apply</property>
+                <layout manager="pack">
+                  <property name="anchor">e</property>
+                  <property name="padx">10</property>
+                  <property name="propagate">True</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Sizegrip" id="sizegrip_1">
+            <layout manager="pack">
+              <property name="anchor">se</property>
+              <property name="propagate">True</property>
+              <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="tk.Menu" id="menubar">
+    <property name="tearoff">false</property>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="fileMenu">
+        <property name="label" translatable="yes">File</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="open">
+            <property name="accelerator">Ctrl+O</property>
+            <property name="command" type="command" cbtype="simple">openFiles</property>
+            <property name="label" translatable="yes">Open</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="save">
+            <property name="accelerator">Ctrl+S</property>
+            <property name="command" type="command" cbtype="simple">saveFiles</property>
+            <property name="label" translatable="yes">Save</property>
+            <property name="state">disabled</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="saveAll">
+            <property name="accelerator">Ctrl+Shift+S</property>
+            <property name="command" type="command" cbtype="simple">saveAll</property>
+            <property name="label" translatable="yes">Save all</property>
+            <property name="state">disabled</property>
+            <property name="underline">5</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Separator" id="separator1" />
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="quit">
+            <property name="accelerator">Esc</property>
+            <property name="command" type="command" cbtype="simple">onClose</property>
+            <property name="label" translatable="yes">Quit</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="importMenu">
+        <property name="label" translatable="yes">Import</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="importMuseScore">
+            <property name="command" type="command" cbtype="simple">callMuseScoreImportDialog</property>
+            <property name="label" translatable="yes">from MuseScore files...</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="exportMenu">
+        <property name="label" translatable="yes">Export</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="exportDtp">
+            <property name="command" type="command" cbtype="simple">callDatapackExportDialog</property>
+            <property name="label" translatable="yes">as datapack...</property>
+            <property name="state">disabled</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="exportMidi">
+            <property name="command" type="command" cbtype="simple">callMidiExportDialog</property>
+            <property name="label" translatable="yes">as MIDI file...</property>
+            <property name="state">disabled</property>
+            <property name="underline">3</property>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="tk.Menuitem.Submenu" id="helpMenu">
+        <property name="label" translatable="yes">Help</property>
+        <property name="specialmenu">help</property>
+        <property name="tearoff">false</property>
+        <property name="underline">0</property>
+        <child>
+          <object class="tk.Menuitem.Command" id="about">
+            <property name="command" type="command" cbtype="simple">callAboutDialog</property>
+            <property name="label" translatable="yes">About</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
