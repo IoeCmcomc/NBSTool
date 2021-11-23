@@ -1069,6 +1069,7 @@ def exportDatapack(data, path, bname, mode=None, master=None):
 
     data.correctData()
     compactNotes(data, groupPerc=False)
+    data.correctData()
 
     noteSounds = vaniNoteSounds + data['customInsts']
 
@@ -1081,7 +1082,7 @@ def exportDatapack(data, path, bname, mode=None, master=None):
 
     scoreObj = bname[:13]
     speed = int(min(data['header']['tempo'] * 4, 120))
-    length = data['header']['length']
+    length = data['header']['length'] + 1
 
     makeFolderTree(
         {path: {
@@ -1139,13 +1140,13 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
     writemcfunction(os.path.join(path, 'data', bname,
                                     'functions', 'give.mcfunction'), text)
 
-    tick = 0
+    tick = -1
     colNotes = {tick: []}
     for note in data['notes']:
-        colNotes[tick].append(note)
         while note['tick'] != tick:
             tick += 1
             colNotes[tick] = []
+        colNotes[tick].append(note)
 
     for tick in range(length):
         text = ""
