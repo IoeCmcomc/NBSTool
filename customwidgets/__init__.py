@@ -21,8 +21,11 @@ print(f'{__name__}')
 
 if __name__ == '__init__': # Pygubu import call
     from wrapmessage import WrapMessage
+    from checkablelabelframe import CheckableLabelFrame
 else: # Normal import call
     from .wrapmessage import WrapMessage
+    from .checkablelabelframe import CheckableLabelFrame
+
 from pygubu import BuilderObject, register_widget
 
 class WrapMessageBuilder(BuilderObject):
@@ -35,6 +38,16 @@ class WrapMessageBuilder(BuilderObject):
     OPTIONS_SPECIFIC =  ('aspect', 'justify', 'width', 'padding')
     properties = OPTIONS_STANDARD + OPTIONS_SPECIFIC
 
+class CheckableLabelFrameBuilder(BuilderObject):
+    class_ = CheckableLabelFrame
+    container = True
+
+    OPTIONS_STANDARD = ('cursor', 'takefocus', 'style')
+    OPTIONS_SPECIFIC = ('borderwidth', 'relief', 'padding', 'height', 'width', 'labelanchor', 'text', 'underline', 'variable', 'command')
+    
+    properties = OPTIONS_STANDARD + OPTIONS_SPECIFIC
+
 register_widget('customwidgets.wrapmessage', WrapMessageBuilder,
                 'WrapMessage', ('tk', 'Custom'))
-
+register_widget('customwidgets.checkablelabelframe', CheckableLabelFrameBuilder,
+                'CheckableLabelFrame', ('ttk', 'Custom'))

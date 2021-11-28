@@ -1,5 +1,4 @@
 {
     "python.pythonPath": "C:\\Users\\Admin\\AppData\\Local\\Programs\\Python\\Python38-32\\python.exe",
-    "python.jediEnabled": false,
-    "python.languageServer": "Microsoft",
+    "python.languageServer": "Pylance",
 }
