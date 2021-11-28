@@ -20,6 +20,7 @@
 import sys
 import os
 import operator
+from typing import Callable, Iterable, List, Literal
 import webbrowser
 import copy
 import traceback
@@ -28,11 +29,12 @@ import json
 import asyncio
 
 from pathlib import Path
-from ast import literal_eval
+from ast import Str, literal_eval
 
 import tkinter as tk
 import tkinter.ttk as ttk
 
+from tkinter import BooleanVar, StringVar, IntVar, Variable
 from tkinter.messagebox import showerror
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory, askopenfilenames
 
@@ -79,9 +81,10 @@ vaniNoteSounds = [
 
 globalIncVar = 0
 
+
 def resource_path(*args):
     if getattr(sys, 'frozen', False):
-        r = os.path.join(sys._MEIPASS, *args)
+        r = os.path.join(sys._MEIPASS, *args)  # type: ignore
     else:
         r = os.path.join(os.path.abspath('.'), *args)
     return r
@@ -96,8 +99,9 @@ class MainWindow():
         self.toplevel: tk.Toplevel = builder.get_object('toplevel')
         self.mainwin: tk.Frame = builder.get_object('mainFrame')
         style = ttk.Style(self.toplevel)
-        style.layout('Barless.TNotebook.Tab', []) # turn off tabs
-        style.configure('Barless.TNotebook', borderwidth=0, highlightthickness=0)
+        style.layout('Barless.TNotebook.Tab', [])  # turn off tabs
+        style.configure('Barless.TNotebook', borderwidth=0,
+                        highlightthickness=0)
 
         self.fileTable: ttk.Treeview = builder.get_object('fileTable')
         applyBtn = builder.get_object('applyBtn')
@@ -106,10 +110,7 @@ class MainWindow():
         centerToplevel(self.toplevel)
 
         self.initMenuBar()
-
-        builder.import_variables(self)
-        builder.connect_callbacks(self)
-
+        self.initVarsAndCallbacksFrom(builder)
         self.initFormatTab()
         self.initHeaderTab()
         self.initFlipTab()
@@ -127,7 +128,8 @@ class MainWindow():
                 builder.get_object('fileMenu').entryconfig(1, state="normal")
                 builder.get_object('saveFilesBtn')["state"] = "normal"
                 builder.get_object('removeEntriesBtn')["state"] = "normal"
-                self.updateHeaderNotebook([fileTable.index(item) for item in selection])
+                self.updateHeaderNotebook(
+                    [fileTable.index(item) for item in selection])
                 applyBtn["state"] = "normal"
             else:
                 builder.get_object('fileMenu').entryconfig(1, state="disabled")
@@ -137,8 +139,10 @@ class MainWindow():
                 self.selectedFilesVerStr.set("No file are selected.")
                 applyBtn["state"] = "disabled"
             exportMenu: tk.Menu = builder.get_object('exportMenu')
-            exportMenu.entryconfig(0, state="normal" if selectionLen == 1 else "disable")
-            exportMenu.entryconfig(1, state="normal" if selectionNotEmpty else "disable")
+            exportMenu.entryconfig(
+                0, state="normal" if selectionLen == 1 else "disable")
+            exportMenu.entryconfig(
+                1, state="normal" if selectionNotEmpty else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -152,11 +156,32 @@ class MainWindow():
         self.songsData = []
         self.selectedFilesVersion = -1
 
+    def initVarsAndCallbacksFrom(self, builder: Builder):
+        # These member will be initialize later
+        self.selectedFilesVerStr: StringVar
+        self.headerLoop: BooleanVar
+        self.headerLoopCount: StringVar
+        self.headerLoopStart: StringVar
+        self.headerAutosave: BooleanVar
+        self.headerAutosaveInterval: StringVar
+        self.headerMinuteSpent: StringVar
+        self.headerLeftClicks: StringVar
+        self.headerRightClicks: StringVar
+        self.headerBlockAdded: StringVar
+        self.headerBlockRemoved: StringVar
+        self.arrangeMode: StringVar
+        self.flipHorizontallyCheckVar: BooleanVar
+        self.flipVerticallyCheckVar: BooleanVar
+        self.groupPerc: BooleanVar
+
+        builder.import_variables(self)
+        builder.connect_callbacks(self)
+
     def isInteger(self, value) -> bool:
         print("isInteger", value, value == '' or value.isdigit())
         return value == '' or value.isdigit()
 
-    def getSelectedFilesVersion(self, selection: tuple) -> int:
+    def getSelectedFilesVersion(self, selection: Iterable) -> int:
         fileVersion = -1
         for i in selection:
             header = self.songsData[i].header
@@ -167,8 +192,8 @@ class MainWindow():
                 fileVersion = ver
         return fileVersion
 
-    def updateHeaderNotebook(self, selection: tuple) -> None:
-        def updateCheckbutton(i: int, var: tk.StringVar, widget: ttk.Checkbutton, value: bool) -> bool:
+    def updateHeaderNotebook(self, selection: Iterable) -> None:
+        def updateCheckbutton(i: int, var: Variable, widget: ttk.Checkbutton, value: bool) -> bool:
             ret = (i > 0) and (var.get() != value)
             if ret:
                 widget.state(['alternate'])
@@ -176,7 +201,7 @@ class MainWindow():
                 var.set(value)
             return not ret
 
-        def updateSpinbox(i: int, var: tk.StringVar, value: int) -> None:
+        def updateSpinbox(i: int, var: Variable, value: int) -> None:
             var.set('' if ((i > 0) and (var.get() != str(value))) else value)
 
         get_object = self.builder.get_object
@@ -184,11 +209,13 @@ class MainWindow():
         fileVersion = self.getSelectedFilesVersion(selection)
         if fileVersion == -1:
             notebook.select(0)
-            self.selectedFilesVerStr.set("Selected file(s) don't have the same version number.")
+            self.selectedFilesVerStr.set(
+                "Selected file(s) don't have the same version number.")
             self.selectedFilesVersion = -1
             return
         self.selectedFilesVersion = fileVersion
-        self.selectedFilesVerStr.set("Selected file(s) format version: {: >8}".format(fileVersion if fileVersion > 0 else 'Classic'))
+        self.selectedFilesVerStr.set("Selected file(s) format version: {: >8}".format(
+            fileVersion if fileVersion > 0 else 'Classic'))
         notebook.select(1)
         for i, index in enumerate(selection):
             header = self.songsData[index].header
@@ -207,7 +234,8 @@ class MainWindow():
 
             autoSave = header.auto_save
             if updateCheckbutton(i, self.headerAutosave, get_object('headerAutosaveCheck'), autoSave):
-                updateSpinbox(i, self.headerAutosaveInterval, header.auto_save_time)
+                updateSpinbox(i, self.headerAutosaveInterval,
+                              header.auto_save_time)
             self.onAutosaveCheckBtn()
 
             updateSpinbox(i, self.headerMinuteSpent, header.minutes_spent)
@@ -219,14 +247,16 @@ class MainWindow():
     def onAutosaveCheckBtn(self):
         label = self.builder.get_object('headerAutosaveLabel')
         spinbox = self.builder.get_object('headerAutosaveSpin')
-        state = 'normal' if ((not 'alternate' in self.builder.get_object('headerAutosaveCheck').state()) and self.headerAutosave.get()) else 'disabled'
+        state = 'normal' if ((not 'alternate' in self.builder.get_object(
+            'headerAutosaveCheck').state()) and self.headerAutosave.get()) else 'disabled'
         label['state'] = state
         spinbox['state'] = state
 
     def onLoopCheckBtn(self):
         checkBox: ttk.Checkbutton = self.builder.get_object('headerLoopCheck')
         loop = self.headerLoop.get()
-        state = 'normal' if ((not 'alternate' in self.builder.get_object('headerLoopCheck').state()) and self.headerLoop.get()) else 'disabled'
+        state = 'normal' if ((not 'alternate' in self.builder.get_object(
+            'headerLoopCheck').state()) and self.headerLoop.get()) else 'disabled'
         for child in self.builder.get_object('headerLoopFrame').winfo_children():
             if child is not checkBox:
                 child.configure(state=state)
@@ -276,7 +306,8 @@ class MainWindow():
                 songData = NbsSong(filePath)
                 self.songsData.append(songData)
             except Exception as e:
-                showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
+                showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(
+                    filePath, e.__class__.__name__, e))
                 print(traceback.format_exc())
                 continue
             self.addFileInfo(filePath, songData)
@@ -327,13 +358,16 @@ class MainWindow():
                     i = fileTable.index(item)
                     filePath = self.filePaths[i]
                     if filePath == '':
-                        filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                        filePath = self.songsData[i].header.import_name.rsplit('.', 1)[
+                            0] + '.nbs'
                         savedPath = os.path.join(path, filePath)
                         fileTable.item(item, text=savedPath)
                         self.filePaths[i] = savedPath
-                    self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+                    self.songsData[i].write(os.path.join(
+                        path, os.path.basename(filePath)))
                 except Exception as e:
-                    showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                    showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
+                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
                     print(traceback.format_exc())
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -352,13 +386,16 @@ class MainWindow():
         for i, filePath in enumerate(self.filePaths):
             try:
                 if filePath == '':
-                    filePath = self.songsData[i].header.import_name.rsplit('.', 1)[0] + '.nbs'
+                    filePath = self.songsData[i].header.import_name.rsplit('.', 1)[
+                        0] + '.nbs'
                     savedPath = os.path.join(path, filePath)
                     self.fileTable.item(items[i], text=savedPath)
                     self.filePaths[i] = savedPath
-                self.songsData[i].write(os.path.join(path, os.path.basename(filePath)))
+                self.songsData[i].write(os.path.join(
+                    path, os.path.basename(filePath)))
             except Exception as e:
-                showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
+                    os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
                 print(traceback.format_exc())
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -441,7 +478,7 @@ class MainWindow():
         mainwin.bind_class("Treeview", "<Shift-Up>",
                            self._on_treeview_shift_up)
         mainwin.bind_class("Treeview", "<Button-1>",
-                           self._on_treeview_left_click, add='+')
+                           self._on_treeview_left_click, add=True)
 
     # Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
     def _on_tab_changed(self, event):
@@ -506,7 +543,8 @@ class MainWindow():
         self.toplevel.destroy()
 
     def onArrangeModeChanged(self):
-        self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (self.arrangeMode.get() == 'instruments') else 'disabled'
+        self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (
+            self.arrangeMode.get() == 'instruments') else 'disabled'
 
     def applyTool(self):
         get_object = self.builder.get_object
@@ -514,23 +552,25 @@ class MainWindow():
         fileTable = self.fileTable
         changedSongData = {}
         selectedIndexes = [fileTable.index(item)
-                               for item in fileTable.selection()]
+                           for item in fileTable.selection()]
         selectionLen = len(selectedIndexes)
         outputVersion = -1
 
         if (formatComboIndex := get_object('formatCombo').current()) > 0:
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
 
-        async def work(dialog: ProgressDialog = None):
+        async def work(dialog: ProgressDialog):
             print("async work() start")
             try:
-                notebook : ttk.Notebook = get_object('headerNotebook')
+                notebook: ttk.Notebook = get_object('headerNotebook')
                 headerModifiable = notebook.index(notebook.select()) == 1
+                i = 0
                 for i, index in enumerate(selectedIndexes):
                     dialog.totalProgress.set(i)
                     fileName = os.path.split(self.filePaths[i])[1]
                     dialog.currentText.set("Current file: {}".format(fileName))
-                    dialog.totalText.set("Processing {} / {} files".format(i+1, selectionLen))
+                    dialog.totalText.set(
+                        "Processing {} / {} files".format(i+1, selectionLen))
                     dialog.currentProgress.set(0)
                     songData: NbsSong = deepcopy(self.songsData[index])
                     dialog.setCurrentPercentage(randint(20, 25))
@@ -551,7 +591,8 @@ class MainWindow():
                                 note['tick'] = length - note['tick']
                             if self.flipVerticallyCheckVar.get():
                                 note['layer'] = maxLayer - note['layer']
-                            dialog.currentProgress.set(dialog.currentProgress.get()+1)
+                            dialog.currentProgress.set(
+                                dialog.currentProgress.get()+1)
                     songData.sortNotes()
 
                     if self.arrangeMode.get() == 'collapse':
@@ -602,7 +643,8 @@ class MainWindow():
             autoSave = self.headerAutosave.get()
             header.auto_save = autoSave
             if autoSave:
-                setAttrFromStrVar('auto_save_time', self.headerAutosaveInterval.get())
+                setAttrFromStrVar('auto_save_time',
+                                  self.headerAutosaveInterval.get())
 
         setAttrFromStrVar('minutes_spent', self.headerMinuteSpent.get())
         setAttrFromStrVar('left_clicks', self.headerLeftClicks.get())
@@ -635,7 +677,7 @@ class DatapackExportDialog:
             button["state"] = "disabled"
 
         def wnbsIDVaildate(P):
-            isVaild = bool(re.match("^(\d|\w|[-_.])+$", P))
+            isVaild = bool(re.match(r"^(\d|\w|[-_.])+$", P))
             button["state"] = "normal" if isVaild and (
                 14 >= len(P) > 0) else "disabled"
             return isVaild
@@ -671,7 +713,11 @@ class MidiExportDialog:
         builder.add_from_file(resource_path('ui/midiexportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
-        builder.get_object('pathChooser').bind('<<PathChooserPathChanged>>', self.pathChanged)
+        builder.get_object('pathChooser').bind(
+            '<<PathChooserPathChanged>>', self.pathChanged)
+
+        self.exportMode: StringVar
+        self.exportPath: StringVar
 
         builder.connect_callbacks(self)
         builder.import_variables(self)
@@ -683,11 +729,13 @@ class MidiExportDialog:
 
     def exportModeChanged(self):
         self.isFolderMode = self.exportMode.get() == 'folder'
-        self.builder.get_object('pathChooser')['state'] = 'normal' if self.isFolderMode else 'disabled'
+        self.builder.get_object('pathChooser')[
+            'state'] = 'normal' if self.isFolderMode else 'disabled'
         self.pathChanged()
 
     def pathChanged(self, _=None):
-        self.builder.get_object('exportBtn')['state'] = 'normal' if (not self.isFolderMode) or (self.exportPath.get() != '') else 'disabled'
+        self.builder.get_object('exportBtn')['state'] = 'normal' if (
+            not self.isFolderMode) or (self.exportPath.get() != '') else 'disabled'
 
     def export(self, _=None):
         path = os.path
@@ -701,13 +749,14 @@ class MidiExportDialog:
             else:
                 return
 
-        async def work(dialog: ProgressDialog = None):
+        async def work(dialog: ProgressDialog):
             try:
                 songsData = self.parent.songsData
                 filePaths = self.parent.filePaths
                 for i in indexes:
                     dialog.totalProgress.set(i)
-                    dialog.totalText.set("Exporting {} / {} files".format(i+1, len(indexes)))
+                    dialog.totalText.set(
+                        "Exporting {} / {} files".format(i+1, len(indexes)))
                     dialog.currentProgress.set(0)
                     origPath = filePaths[i]
                     baseName = path.basename(origPath)
@@ -721,18 +770,20 @@ class MidiExportDialog:
                     else:
                         filePath = path.join(self.exportPath.get(), baseName)
                     try:
-                        dialog.currentText.set("Current file: {}".format(filePath))
+                        dialog.currentText.set(
+                            "Current file: {}".format(filePath))
                         songData = deepcopy(songsData[i])
                         compactNotes(songData, True)
-                        dialog.currentProgress.set(10) # 10%
+                        dialog.currentProgress.set(10)  # 10%
                         await nbs2midi(songData, filePath, dialog)
                     except Exception as e:
-                        showerror("Exporting file error", 'Cannot export file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
+                        showerror("Exporting file error", 'Cannot export file "{}"\n{}: {}'.format(
+                            filePath, e.__class__.__name__, e))
                         print(traceback.format_exc())
                 dialog.totalProgress.set(dialog.currentMax)
             except asyncio.CancelledError:
                 raise
-            self.d.toplevel.after(1, self.d.destroy)
+            self.d.toplevel.after(1, self.d.destroy)  # type: ignore
 
         dialog = ProgressDialog(self.d.toplevel, self)
         dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
@@ -745,14 +796,20 @@ class ProgressDialog:
     def __init__(self, master, parent):
         self.master = master
         self.parent = parent
-        self.work = None
+        self.work: Callable
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
         builder.add_from_file(resource_path('ui/progressdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog1', master)
-        self.d.toplevel.protocol('WM_DELETE_WINDOW', self.onCancel)
+        self.d.toplevel.protocol(                   # type: ignore
+            'WM_DELETE_WINDOW', self.onCancel)
+
+        self.currentText: StringVar
+        self.totalText: StringVar
+        self.currentProgress: IntVar
+        self.totalProgress: IntVar
 
         builder.connect_callbacks(self)
         builder.import_variables(self)
@@ -777,7 +834,7 @@ class ProgressDialog:
         self.builder.get_object('dialog1', self.master).run()
         if asyncio.iscoroutinefunction(func):
             self.work = func
-            self.d.toplevel.after(0, self.startWork)
+            self.d.toplevel.after(0, self.startWork)  # type: ignore
 
     def startWork(self) -> None:
         if self.totalProgress.get() >= self.totalMax:
@@ -785,14 +842,14 @@ class ProgressDialog:
             return
         asyncio.run(self.updateProgress())
         print("startWork() about to after")
-        self.d.toplevel.after(0, self.startWork)
+        self.d.toplevel.after(0, self.startWork)  # type: ignore
 
     async def updateProgress(self) -> None:
         print("async updateProgressDialog() start")
         self.task = asyncio.create_task(self.work(dialog=self))
-        while True: # wait the async task finish
+        while True:  # wait the async task finish
             done, pending = await asyncio.wait({self.task}, timeout=0)
-            self.d.toplevel.update()
+            self.d.toplevel.update()  # type: ignore
             if self.task in done:
                 await self.task
                 break
@@ -810,9 +867,9 @@ class ProgressDialog:
         self.d.destroy()
 
 
-def parseFilePaths(string: str) -> list:
+def parseFilePaths(string: str) -> tuple:
     strLen = len(string)
-    ret = []
+    ret: List[str] = []
     filePath = ''
     isQuoted = False
     for i, char in enumerate(string):
@@ -846,6 +903,11 @@ class MuseScoreImportDialog:
 
         self.d: Dialog = builder.get_object('dialog', master)
 
+        self.autoExpand: BooleanVar
+        self.filePaths: StringVar
+        self.exportPath: StringVar
+        self.expandMult: IntVar
+
         builder.connect_callbacks(self)
         builder.import_variables(self)
 
@@ -859,13 +921,15 @@ class MuseScoreImportDialog:
         types = (("MuseScore files", ('*.mscz', '*.mscx')), ('All files', '*'),)
         paths = askopenfilenames(filetypes=types)
 
-        self.filePaths.set(paths)
+        self.filePaths.set(str(paths))
 
     def autoExpandChanged(self):
-        self.builder.get_object('expandScale')['state'] = 'disabled' if self.autoExpand.get() else 'normal'
+        self.builder.get_object('expandScale')[
+            'state'] = 'disabled' if self.autoExpand.get() else 'normal'
 
     def pathChanged(self, *args):
-        self.builder.get_object('importBtn')['state'] = 'normal' if (self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
+        self.builder.get_object('importBtn')['state'] = 'normal' if (
+            self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
 
     def onImport(self, _=None):
         fileTable = self.parent.fileTable
@@ -881,17 +945,20 @@ class MuseScoreImportDialog:
             paths = parseFilePaths(paths)
         fileCount = len(paths)
 
-        async def work(dialog: ProgressDialog = None):
+        async def work(dialog: ProgressDialog):
             try:
                 songsData: list = self.parent.songsData
                 filePaths: list = self.parent.filePaths
                 for i, filePath in enumerate(paths):
                     try:
                         dialog.totalProgress.set(i)
-                        dialog.totalText.set("Importing {} / {} files".format(i+1, fileCount))
+                        dialog.totalText.set(
+                            "Importing {} / {} files".format(i+1, fileCount))
                         dialog.currentProgress.set(0)
-                        dialog.currentText.set("Current file: {}".format(filePath))
-                        task = asyncio.create_task(musescore2nbs(filePath, self.expandMult.get(), self.autoExpand.get(), dialog))
+                        dialog.currentText.set(
+                            "Current file: {}".format(filePath))
+                        task = asyncio.create_task(musescore2nbs(
+                            filePath, self.expandMult.get(), self.autoExpand.get(), dialog))
                         while True:
                             done, pending = await asyncio.wait({task}, timeout=0)
                             if task in done:
@@ -899,7 +966,8 @@ class MuseScoreImportDialog:
                                 await task
                                 break
                         if not songData:
-                            raise Exception("The file {} cannot be read as a vaild XML file.".format(filePath))
+                            raise Exception(
+                                "The file {} cannot be read as a vaild XML file.".format(filePath))
                         dialog.currentProgress.set(80)
                         await asyncio.sleep(0.001)
                         songsData.append(songData)
@@ -909,7 +977,8 @@ class MuseScoreImportDialog:
                     except asyncio.CancelledError:
                         raise
                     except Exception as e:
-                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(filePath, e.__class__.__name__, e))
+                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
+                            filePath, e.__class__.__name__, e))
                         print(traceback.format_exc())
                         continue
                 dialog.totalProgress.set(dialog.currentMax)
@@ -943,6 +1012,10 @@ class AboutDialog:
 
 class FlexCheckbutton(tk.Checkbutton):
     def __init__(self, *args, **kwargs):
+        self.multiline: bool
+        self.anchor: Literal['nw', 'n', 'ne', 'w', 'center', 'e', 'sw']
+        self.justify: Literal['left', 'center', 'right']
+
         okwargs = dict(kwargs)
         if 'multiline' in kwargs:
             self.multiline = kwargs['multiline']
@@ -968,6 +1041,7 @@ class FlexCheckbutton(tk.Checkbutton):
         if self.multiline:
             self.bind("<Configure>", lambda event: self.configure(width=event.width-10,
                                                                   justify=self.justify, anchor=self.anchor, wraplength=event.width-20, text=self.text+' '*999))
+
 
 def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     # Credit: https://stackoverflow.com/questions/3129322/how-do-i-get-monitor-resolution-in-python/56913005#56913005
@@ -1042,6 +1116,7 @@ def compactNotes(data, groupPerc=1) -> None:
         outerLayer += innerLayer + 1
     data['maxLayer'] = outerLayer - 1
 
+
 def exportDatapack(data, path, bname, mode=None, master=None):
     def writejson(path, jsout):
         with open(path, 'w') as f:
@@ -1102,11 +1177,11 @@ def exportDatapack(data, path, bname, mode=None, master=None):
     )
 
     writejson(os.path.join(path, 'pack.mcmeta'), {"pack": {
-                "description": "Note block song datapack made with NBSTool.", "pack_format": 6}})
+        "description": "Note block song datapack made with NBSTool.", "pack_format": 6}})
     writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
-                            'load.json'), jsout={"values": ["{}:load".format(bname)]})
+                           'load.json'), jsout={"values": ["{}:load".format(bname)]})
     writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
-                            'tick.json'), jsout={"values": ["{}:tick".format(bname)]})
+                           'tick.json'), jsout={"values": ["{}:tick".format(bname)]})
 
     writemcfunction(os.path.join(path, 'data', bname, 'functions', 'load.mcfunction'),
                     """scoreboard objectives add {0} dummy
@@ -1135,10 +1210,10 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
         for i in range(len(v)):
             text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
                     "{}-{}".format(noteSounds[k]['name'],
-                                    i), "{}-{}".format(k, i)
+                                   i), "{}-{}".format(k, i)
             )
     writemcfunction(os.path.join(path, 'data', bname,
-                                    'functions', 'give.mcfunction'), text)
+                                 'functions', 'give.mcfunction'), text)
 
     tick = -1
     colNotes = {tick: []}
