@@ -41,7 +41,7 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory,
 import pygubu
 from pygubu import Builder
 from pygubu.widgets.dialog import Dialog
-# Explict import for PyInstaller
+# Explict imports for PyInstaller
 from pygubu.builder import ttkstdwidgets, tkstdwidgets
 from pygubu.builder.widgets import tkscrollbarhelper, dialog, pathchooserinput
 import customwidgets
@@ -157,7 +157,7 @@ class MainWindow():
         self.selectedFilesVersion = -1
 
     def initVarsAndCallbacksFrom(self, builder: Builder):
-        # These member will be initialize later
+        # These members will be initialized later
         self.selectedFilesVerStr: StringVar
         self.headerLoop: BooleanVar
         self.headerLoopCount: StringVar
@@ -178,7 +178,6 @@ class MainWindow():
         builder.connect_callbacks(self)
 
     def isInteger(self, value) -> bool:
-        print("isInteger", value, value == '' or value.isdigit())
         return value == '' or value.isdigit()
 
     def getSelectedFilesVersion(self, selection: Iterable) -> int:
@@ -228,7 +227,7 @@ class MainWindow():
                     updateSpinbox(i, self.headerLoopStart, header.loop_start)
                 self.onLoopCheckBtn()
             else:
-                # Credit: https://stackoverflow.com/questions/24942760/is-there-a-way-to-gray-out-disable-a-tkinter-frame
+                # Source: https://stackoverflow.com/questions/24942760/is-there-a-way-to-gray-out-disable-a-tkinter-frame
                 for child in get_object('headerLoopFrame').winfo_children():
                     child.configure(state='disable')
 
@@ -560,7 +559,6 @@ class MainWindow():
             outputVersion = (NBS_VERSION + 1) - formatComboIndex
 
         async def work(dialog: ProgressDialog):
-            print("async work() start")
             try:
                 notebook: ttk.Notebook = get_object('headerNotebook')
                 headerModifiable = notebook.index(notebook.select()) == 1
@@ -841,11 +839,9 @@ class ProgressDialog:
             self.d.destroy()
             return
         asyncio.run(self.updateProgress())
-        print("startWork() about to after")
         self.d.toplevel.after(0, self.startWork)  # type: ignore
 
     async def updateProgress(self) -> None:
-        print("async updateProgressDialog() start")
         self.task = asyncio.create_task(self.work(dialog=self))
         while True:  # wait the async task finish
             done, pending = await asyncio.wait({self.task}, timeout=0)

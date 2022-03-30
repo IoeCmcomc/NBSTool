@@ -330,11 +330,8 @@ ASALocalRun/
 .mfractor/
 
 ## Ignore output/exported files and datapacks.
-*.nbs
 *.mid
 *.mp3
-*.mscx
-*.mscz
 datapacks/
 Downloaded song/
 
@@ -346,7 +343,6 @@ Downloaded song/
 
 build/
 dist/
-test/
 main.build/
 main.dist/
 .mscbackup/
