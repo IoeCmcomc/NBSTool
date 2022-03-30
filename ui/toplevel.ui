@@ -873,7 +873,15 @@
         <child>
           <object class="tk.Menuitem.Command" id="exportMidi">
             <property name="command" type="command" cbtype="simple">callMidiExportDialog</property>
-            <property name="label" translatable="yes">as MIDI file...</property>
+            <property name="label" translatable="yes">as MIDI files...</property>
+            <property name="state">disabled</property>
+            <property name="underline">3</property>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Menuitem.Command" id="exportJson">
+            <property name="command" type="command" cbtype="simple">callJsonExportDialog</property>
+            <property name="label" translatable="yes">as JSON files...</property>
             <property name="state">disabled</property>
             <property name="underline">3</property>
           </object>

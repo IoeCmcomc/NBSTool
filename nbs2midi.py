@@ -200,4 +200,4 @@ if __name__ == "__main__":
 
     data = NbsSong(fn + '.nbs')
     data.correctData()
-    nbs2midi(data, fn)
+    _ = nbs2midi(data, fn)

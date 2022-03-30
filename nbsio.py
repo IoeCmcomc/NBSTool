@@ -211,10 +211,10 @@ class NbsSong(Dict):
                 header['inst_count'] = readNumeric(f, BYTE)
                 for i in range(header['inst_count']):
                     name = readString(f) #Instrument name
-                    file = readString(f) #Sound fn
+                    filePath = readString(f) #Sound file path
                     pitch = readNumeric(f, BYTE) #Pitch
                     shouldPressKeys = bool(readNumeric(f, BYTE)) #Press key
-                    customInsts.append(Dict({'name':name, 'fn':file, 'pitch':pitch, 'pressKeys':shouldPressKeys}))
+                    customInsts.append(Dict({'name':name, 'filePath':filePath, 'pitch':pitch, 'pressKeys':shouldPressKeys}))
                 #Rest of the file
                 appendix = f.read()
             finally:
@@ -336,7 +336,7 @@ class NbsSong(Dict):
                     if len(customInsts) > 0:
                         for customInst in customInsts:
                             writeString(f, customInst['name']) #Instrument name
-                            writeString(f, customInst['fn']) #Sound fn
+                            writeString(f, customInst['filePath']) #Sound file path
                             writeNumeric(f, BYTE, customInst['pitch']) #Pitch
                             writeNumeric(f, BYTE, customInst['pressKeys']) #Press key
                 #Appendix

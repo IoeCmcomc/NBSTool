@@ -19,17 +19,17 @@
 
 import sys
 import os
-import operator
-from typing import Callable, Iterable, List, Literal
+from typing import Any, Callable, Coroutine, Iterable, List, Literal, Union
 import webbrowser
 import copy
 import traceback
 import re
 import json
 import asyncio
+from asyncio import sleep, CancelledError
 
 from pathlib import Path
-from ast import Str, literal_eval
+from ast import literal_eval
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -48,15 +48,12 @@ import customwidgets
 
 from time import time
 from pprint import pprint
-from random import randrange, randint
+from random import randint
 from math import floor, log2
 from datetime import timedelta
 from copy import deepcopy
 
-from PIL import Image, ImageTk
-
 from nbsio import NBS_VERSION, NbsSong
-from ncfio import writencf
 from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
 
@@ -143,6 +140,8 @@ class MainWindow():
                 0, state="normal" if selectionLen == 1 else "disable")
             exportMenu.entryconfig(
                 1, state="normal" if selectionNotEmpty else "disable")
+            exportMenu.entryconfig(
+                2, state="normal" if selectionNotEmpty else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -366,7 +365,7 @@ class MainWindow():
                         path, os.path.basename(filePath)))
                 except Exception as e:
                     showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
-                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e)) # type: ignore
                     print(traceback.format_exc())
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -444,6 +443,9 @@ class MainWindow():
         dialog.run()
         del dialog
 
+    def callJsonExportDialog(self):
+        JsonExportDialog(self.toplevel, self).run()
+
     def callAboutDialog(self):
         dialog = AboutDialog(self.toplevel, self)
         del dialog
@@ -478,6 +480,12 @@ class MainWindow():
                            self._on_treeview_shift_up)
         mainwin.bind_class("Treeview", "<Button-1>",
                            self._on_treeview_left_click, add=True)
+        # Credit: https://stackoverflow.com/a/63173461/12682038
+
+        def treeview_select_all(event): return event.widget.selection_add(
+            event.widget.get_children())
+        mainwin.bind_class("Treeview", "<Control-a>", treeview_select_all)
+        mainwin.bind_class("Treeview", "<Control-A>", treeview_select_all)
 
     # Credit: http://code.activestate.com/recipes/580726-tkinter-notebook-that-fits-to-the-height-of-every-/
     def _on_tab_changed(self, event):
@@ -572,7 +580,7 @@ class MainWindow():
                     dialog.currentProgress.set(0)
                     songData: NbsSong = deepcopy(self.songsData[index])
                     dialog.setCurrentPercentage(randint(20, 25))
-                    await asyncio.sleep(0.001)
+                    await sleep(0.001)
                     dialog.currentMax = len(songData.notes)*2
                     length = songData.header['length']
                     maxLayer = songData.maxLayer
@@ -599,15 +607,15 @@ class MainWindow():
                         compactNotes(songData, self.groupPerc)
 
                     dialog.setCurrentPercentage(randint(75, 85))
-                    await asyncio.sleep(0.001)
+                    await sleep(0.001)
                     songData.sortNotes()
                     changedSongData[index] = songData
-                    await asyncio.sleep(0.001)
+                    await sleep(0.001)
 
                 for k, v in changedSongData.items():
                     self.songsData[k] = v
                 dialog.totalProgress.set(i+1)
-            except asyncio.CancelledError:
+            except CancelledError:
                 raise
             finally:
                 get_object('applyBtn')['state'] = 'normal'
@@ -701,16 +709,23 @@ class DatapackExportDialog:
             path, self.entry.get()), self.entry.get(), 'wnbs')
 
 
-class MidiExportDialog:
-    def __init__(self, master, parent):
+ExportDialogFunc = Callable[[NbsSong, str, Any], Coroutine]
+
+
+class ExportDialog:
+    def __init__(self, master, parent, fileExt: str, title: str, progressTitle: str, func: ExportDialogFunc):
         self.master = master
         self.parent = parent
+        self.progressTitle = progressTitle
+        self.fileExt = fileExt
+        self.func = func
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/midiexportdialog.ui'))
+        builder.add_from_file(resource_path('ui/exportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
+        self.d.set_title(title)
         builder.get_object('pathChooser').bind(
             '<<PathChooserPathChanged>>', self.pathChanged)
 
@@ -737,8 +752,9 @@ class MidiExportDialog:
 
     def export(self, _=None):
         path = os.path
-        fileTable = self.parent.fileTable
+        fileTable: ttk.Treeview = self.parent.fileTable
         indexes = [fileTable.index(i) for i in fileTable.selection()]
+        func = self.func
 
         if self.isFolderMode:
             self.pathChanged()
@@ -760,7 +776,7 @@ class MidiExportDialog:
                     baseName = path.basename(origPath)
                     if baseName.endswith('.nbs'):
                         baseName = baseName[:-4]
-                    baseName += '.mid'
+                    baseName += self.fileExt
 
                     filePath = ''
                     if not self.isFolderMode:
@@ -770,24 +786,59 @@ class MidiExportDialog:
                     try:
                         dialog.currentText.set(
                             "Current file: {}".format(filePath))
+                        # Prevent data from unintended changes
                         songData = deepcopy(songsData[i])
                         compactNotes(songData, True)
                         dialog.currentProgress.set(10)  # 10%
-                        await nbs2midi(songData, filePath, dialog)
+                        await func(songData, filePath, dialog)
                     except Exception as e:
-                        showerror("Exporting file error", 'Cannot export file "{}"\n{}: {}'.format(
+                        showerror("Exporting files error", 'Cannot export file "{}"\n{}: {}'.format(
                             filePath, e.__class__.__name__, e))
                         print(traceback.format_exc())
                 dialog.totalProgress.set(dialog.currentMax)
-            except asyncio.CancelledError:
+            except CancelledError:
                 raise
             self.d.toplevel.after(1, self.d.destroy)  # type: ignore
 
         dialog = ProgressDialog(self.d.toplevel, self)
         dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
-        dialog.d.set_title("Exporting {} files to MIDI".format(len(indexes)))
+        dialog.d.set_title(self.progressTitle.format(len(indexes)))
         dialog.totalMax = len(indexes)
         dialog.run(work)
+
+
+class MidiExportDialog(ExportDialog):
+    def __init__(self, master, parent):
+        super().__init__(master, parent, '.mid', "MIDI exporting",
+                         "Exporting {} files to MIDI...", nbs2midi)
+
+
+class JsonExportDialog(ExportDialog):
+    def __init__(self, master, parent):
+        super().__init__(master, parent, '.json', "JSON exporting",
+                         "Exporting {} files to JSON...", self.nbs2json)
+
+    async def nbs2json(self, data: NbsSong, filepath: str, dialog):
+        if not filepath.endswith('.json'):
+            filepath += '.json'
+
+        dialog.currentProgress.set(25)  # 25%
+        await sleep(0.001)
+
+        for note in data.notes:
+            del note['isPerc']
+
+        exportData = {'header': data.header, 'notes': tuple(data.notes), 'layers': tuple(
+            data.layers), 'custom_instruments': data.customInsts}
+
+        dialog.currentProgress.set(60)  # 60%
+        await sleep(0.001)
+
+        with open(filepath, 'w') as f:
+            json.dump(exportData, f, ensure_ascii=False, indent=4)
+
+        dialog.currentProgress.set(90)  # 90%
+        await sleep(0.001)
 
 
 class ProgressDialog:
@@ -830,7 +881,7 @@ class ProgressDialog:
 
     def run(self, func=None):
         self.builder.get_object('dialog1', self.master).run()
-        if asyncio.iscoroutinefunction(func):
+        if func and asyncio.iscoroutinefunction(func):
             self.work = func
             self.d.toplevel.after(0, self.startWork)  # type: ignore
 
@@ -928,8 +979,6 @@ class MuseScoreImportDialog:
             self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
 
     def onImport(self, _=None):
-        fileTable = self.parent.fileTable
-
         if not self.autoExpand.get():
             self.pathChanged()
             if self.filePaths.get() == '':
@@ -965,12 +1014,12 @@ class MuseScoreImportDialog:
                             raise Exception(
                                 "The file {} cannot be read as a vaild XML file.".format(filePath))
                         dialog.currentProgress.set(80)
-                        await asyncio.sleep(0.001)
+                        await sleep(0.001)
                         songsData.append(songData)
                         filePaths.append('')
                         self.parent.addFileInfo('', songData)
-                        await asyncio.sleep(0.001)
-                    except asyncio.CancelledError:
+                        await sleep(0.001)
+                    except CancelledError:
                         raise
                     except Exception as e:
                         showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
@@ -978,7 +1027,7 @@ class MuseScoreImportDialog:
                         print(traceback.format_exc())
                         continue
                 dialog.totalProgress.set(dialog.currentMax)
-            except asyncio.CancelledError:
+            except CancelledError:
                 raise
             # self.d.toplevel.after(1, self.d.destroy)
 
@@ -1071,7 +1120,7 @@ def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     obj.update_idletasks()
 
 
-def compactNotes(data, groupPerc=1) -> None:
+def compactNotes(data, groupPerc: Union[int, BooleanVar] = 1) -> None:
     groupPerc = bool(groupPerc)
     prevNote = {'layer': -1, 'tick': -1}
     outerLayer = 0
