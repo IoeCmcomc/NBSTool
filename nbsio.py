@@ -27,10 +27,10 @@ from warnings import warn
 
 from addict import Dict
 
-BYTE = Struct('<b')
-SHORT = Struct('<h')
-SHORT_SIGNED = Struct('<H')
-INT = Struct('<i')
+BYTE = Struct('<B')
+SHORT = Struct('<H')
+SHORT_SIGNED = Struct('<h')
+INT = Struct('<I')
 
 NBS_VERSION = 5
 
@@ -40,7 +40,7 @@ def read_numeric(f: BinaryIO, fmt: Struct) -> int:
     '''Read the following bytes from file and return a number.'''
 
     raw = f.read(fmt.size)
-    rawInt = int.from_bytes(raw, byteorder='little', signed=True)
+    # rawInt = int.from_bytes(raw, byteorder='little', signed=True)
     # print("{0:<2}{1:<20}{2:<10}{3:<11}".format(fmt.size, str(raw), raw.hex(), rawInt))
     return fmt.unpack(raw)[0]
 
@@ -94,6 +94,9 @@ class NbsSong(Dict):
         self.customInsts = []
         self.appendix = None
         if f: self.read(f)
+
+    def __len__(self) -> int:
+        return self.header.length
 
     def __repr__(self):
         return "<NbsSong notes={}, layers={}, customInsts={}>".format(len(self.notes), len(self.layers), len(self.customInsts))
@@ -240,7 +243,7 @@ class NbsSong(Dict):
         maxInst = 0
         tick = -1
         self.hasPerc = False
-        for i, note in enumerate(notes):
+        for note in notes:
             tick, inst, layer = note['tick'], note['inst'], note['layer']
             maxInst = max(maxInst, inst)
             if inst in {2, 3, 4}:
@@ -258,8 +261,15 @@ class NbsSong(Dict):
         self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         # self['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
 
+    def downgradeToClassic(self):
+        for note in self.notes:
+            if 10 <= note.inst <= 15:
+                note.inst = 0 # Change newer instrument to harp
+            elif note.inst > 15:
+                note.inst -= 6 # Update custom instrument index
+
     def write(self, fn: str) -> None:
-        '''Save nbs data to a file on disk with the path given.'''
+        '''Save nbs data to a file on disk with the given path.'''
 
         if not fn.endswith('.nbs'):
             fn += '.nbs'

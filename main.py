@@ -590,6 +590,8 @@ class MainWindow():
 
                     if outputVersion > -1:
                         songData.header['file_version'] = outputVersion
+                        if outputVersion == 0:
+                            songData.downgradeToClassic()
 
                     if self.flipHorizontallyCheckVar.get() or self.flipVerticallyCheckVar.get():
                         for note in songData.notes:
@@ -828,8 +830,9 @@ class JsonExportDialog(ExportDialog):
         for note in data.notes:
             del note['isPerc']
 
-        exportData = {'header': data.header, 'notes': tuple(data.notes), 'layers': tuple(
-            data.layers), 'custom_instruments': data.customInsts}
+        exportData = {'header': data.header, 'notes': tuple(data.notes),
+        'layers': tuple(data.layers), 'custom_instruments': data.customInsts,
+        'appendix': data.appendix}
 
         dialog.currentProgress.set(60)  # 60%
         await sleep(0.001)
