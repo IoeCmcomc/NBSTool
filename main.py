@@ -53,28 +53,10 @@ from math import floor, log2
 from datetime import timedelta
 from copy import deepcopy
 
-from nbsio import NBS_VERSION, NbsSong
+from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
 from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
 
-vaniNoteSounds = [
-    {'filename': 'harp.ogg', 'name': 'harp'},
-    {'filename': 'dbass.ogg', 'name': 'bass'},
-    {'filename': 'bdrum.ogg', 'name': 'basedrum'},
-    {'filename': 'sdrum.ogg', 'name': 'snare'},
-    {'filename': 'click.ogg', 'name': 'hat'},
-    {'filename': 'guitar.ogg', 'name': 'guitar'},
-    {'filename': 'flute.ogg', 'name': 'flute'},
-    {'filename': 'bell.ogg', 'name': 'bell'},
-    {'filename': 'icechime.ogg', 'name': 'chime'},
-    {'filename': 'xylobone.ogg', 'name': 'xylophone'},
-    {'filename': 'iron_xylophone.ogg', 'name': 'iron_xylophone'},
-    {'filename': 'cow_bell.ogg', 'name': 'cow_bell'},
-    {'filename': 'didgeridoo.ogg', 'name': 'didgeridoo'},
-    {'filename': 'bit.ogg', 'name': 'bit'},
-    {'filename': 'banjo.ogg', 'name': 'banjo'},
-    {'filename': 'pling.ogg', 'name': 'pling'}
-]
 
 globalIncVar = 0
 
@@ -284,7 +266,7 @@ class MainWindow():
             filePath = "[Not saved] ({})".format(globalIncVar)
         header = songData.header
         length = timedelta(seconds=floor(
-            header['length'] / header['tempo'])) if header['length'] != None else "Not calculated"
+            header.length / header.tempo)) if header.length != None else "Not calculated"
         self.fileTable.insert("", 'end', text=filePath, values=(
             length, header.name, header.author, header.orig_author))
 
@@ -582,23 +564,23 @@ class MainWindow():
                     dialog.setCurrentPercentage(randint(20, 25))
                     await sleep(0.001)
                     dialog.currentMax = len(songData.notes)*2
-                    length = songData.header['length']
+                    length = songData.header.length
                     maxLayer = songData.maxLayer
 
                     if headerModifiable:
                         self.modifyHeaders(songData.header)
 
                     if outputVersion > -1:
-                        songData.header['file_version'] = outputVersion
+                        songData.header.file_version = outputVersion
                         if outputVersion == 0:
                             songData.downgradeToClassic()
 
                     if self.flipHorizontallyCheckVar.get() or self.flipVerticallyCheckVar.get():
                         for note in songData.notes:
                             if self.flipHorizontallyCheckVar.get():
-                                note['tick'] = length - note['tick']
+                                note.tick = length - note.tick
                             if self.flipVerticallyCheckVar.get():
-                                note['layer'] = maxLayer - note['layer']
+                                note.layer = maxLayer - note.layer
                             dialog.currentProgress.set(
                                 dialog.currentProgress.get()+1)
                     songData.sortNotes()
@@ -606,7 +588,7 @@ class MainWindow():
                     if self.arrangeMode.get() == 'collapse':
                         self.collapseNotes(songData.notes)
                     elif self.arrangeMode.get() == 'instruments':
-                        compactNotes(songData, self.groupPerc)
+                        compactNotes(songData, self.groupPerc.get())
 
                     dialog.setCurrentPercentage(randint(75, 85))
                     await sleep(0.001)
@@ -629,14 +611,14 @@ class MainWindow():
 
     def collapseNotes(self, notes) -> None:
         layer = 0
-        prevNote = {'layer': -1, 'tick': -1}
+        prevNote = Note()
         for note in notes:
-            if note['tick'] == prevNote['tick']:
+            if note.tick == prevNote.tick:
                 layer += 1
-                note['layer'] = layer
+                note.layer = layer
             else:
                 layer = 0
-                note['layer'] = layer
+                note.layer = layer
                 prevNote = note
 
     def modifyHeaders(self, header):
@@ -827,12 +809,13 @@ class JsonExportDialog(ExportDialog):
         dialog.currentProgress.set(25)  # 25%
         await sleep(0.001)
 
-        for note in data.notes:
-            del note['isPerc']
+        notes = [note.__dict__ for note in data.notes]
+        layers = [layer.__dict__ for layer in data.layers]
+        insts = [inst.__dict__ for inst in data.customInsts]
 
-        exportData = {'header': data.header, 'notes': tuple(data.notes),
-        'layers': tuple(data.layers), 'custom_instruments': data.customInsts,
-        'appendix': data.appendix}
+        exportData = {'header': data.header.__dict__, 'notes': notes,
+            'layers': layers, 'custom_instruments': insts,
+            'appendix': data.appendix}
 
         dialog.currentProgress.set(60)  # 60%
         await sleep(0.001)
@@ -1123,49 +1106,46 @@ def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
     obj.update_idletasks()
 
 
-def compactNotes(data, groupPerc: Union[int, BooleanVar] = 1) -> None:
+def compactNotes(data: NbsSong, groupPerc: Union[int, BooleanVar] = 1) -> None:
     groupPerc = bool(groupPerc)
-    prevNote = {'layer': -1, 'tick': -1}
+    prevNote = Note()
     outerLayer = 0
-    it = data['usedInsts'][0]
+    insts = data.usedInsts[0]
     if not groupPerc:
-        it += data['usedInsts'][1]
-    for inst in it:
-        #print('Instrument: {}'.format(inst))
+        insts += data.usedInsts[1]
+    for inst in insts: # Arrange notes by instruments first
         innerLayer = localLayer = c = 0
-        #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-        for note in data['notes']:
-            if note['inst'] == inst:
+        for note in data.notes:
+            if note.inst == inst:
                 c += 1
-                if note['tick'] == prevNote['tick']:
+                if note.tick == prevNote.tick:
                     localLayer += 1
                     innerLayer = max(innerLayer, localLayer)
-                    note['layer'] = localLayer + outerLayer
+                    note.layer = localLayer + outerLayer
                 else:
                     localLayer = 0
-                    note['layer'] = localLayer + outerLayer
+                    note.layer = localLayer + outerLayer
                     prevNote = note
-                #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
         outerLayer += innerLayer + 1
-        #print('OuterLayer: {}; Innerlayer: {}; LocalLayer: {}; c: {}'.format(OuterLayer, InnerLayer, LocalLayer, c))
-    if groupPerc:
+
+    if groupPerc: # Treat percussions as one instrument
         innerLayer = localLayer = c = 0
-        for note in data['notes']:
-            if note['inst'] in data['usedInsts'][1]:
+        for note in data.notes:
+            if note.inst in data.usedInsts[1]:
                 c += 1
-                if note['tick'] == prevNote['tick']:
+                if note.tick == prevNote.tick:
                     localLayer += 1
                     innerLayer = max(innerLayer, localLayer)
-                    note['layer'] = localLayer + outerLayer
+                    note.layer = localLayer + outerLayer
                 else:
                     localLayer = 0
-                    note['layer'] = localLayer + outerLayer
+                    note.layer = localLayer + outerLayer
                     prevNote = note
         outerLayer += innerLayer + 1
-    data['maxLayer'] = outerLayer - 1
+    data.maxLayer = outerLayer - 1
 
 
-def exportDatapack(data, path, bname, mode=None, master=None):
+def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None):
     def writejson(path, jsout):
         with open(path, 'w') as f:
             json.dump(jsout, f, ensure_ascii=False)
@@ -1188,24 +1168,28 @@ def exportDatapack(data, path, bname, mode=None, master=None):
             return
 
     path = os.path.join(*os.path.normpath(path).split())
-    bname = os.path.basename(path)
+    bname: str = ''
+    if _bname:
+        bname = _bname
+    else:
+        bname = os.path.basename(path)
 
     data.correctData()
     compactNotes(data, groupPerc=False)
     data.correctData()
 
-    noteSounds = vaniNoteSounds + data['customInsts']
+    instruments = VANILLA_INSTS + data.customInsts
 
     instLayers = {}
-    for note in data['notes']:
-        if note['inst'] not in instLayers:
-            instLayers[note['inst']] = [note['layer']]
-        elif note['layer'] not in instLayers[note['inst']]:
-            instLayers[note['inst']].append(note['layer'])
+    for note in data.notes:
+        if note.inst not in instLayers:
+            instLayers[note.inst] = [note.layer]
+        elif note.layer not in instLayers[note.inst]:
+            instLayers[note.inst].append(note.layer)
 
     scoreObj = bname[:13]
-    speed = int(min(data['header']['tempo'] * 4, 120))
-    length = data['header']['length'] + 1
+    speed = int(min(data.header.tempo * 4, 120))
+    length = data.header.length + 1
 
     makeFolderTree(
         {path: {
@@ -1257,7 +1241,7 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
     for k, v in instLayers.items():
         for i in range(len(v)):
             text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
-                    "{}-{}".format(noteSounds[k]['name'],
+                    "{}-{}".format(instruments[k].sound_id,
                                    i), "{}-{}".format(k, i)
             )
     writemcfunction(os.path.join(path, 'data', bname,
@@ -1265,8 +1249,8 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
 
     tick = -1
     colNotes = {tick: []}
-    for note in data['notes']:
-        while note['tick'] != tick:
+    for note in data.notes:
+        while note.tick != tick:
             tick += 1
             colNotes[tick] = []
         colNotes[tick].append(note)
@@ -1280,7 +1264,7 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
                     """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
-""".format(obj=scoreObj, tick=tick, inst=note['inst'], order=instLayers[note['inst']].index(note['layer']), instname=noteSounds[note['inst']]['name'], key=max(33, min(57, note['key'])) - 33)
+""".format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note['inst']].index(note['layer']), instname=instruments[note.inst].sound_id, key=max(33, min(57, note.key)) - 33)
         if tick < length-1:
             text += "scoreboard players set @s {}_t {}".format(
                 scoreObj, tick)

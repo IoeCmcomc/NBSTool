@@ -16,11 +16,10 @@
 # Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
-
-from addict import Dict
-from lxml import etree
 import zipfile
-from nbsio import NbsSong
+
+from lxml import etree
+from nbsio import Layer, NbsSong, Note
 from functools import lru_cache
 from os.path import basename
 from asyncio import sleep
@@ -157,12 +156,14 @@ INST_INFO = (
     ('Percussion', -1, 0, ''),
 )
 
+_EMPTY_TUPLE = ('', -1, -1)
+
 DRUM_INFO = (
-    None, None, None, None, None,
-    None, None, None, None, None,
-    None, None, None, None, None,
-    None, None, None, None, None,
-    None, None, None, None,
+    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
+    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
+    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
+    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
+    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
     ('Zap', -1, 0),
     ('Brush hit hard', -1, 0),
     ('Brush circle', -1, 0),
@@ -286,7 +287,7 @@ Return:
 
     # Reads the input file
 
-    xml: etree.ElementTree = None
+    xml = None
     if filepath.endswith(".mscz"):
         with zipfile.ZipFile(filepath, 'r') as zip:
             filename: str = ""
@@ -312,8 +313,8 @@ Return:
 
     # Get meta-information
 
-    header: Dict = nbs.header
-    score: etree.Element = xml.find("Score")
+    header = nbs.header
+    score = xml.find("Score")
     header.import_name = basename(filepath)
     header.name = (score.xpath("metaTag[@name='workTitle']/text()") or ('',))[0]
     header.author = (score.xpath("metaTag[@name='arranger']/text()") or ('',))[0]
@@ -432,9 +433,10 @@ Return:
                             else:
                                 layer = innerBaseLayer+i
                             if layer >= len(nbs.layers):
-                                nbs.layers.append(Dict({'name': "{} (v. {})".format(staffInsts[staffId][0], voi+1), 'lock':False, 'volume':100, 'stereo':100}))
+                                nbs.layers.append(Layer("{} (v. {})".format(staffInsts[staffId][0], voi+1), False, 100, 100))
                             inst = staffInst
                             isPerc = False
+                            key = -1
                             if inst > -1:
                                 key = int(note.find("pitch").text) - 21
                             else:
@@ -448,8 +450,7 @@ Return:
                             pitch = int(float(tuning.text)) if tuning is not None else 0
                             # TODO: Support relative velocity
                             vel = max(min(int(note.findtext("velocity") or 100), 127), 0)
-                            nbs.notes.append(Dict({'tick': int(tick), 'layer': layer, 'inst': inst,
-                                                'key': key, 'vel': vel, 'pan': 100, 'pitch': pitch, 'isPerc': isPerc}))
+                            nbs.notes.append(Note(int(tick), layer, inst, key, vel, 100, pitch))
                             ceilingLayer = max(ceilingLayer, layer)
                             innerCeilingLayer = max(innerCeilingLayer, i)
                         lastTick = tick
@@ -483,23 +484,3 @@ Return:
 
     nbs.correctData()
     return nbs
-
-if __name__ == '__main__':
-    # filepath = "sayonara_30_seconds.mscx"
-    # filepath = "chord.mscx"
-    # filepath = "Vì_yêu_cứ_đâm_đầu.mscx"
-    # filepath = "Ai_yêu_Bác_Hồ_Chí_Minh.mscz"
-    # filepath = "test.mscx"
-    # filepath = "test_microtones.mscx"
-    # filepath = "Shining_in_the_Sky.mscx"
-    # filepath = "voices.mscx"
-    # filepath = "AYBHCM_1_2.mscx"
-    # filepath = "inst.mscx"
-    # filepath = "Chay ngay di.mscx"
-    # filepath = "1note.mscx"
-    # filepath = "Ai_đưa_em_về_-_Nguyễn_Ánh_9_-_Phiên_bản_dễ_(Easy_version).mscx"
-    # filepath = 'halfTempo.mscx'
-    filepath = "A_Tender_Feeling_(Sword_Art_Online).mscz"
-    nbs = musescore2nbs(filepath, autoExpand=False)
-    print(nbs)
-    nbs.write(filepath.rsplit('.', 1)[0] + '.nbs')
