@@ -961,8 +961,9 @@ class MuseScoreImportDialog:
             'state'] = 'disabled' if self.autoExpand.get() else 'normal'
 
     def pathChanged(self, *args):
-        self.builder.get_object('importBtn')['state'] = 'normal' if (
-            self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
+        if hasattr(self, "exportPath"):
+            self.builder.get_object('importBtn')['state'] = 'normal' if (
+                self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
 
     def onImport(self, _=None):
         if not self.autoExpand.get():

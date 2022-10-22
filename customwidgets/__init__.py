@@ -17,8 +17,6 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-print(f'{__name__}')
-
 if __name__ == '__init__': # Pygubu import call
     from wrapmessage import WrapMessage
     from checkablelabelframe import CheckableLabelFrame
