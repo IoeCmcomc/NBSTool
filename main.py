@@ -290,7 +290,8 @@ class MainWindow():
                 elif filePath.endswith('.nbs'):
                     songData = NbsSong(filePath)
                 else:
-                    raise NotImplementedError("This file format is not supported. However, you can try importing from the 'Import' menu instead.")
+                    raise NotImplementedError(
+                        "This file format is not supported. However, you can try importing from the 'Import' menu instead.")
                 self.songsData.append(songData)
             except Exception as e:
                 showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(
@@ -700,7 +701,80 @@ class DatapackExportDialog:
             path, self.entry.get()), self.entry.get(), 'wnbs')
 
 
-ExportDialogFunc = Callable[[NbsSong, str, Any], Coroutine]
+class ProgressDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+        self.work: Callable
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('ui/progressdialog.ui'))
+
+        self.d: Dialog = builder.get_object('dialog1', master)
+        self.d.toplevel.protocol(                   # type: ignore
+            'WM_DELETE_WINDOW', self.onCancel)
+
+        self.currentText: StringVar
+        self.totalText: StringVar
+        self.currentProgress: IntVar
+        self.totalProgress: IntVar
+
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+    @property
+    def currentMax(self) -> int:
+        return self.builder.get_object('currentProgressBar')['maximum']
+
+    @currentMax.setter
+    def currentMax(self, value: int) -> None:
+        self.builder.get_object('currentProgressBar')['maximum'] = value
+
+    @property
+    def totalMax(self) -> int:
+        return self.builder.get_object('totalProgressBar')['maximum']
+
+    @totalMax.setter
+    def totalMax(self, value: int) -> None:
+        self.builder.get_object('totalProgressBar')['maximum'] = value
+
+    def run(self, func=None):
+        self.builder.get_object('dialog1', self.master).run()
+        if func and asyncio.iscoroutinefunction(func):
+            self.work = func
+            self.d.toplevel.after(0, self.startWork)  # type: ignore
+
+    def startWork(self) -> None:
+        if self.totalProgress.get() >= self.totalMax:
+            self.d.destroy()
+            return
+        asyncio.run(self.updateProgress())
+        self.d.toplevel.after(0, self.startWork)  # type: ignore
+
+    async def updateProgress(self) -> None:
+        self.task = asyncio.create_task(self.work(dialog=self))
+        while True:  # wait the async task finish
+            done, pending = await asyncio.wait({self.task}, timeout=0)
+            self.d.toplevel.update()  # type: ignore
+            if self.task in done:
+                await self.task
+                break
+
+    def setCurrentPercentage(self, value: int) -> None:
+        self.currentProgress.set(round(self.currentMax * value / 100))
+
+    def onCancel(self) -> None:
+        try:
+            allTasks = asyncio.all_tasks()
+            for task in allTasks:
+                task.cancel()
+        except RuntimeError:  # if you have cancel the task it will raise RuntimeError
+            pass
+        self.d.destroy()
+
+
+ExportDialogFunc = Callable[[NbsSong, str, ProgressDialog], Coroutine]
 
 
 class ExportDialog:
@@ -809,7 +883,7 @@ class JsonExportDialog(ExportDialog):
         super().__init__(master, parent, '.json', "JSON exporting",
                          "Exporting {} files to JSON...", self.nbs2json)
 
-    async def nbs2json(self, data: NbsSong, filepath: str, dialog):
+    async def nbs2json(self, data: NbsSong, filepath: str, dialog: ProgressDialog):
         if not filepath.endswith('.json'):
             filepath += '.json'
 
@@ -832,79 +906,6 @@ class JsonExportDialog(ExportDialog):
 
         dialog.currentProgress.set(90)  # 90%
         await sleep(0.001)
-
-
-class ProgressDialog:
-    def __init__(self, master, parent):
-        self.master = master
-        self.parent = parent
-        self.work: Callable
-
-        self.builder = builder = pygubu.Builder()
-        builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/progressdialog.ui'))
-
-        self.d: Dialog = builder.get_object('dialog1', master)
-        self.d.toplevel.protocol(                   # type: ignore
-            'WM_DELETE_WINDOW', self.onCancel)
-
-        self.currentText: StringVar
-        self.totalText: StringVar
-        self.currentProgress: IntVar
-        self.totalProgress: IntVar
-
-        builder.connect_callbacks(self)
-        builder.import_variables(self)
-
-    @property
-    def currentMax(self) -> int:
-        return self.builder.get_object('currentProgressBar')['maximum']
-
-    @currentMax.setter
-    def currentMax(self, value: int) -> None:
-        self.builder.get_object('currentProgressBar')['maximum'] = value
-
-    @property
-    def totalMax(self) -> int:
-        return self.builder.get_object('totalProgressBar')['maximum']
-
-    @totalMax.setter
-    def totalMax(self, value: int) -> None:
-        self.builder.get_object('totalProgressBar')['maximum'] = value
-
-    def run(self, func=None):
-        self.builder.get_object('dialog1', self.master).run()
-        if func and asyncio.iscoroutinefunction(func):
-            self.work = func
-            self.d.toplevel.after(0, self.startWork)  # type: ignore
-
-    def startWork(self) -> None:
-        if self.totalProgress.get() >= self.totalMax:
-            self.d.destroy()
-            return
-        asyncio.run(self.updateProgress())
-        self.d.toplevel.after(0, self.startWork)  # type: ignore
-
-    async def updateProgress(self) -> None:
-        self.task = asyncio.create_task(self.work(dialog=self))
-        while True:  # wait the async task finish
-            done, pending = await asyncio.wait({self.task}, timeout=0)
-            self.d.toplevel.update()  # type: ignore
-            if self.task in done:
-                await self.task
-                break
-
-    def setCurrentPercentage(self, value: int) -> None:
-        self.currentProgress.set(round(self.currentMax * value / 100))
-
-    def onCancel(self) -> None:
-        try:
-            allTasks = asyncio.all_tasks()
-            for task in allTasks:
-                task.cancel()
-        except RuntimeError:  # if you have cancel the task it will raise RuntimeError
-            pass
-        self.d.destroy()
 
 
 def parseFilePaths(string: str) -> tuple:
@@ -937,16 +938,15 @@ class MuseScoreImportDialog:
         self.master = master
         self.parent = parent
 
+        self.autoExpand: BooleanVar
+        self.filePaths: StringVar
+        self.expandMult: IntVar
+
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
         builder.add_from_file(resource_path('ui/musescoreimportdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
-
-        self.autoExpand: BooleanVar
-        self.filePaths: StringVar
-        self.exportPath: StringVar
-        self.expandMult: IntVar
 
         builder.connect_callbacks(self)
         builder.import_variables(self)
@@ -968,9 +968,8 @@ class MuseScoreImportDialog:
             'state'] = 'disabled' if self.autoExpand.get() else 'normal'
 
     def pathChanged(self, *args):
-        if hasattr(self, "exportPath"):
-            self.builder.get_object('importBtn')['state'] = 'normal' if (
-                self.filePaths.get() != '') or (self.exportPath.get() != '') else 'disabled'
+        self.builder.get_object('importBtn')['state'] = 'normal' if (
+            self.filePaths.get() != '') else 'disabled'
 
     def onImport(self, _=None):
         if not self.autoExpand.get():
