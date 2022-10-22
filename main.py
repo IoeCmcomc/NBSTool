@@ -54,6 +54,7 @@ from datetime import timedelta
 from copy import deepcopy
 
 from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
+from mcsp2nbs import mcsp2nbs
 from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
 
@@ -271,7 +272,8 @@ class MainWindow():
             length, header.name, header.author, header.orig_author))
 
     def addFiles(self, _=None, paths=()):
-        types = [("Note Block Studio files", '*.nbs'), ('All files', '*')]
+        types = [("Note Block Studio files", '*.nbs'),
+                 ("Minecraft Song Planner v2 files", '*.mcsp2'), ('All files', '*')]
         addedPaths = []
         if len(paths) > 0:
             addedPaths = paths
@@ -283,7 +285,12 @@ class MainWindow():
         self.disabledFileTable()
         for i, filePath in enumerate(addedPaths):
             try:
-                songData = NbsSong(filePath)
+                if filePath.endswith('.mcsp2'):
+                    songData = mcsp2nbs(filePath)
+                elif filePath.endswith('.nbs'):
+                    songData = NbsSong(filePath)
+                else:
+                    raise NotImplementedError("This file format is not supported. However, you can try importing from the 'Import' menu instead.")
                 self.songsData.append(songData)
             except Exception as e:
                 showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(
@@ -347,7 +354,7 @@ class MainWindow():
                         path, os.path.basename(filePath)))
                 except Exception as e:
                     showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
-                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e)) # type: ignore
+                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))  # type: ignore
                     print(traceback.format_exc())
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -814,8 +821,8 @@ class JsonExportDialog(ExportDialog):
         insts = [inst.__dict__ for inst in data.customInsts]
 
         exportData = {'header': data.header.__dict__, 'notes': notes,
-            'layers': layers, 'custom_instruments': insts,
-            'appendix': data.appendix}
+                      'layers': layers, 'custom_instruments': insts,
+                      'appendix': data.appendix}
 
         dialog.currentProgress.set(60)  # 60%
         await sleep(0.001)
@@ -1114,7 +1121,7 @@ def compactNotes(data: NbsSong, groupPerc: Union[int, BooleanVar] = 1) -> None:
     insts = data.usedInsts[0]
     if not groupPerc:
         insts += data.usedInsts[1]
-    for inst in insts: # Arrange notes by instruments first
+    for inst in insts:  # Arrange notes by instruments first
         innerLayer = localLayer = c = 0
         for note in data.notes:
             if note.inst == inst:
@@ -1129,7 +1136,7 @@ def compactNotes(data: NbsSong, groupPerc: Union[int, BooleanVar] = 1) -> None:
                     prevNote = note
         outerLayer += innerLayer + 1
 
-    if groupPerc: # Treat percussions as one instrument
+    if groupPerc:  # Treat percussions as one instrument
         innerLayer = localLayer = c = 0
         for note in data.notes:
             if note.inst in data.usedInsts[1]:

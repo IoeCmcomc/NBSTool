@@ -108,7 +108,7 @@ class Header:
     description = ''
     auto_save = True
     auto_save_time = 10
-    tempo: float = 1000  # 10 TPS
+    tempo = 10.0  # 10 TPS
     time_sign = 4
     minutes_spent = 0
     left_clicks = 0
