@@ -12,6 +12,7 @@
 			  "args": ["-ExecutionPolicy", "Bypass"]
 			}
 		  },
-		  "terminal.integrated.defaultProfile.windows": "PowerShell",
+		"terminal.integrated.defaultProfile.windows": "PowerShell",
+		"docwriter.style": "NumPy",
 	}
 }

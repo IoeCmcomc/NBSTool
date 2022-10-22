@@ -17,7 +17,8 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-from lark import Lark, Tree
+from lark.lark import Lark
+from lark.tree import Tree
 from lark.visitors import Interpreter, visit_children_decor
 from collections import deque
 

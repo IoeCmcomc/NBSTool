@@ -260,6 +260,19 @@ class FileError(Exception):
 
 @lru_cache
 def fraction2length(fraction: str) -> int:
+    '''It takes a string in the form of a fraction, and returns the length of
+    the note in 16th notes
+    
+    Parameters
+    ----------
+    fraction : str
+        str
+    
+    Returns
+    -------
+        The length of the note in 16th notes.
+    
+    '''
     if isinstance(fraction, str):
         parts = fraction.split('/')
         return int(parts[0]) * int(16 / int(parts[1]))

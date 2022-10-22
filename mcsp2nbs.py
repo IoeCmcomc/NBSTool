@@ -13,6 +13,20 @@ NOTE_MAPPING = {
 }
 
 def mcsp2nbs(filename: str) -> NbsSong:
+    '''It reads the file, splits it into two parts, parses the first part, and
+    then parses the second part if it exists
+    
+    Parameters
+    ----------
+    filename : str
+        The file path to the .mcsp file
+    
+    Returns
+    -------
+        A NBSSong object
+    
+    '''
+    
     with open(filename, 'r', encoding='ansi') as f:
         main_part = f.readline()
         metadata_part = f.readline()

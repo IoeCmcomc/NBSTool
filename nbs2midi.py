@@ -94,6 +94,20 @@ INST2PITCH = {
 }
 
 def firstInstInLayer(nbs: NbsSong, layer: int) -> int:
+    '''It returns the instrument of the first note in a layer
+    
+    Parameters
+    ----------
+    nbs : NbsSong
+        The NBS file to be converted.
+    layer : int
+        The layer to check for the first instrument.
+    
+    Returns
+    -------
+        The instrument of the first note in the layer.
+    
+    '''
     if layer > nbs.maxLayer:
         return 0
     for note in nbs.notes:
@@ -102,17 +116,19 @@ def firstInstInLayer(nbs: NbsSong, layer: int) -> int:
     return 0
 
 class MsgComparator:
-    def __init__(self, msg) -> None:
+    def __init__(self, msg: Message) -> None:
         self.msg = msg
         self.isMeta = isinstance(msg, MetaMessage)
 
-    def __lt__(self, other) -> bool:
+    def __lt__(self, other: 'MsgComparator') -> bool:
         if (not self.isMeta) and isinstance(other.msg, Message):
             return self.msg.time < other.msg.time # type: ignore
         else:
             return False
 
 def absTrack2DeltaTrack(track) -> MidiTrack:
+    '''It takes a track of absolute time messages and returns a track of delta
+    time messages'''
     track.sort(key=MsgComparator)
     ret = MidiTrack()
     ret.append(track[0])
@@ -124,6 +140,18 @@ def absTrack2DeltaTrack(track) -> MidiTrack:
 
 
 async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
+    '''It converts a NBS song to a MIDI file
+    
+    Parameters
+    ----------
+    data : NbsSong
+        NbsSong
+    filepath : str
+        The path to the file you want to save to.
+    dialog
+        the dialog that shows the progress bar
+    
+    '''
     headers, notes, layers = data.header, data.notes, data.layers
 
     timeSign = headers.time_sign
