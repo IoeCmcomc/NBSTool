@@ -19,7 +19,7 @@
 
 import sys
 import os
-from typing import Any, Callable, Coroutine, Iterable, List, Literal, Union
+from typing import Callable, Coroutine, Iterable, List, Literal, Union
 import webbrowser
 import copy
 import traceback
@@ -46,6 +46,8 @@ from pygubu.builder import ttkstdwidgets, tkstdwidgets
 from pygubu.builder.widgets import tkscrollbarhelper, dialog, pathchooserinput
 import customwidgets
 
+import pygubu.builder.widgets.combobox
+
 from time import time
 from pprint import pprint
 from random import randint
@@ -53,7 +55,7 @@ from math import floor, log2
 from datetime import timedelta
 from copy import deepcopy
 
-from common import resource_path
+from common import resource_path, BASE_RESOURCE_PATH
 from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
 from mcsp2nbs import mcsp2nbs
 from nbs2midi import nbs2midi
@@ -68,7 +70,7 @@ class MainWindow():
     def __init__(self):
         builder: Builder = pygubu.Builder()
         self.builder: Builder = builder
-        builder.add_resource_path(resource_path())
+        builder.add_resource_path(BASE_RESOURCE_PATH)
         builder.add_from_file(resource_path('ui/toplevel.ui'))
         self.toplevel: tk.Toplevel = builder.get_object('toplevel')
         self.mainwin: tk.Frame = builder.get_object('mainFrame')
@@ -789,6 +791,7 @@ class ExportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
+        print(resource_path(ui_file))
         builder.add_from_file(resource_path(ui_file))
 
         self.d: Dialog = builder.get_object('dialog', master)
@@ -1071,7 +1074,7 @@ class AboutDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/aboutdiaplog.ui'))
+        builder.add_from_file(resource_path('ui/aboutdialog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
         builder.connect_callbacks(self)

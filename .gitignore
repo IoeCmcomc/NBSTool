@@ -341,9 +341,8 @@ Downloaded song/
 *.bat
 *.pyo
 
-build/
+*build/
 dist/
-main.build/
 main.dist/
 .mscbackup/
 
