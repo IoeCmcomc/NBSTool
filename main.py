@@ -60,7 +60,7 @@ from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
 
-
+__version__ = '0.1.0'
 globalIncVar = 0
 
 
@@ -129,7 +129,7 @@ class MainWindow():
         self.mainwin.grab_set()
         self.mainwin.grab_release()
 
-        self.VERSION = '1.0.0'
+        self.VERSION = __version__
         self.filePaths = []
         self.songsData = []
         self.selectedFilesVersion = -1
@@ -1071,7 +1071,7 @@ class AboutDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/aboutdialog.ui'))
+        builder.add_from_file(resource_path('ui/aboutdiaplog.ui'))
 
         self.d: Dialog = builder.get_object('dialog', master)
         builder.connect_callbacks(self)
