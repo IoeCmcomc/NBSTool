@@ -934,9 +934,11 @@ class AudioExportDialog(ExportDialog):
 
         channels = int(self.stereo.get()) + 1  # type: ignore
         includeLocked = self.includeLocked.get()  # type: ignore
+        ignoreMissingSounds = self.ignoreMissingSounds.get()  # type: ignore
 
-        await nbs2audio(data, filepath, dialog, format, samplingRate, channels,
-            exclude_locked_layers=not includeLocked)
+        await nbs2audio(data, filepath, dialog, format, samplingRate,
+                        channels, exclude_locked_layers=not includeLocked,
+                        ignore_missing_instruments=ignoreMissingSounds)
 
 
 def parseFilePaths(string: str) -> tuple:

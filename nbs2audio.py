@@ -2,11 +2,10 @@ from asyncio import sleep
 from os import environ
 from typing import Optional, Sequence
 
-from tkinter.messagebox import showwarning
 from pynbs import File, Header, Note, Layer, Instrument
 
 from common import resource_path
-environ["PATH"] += resource_path('ffmpeg', 'bin') 
+environ["PATH"] += resource_path('ffmpeg', 'bin')
 
 from nbswave import audio, nbs, SongRenderer
 from nbswave.main import MissingInstrumentException
@@ -181,9 +180,9 @@ async def nbs2audio(data: NbsSong, filepath: str, dialog=None,
 
     renderer = Renderer(convert(data), dialog)
 
-    if missingInsts := renderer.missing_instruments():
+    if (not ignore_missing_instruments) and (missingInsts := renderer.missing_instruments()):
         instFiles = '\n'.join(inst.file for inst in missingInsts)
-        showwarning("Missing instrument sounds",
+        raise MissingInstrumentException(
             f"The following sound files are missing in the sounds/ folder:\n{instFiles}")
 
     if dialog:
