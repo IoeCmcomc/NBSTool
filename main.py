@@ -53,21 +53,15 @@ from math import floor, log2
 from datetime import timedelta
 from copy import deepcopy
 
+from common import resource_path
 from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
 from mcsp2nbs import mcsp2nbs
 from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
+from nbs2audio import nbs2audio
 
 
 globalIncVar = 0
-
-
-def resource_path(*args):
-    if getattr(sys, 'frozen', False):
-        r = os.path.join(sys._MEIPASS, *args)  # type: ignore
-    else:
-        r = os.path.join(os.path.abspath('.'), *args)
-    return r
 
 
 class MainWindow():
@@ -125,6 +119,8 @@ class MainWindow():
                 1, state="normal" if selectionNotEmpty else "disable")
             exportMenu.entryconfig(
                 2, state="normal" if selectionNotEmpty else "disable")
+            exportMenu.entryconfig(
+                3, state="normal" if selectionNotEmpty else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -430,6 +426,11 @@ class MainWindow():
 
     def callMidiExportDialog(self):
         dialog = MidiExportDialog(self.toplevel, self)
+        dialog.run()
+        del dialog
+
+    def callAudioExportDialog(self):
+        dialog = AudioExportDialog(self.toplevel, self)
         dialog.run()
         del dialog
 
@@ -778,7 +779,8 @@ ExportDialogFunc = Callable[[NbsSong, str, ProgressDialog], Coroutine]
 
 
 class ExportDialog:
-    def __init__(self, master, parent, fileExt: str, title: str, progressTitle: str, func: ExportDialogFunc):
+    def __init__(self, master, parent, fileExt: str, title: str, progressTitle: str,
+                 func: ExportDialogFunc, ui_file='ui/exportdialog.ui'):
         self.master = master
         self.parent = parent
         self.progressTitle = progressTitle
@@ -787,7 +789,7 @@ class ExportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/exportdialog.ui'))
+        builder.add_from_file(resource_path(ui_file))
 
         self.d: Dialog = builder.get_object('dialog', master)
         self.d.set_title(title)
@@ -906,6 +908,35 @@ class JsonExportDialog(ExportDialog):
 
         dialog.currentProgress.set(90)  # 90%
         await sleep(0.001)
+
+
+class AudioExportDialog(ExportDialog):
+    def __init__(self, master, parent):
+        super().__init__(master, parent, '.wav', "Audio exporting",
+                         "Exporting {} files to audio...", self.audioExport, 'ui/audioexportdialog.ui')
+
+        formatCombo = self.builder.get_object('formatCombo')
+        formatCombo.current('wav')
+        self.formatVar.trace('w', self.formatChanged)  # type: ignore
+
+        samplingRateCombo = self.builder.get_object('samplingRateCombo')
+        samplingRateCombo.current(44100)
+
+        self.stereo.set(True)  # type: ignore
+        self.includeLocked.set(True)  # type: ignore
+
+    def formatChanged(self, *args):
+        self.fileExt = '.' + self.builder.get_object('formatCombo').current()
+
+    async def audioExport(self, data: NbsSong, filepath: str, dialog: ProgressDialog):
+        format = self.builder.get_object('formatCombo').current()
+        samplingRate = self.builder.get_object('samplingRateCombo').current()
+
+        channels = int(self.stereo.get()) + 1  # type: ignore
+        includeLocked = self.includeLocked.get()  # type: ignore
+
+        await nbs2audio(data, filepath, dialog, format, samplingRate, channels,
+            exclude_locked_layers=not includeLocked)
 
 
 def parseFilePaths(string: str) -> tuple:

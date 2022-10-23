@@ -1,0 +1,180 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.2">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">true</property>
+    <property name="resizable">none</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame">
+        <property name="height">200</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">3</property>
+          <property name="pady">5</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.LabelFrame" id="optionsFrame">
+            <property name="height">200</property>
+            <property name="text" translatable="yes">Options</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <containerlayout manager="grid">
+              <property name="anchor">n</property>
+            </containerlayout>
+            <child>
+              <object class="ttk.Label" id="label1">
+                <property name="text" translatable="yes">Output format:</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="pygubu.builder.widgets.combobox" id="formatCombo">
+                <property name="keyvariable">string:formatVar</property>
+                <property name="values">[["wav", "WAV"], ["mp3", "MP3"], ["ogg", "OGG"], ["flac", "FLAC"]]</property>
+                <layout manager="grid">
+                  <property name="column">1</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Label" id="label2">
+                <property name="text" translatable="yes">Sampling rate:</property>
+                <layout manager="grid">
+                  <property name="column">2</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="pygubu.builder.widgets.combobox" id="samplingRateCombo">
+                <property name="values">[[44100, "44100 Hz"], [48000, "48000 Hz"], [88200, "88200 Hz"], [96000, "96000 Hz"]]</property>
+                <layout manager="grid">
+                  <property name="column">3</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">0</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Checkbutton" id="stereoCheck">
+                <property name="text" translatable="yes">Stereo audio (2 channels)</property>
+                <property name="variable">boolean:stereo</property>
+                <layout manager="grid">
+                  <property name="column">0</property>
+                  <property name="columnspan">2</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">1</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Checkbutton" id="includeLockedCheck">
+                <property name="text" translatable="yes">Include locked layers</property>
+                <property name="variable">boolean:includeLocked</property>
+                <layout manager="grid">
+                  <property name="column">2</property>
+                  <property name="columnspan">2</property>
+                  <property name="padx">5</property>
+                  <property name="pady">2</property>
+                  <property name="row">1</property>
+                  <property name="sticky">w</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="tk.LabelFrame" id="exportFrame">
+            <property name="text" translatable="yes">Export location</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="anchor">nw</property>
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="padx">5</property>
+              <property name="pady">5</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="tk.Radiobutton" id="radiobutton5">
+                <property name="command" type="command" cbtype="simple">exportModeChanged</property>
+                <property name="justify">left</property>
+                <property name="text" translatable="yes">Export all files in a folder:</property>
+                <property name="value">folder</property>
+                <property name="variable">string:exportMode</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="pygubu.builder.widgets.pathchooserinput" id="pathChooser">
+                <property name="state">disabled</property>
+                <property name="textvariable">string:exportPath</property>
+                <property name="title" translatable="yes">Select folder to export</property>
+                <property name="type">directory</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="fill">x</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Radiobutton" id="radiobutton4">
+                <property name="command" type="command" cbtype="simple">exportModeChanged</property>
+                <property name="justify">left</property>
+                <property name="text" translatable="yes">Export each file in the same folder as the original file. Only ask export paths for untitled files.
+</property>
+                <property name="value">current</property>
+                <property name="variable">string:exportMode</property>
+                <property name="wraplength">500</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="exportBtn">
+            <property name="command" type="command" cbtype="simple">export</property>
+            <property name="default">normal</property>
+            <property name="text" translatable="yes">Export</property>
+            <layout manager="pack">
+              <property name="anchor">ne</property>
+              <property name="padx">5</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

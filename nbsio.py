@@ -77,7 +77,7 @@ class Note:
     inst: int = -1
     key: int = -1
     vel: int = 100
-    pan: int = 100
+    pan: int = 0 # from -100 to 100 (saved as 0 to 200)
     pitch: int = 0
 
     @property
@@ -126,7 +126,7 @@ class Layer:
     name: str
     lock: bool = False
     volume: int = 100
-    stereo: int = 100
+    pan: int = 0 # same as Note.pan
     # solo: bool = False
 
 
@@ -148,7 +148,7 @@ VANILLA_INSTS = [
     Instrument("Flute", 'flute.ogg', 0, False, 'flute'),
     Instrument("Bell", 'bell.ogg', 0, False, 'bell'),
     Instrument("Chime", 'icechime.ogg', 0, False, 'chime'),
-    Instrument("Xylophone", 'xylophone.ogg', 0, False, 'xylophone'),
+    Instrument("Xylophone", 'xylobone.ogg', 0, False, 'xylophone'),
     Instrument("Iron Xylophone", 'iron_xylophone.ogg', 0, False, 'iron_xylophone'),
     Instrument("Cow Bell", 'cow_bell.ogg', 0, False, 'cow_bell'),
     Instrument("Didgeridoo", 'didgeridoo.ogg', 0, False, 'didgeridoo'),
@@ -258,11 +258,11 @@ class NbsSong:
                         key = readNumeric(f, BYTE)  # +21
                         if file_version >= 4:
                             vel = readNumeric(f, BYTE)
-                            pan = readNumeric(f, BYTE)
+                            pan = readNumeric(f, BYTE) - 100
                             pitch = readNumeric(f, SHORT_SIGNED)
                         else:
                             vel = 100
-                            pan = 100
+                            pan = 0
                             pitch = 0
                         if inst in PERC_INSTS:
                             if inst not in usedInsts[1]:
@@ -413,7 +413,7 @@ class NbsSong:
                         writeNumeric(f, BYTE, note.key)  # -21
                         if file_version >= 4:
                             writeNumeric(f, BYTE, note.vel)
-                            writeNumeric(f, BYTE, note.pan)
+                            writeNumeric(f, BYTE, note.pan + 100)
                             writeNumeric(f, SHORT_SIGNED, note.pitch)
                 # writeNumeric(f, SHORT, 0)
                 # writeNumeric(f, SHORT, 0)
@@ -425,7 +425,7 @@ class NbsSong:
                         writeNumeric(f, BYTE, layer.lock)  # Lock
                     writeNumeric(f, BYTE, layer.volume)  # Volume
                     if file_version >= 2:
-                        writeNumeric(f, BYTE, layer.stereo)  # Stereo
+                        writeNumeric(f, BYTE, layer.pan + 100)  # Panning
                 # Custom instrument
                 if len(customInsts) == 0:
                     writeNumeric(f, BYTE, 0)
