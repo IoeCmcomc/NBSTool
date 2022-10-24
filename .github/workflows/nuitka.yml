@@ -1,0 +1,47 @@
+name: Build with Nuitka
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest]
+        arch: [x86, x64]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Check-out repository
+      uses: actions/checkout@v3
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+        architecture: ${{ matrix.arch }} # optional x64 or x86. Defaults to x64 if not specified
+        cache: 'poetry'
+
+    - name: Python Poetry Action
+      uses: abatilo/actions-poetry@v2.1.6
+    
+    - name: Install Dependencies
+      run: poetry install
+        
+    - Name: Build Executable
+      uses: Nuitka/Nuitka-Action@v0.4
+      with:
+        script-name: main.py
+        standalone: true
+
+    - name: Easy Zip Files
+      uses: vimtor/action-zip@v1
+      with:
+        files: main.dist/
+        dest: ${{ runner.os }}_${{ matrix.arch }}.zip
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ runner.os }} ${{ matrix.arch }} Build
+        path: |
+          ${{ runner.os }}_${{ matrix.arch }}.zip
