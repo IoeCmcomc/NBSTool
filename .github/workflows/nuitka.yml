@@ -14,26 +14,23 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v3
 
+    - name: Install poetry
+      run: pipx install poetry
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.8' # Version range or exact version of a Python version to use, using SemVer's version range syntax
         architecture: ${{ matrix.arch }} # optional x64 or x86. Defaults to x64 if not specified
-        cache: 'pip'
+        cache: 'poetry'
 
-    - name: Install poetry
-      run: pip install poetry
-
-    - name: Install dependencies using pip
+    - name: Install dependencies
       run: |
-        poetry export -f requirements.txt -o requirements.txt --without-hashes
-        pip install -r requirements.txt
+        poetry install
         
     - name: Build standalone folder
-      uses: Nuitka/Nuitka-Action@v0.4
-      with:
-        script-name: main.py
-        standalone: true
+      run: |
+        poetry run nuitka --standalone --enable-plugin=tk-inter --enable-plugin=numpy --include-data-dir=sounds=sounds --include-data-dir=ffmpeg=ffmpeg --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --windows-icon-from-ico=icon.ico --windows-product-name=NBSTool --windows-company-name=IoeCmcomc --windows-product-name=0.1.0.0 --disable-console --show-anti-bloat-changes main.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
