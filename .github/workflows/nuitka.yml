@@ -6,7 +6,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, ubuntu-latest]
         arch: [x86, x64]
     runs-on: ${{ matrix.os }}
 
@@ -24,19 +24,29 @@ jobs:
         architecture: ${{ matrix.arch }} # optional x64 or x86. Defaults to x64 if not specified
         cache: 'poetry'
 
+    - name: Install external dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt install build-essential python3.8-dev python3.8-tk
+
     - name: Install dependencies
       run: |
         poetry install
         
-    - name: Build standalone folder
+    - name: Build standalone folder (Windows)
+      if: matrix.os == 'windows-latest'
       run: |
         poetry run nuitka --standalone --enable-plugin=tk-inter --enable-plugin=numpy --include-data-dir=sounds=sounds --include-data-dir=ffmpeg=ffmpeg --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --windows-icon-from-ico=icon.ico --windows-product-name=NBSTool --windows-company-name=IoeCmcomc --windows-product-version=0.1.0.0 --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
+
+    - name: Build standalone folder (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        poetry run nuitka --standalone --enable-plugin=tk-inter --enable-plugin=numpy --include-data-dir=sounds=sounds --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
       with:
         files: main.dist/
-        dest: ${{ runner.os }}_${{ matrix.arch }}.zip
+        dest: NBSTool_${{ runner.os }}_${{ matrix.arch }}.zip
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
