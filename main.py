@@ -27,7 +27,6 @@ import re
 import json
 import asyncio
 from asyncio import sleep, CancelledError
-
 from pathlib import Path
 from ast import literal_eval
 
@@ -35,7 +34,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from tkinter import BooleanVar, StringVar, IntVar, Variable
-from tkinter.messagebox import showerror
+from tkinter.messagebox import showerror, showwarning
 from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory, askopenfilenames
 
 import pygubu
@@ -45,15 +44,14 @@ from pygubu.widgets.dialog import Dialog
 from pygubu.builder import ttkstdwidgets, tkstdwidgets
 from pygubu.builder.widgets import tkscrollbarhelper, dialog, pathchooserinput
 import customwidgets
-
 import pygubu.builder.widgets.combobox
 
-from time import time
-from pprint import pprint
 from random import randint
 from math import floor, log2
 from datetime import timedelta
 from copy import deepcopy
+
+from pydub.utils import which
 
 from common import resource_path, BASE_RESOURCE_PATH
 from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
@@ -78,11 +76,13 @@ class MainWindow():
         style.layout('Barless.TNotebook.Tab', [])  # turn off tabs
         style.configure('Barless.TNotebook', borderwidth=0,
                         highlightthickness=0)
+        if os.name =='posix':
+            ttk.Style().theme_use('clam')
 
         self.fileTable: ttk.Treeview = builder.get_object('fileTable')
         applyBtn = builder.get_object('applyBtn')
 
-        self.toplevel.title("NBS Tool")
+        self.toplevel.title("NBSTool")
         centerToplevel(self.toplevel)
 
         self.initMenuBar()
@@ -791,7 +791,6 @@ class ExportDialog:
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
-        print(resource_path(ui_file))
         builder.add_from_file(resource_path(ui_file))
 
         self.d: Dialog = builder.get_object('dialog', master)
@@ -927,6 +926,18 @@ class AudioExportDialog(ExportDialog):
 
         self.stereo.set(True)  # type: ignore
         self.includeLocked.set(True)  # type: ignore
+
+        if not (which('ffmpeg') and which('ffprobe')):
+            if os.name == 'nt':
+                instructionMsg = """
+Make sure there are ffmpeg.exe and ffprobe.exe inside the ffmpeg/bin folder.
+If not, you can download ffmpeg then put these two files in ffmpeg/bin folder."""
+            elif os.name == 'posix':
+                instructionMsg = """
+Make sure the ffmpeg package is installed in the system.
+Use "sudo apt install ffmpeg" command to install ffmpeg."""
+            showwarning("ffmpeg not found",
+            "NBSTool can't find ffmpeg, which is required to render audio." + instructionMsg)
 
     def formatChanged(self, *args):
         self.fileExt = '.' + self.builder.get_object('formatCombo').current()
@@ -1374,12 +1385,7 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
 if __name__ == "__main__":
     app = MainWindow()
 
-    print(sys.argv)
-
     if len(sys.argv) == 2:
         app.addFiles(paths=[sys.argv[1], ])
 
-    print('Ready')
     app.mainwin.mainloop()
-
-    print("The app was closed.")

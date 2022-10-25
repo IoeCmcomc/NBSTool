@@ -1,11 +1,12 @@
 from asyncio import sleep
-from os import environ
+from os import environ, name as os_name
 from typing import Optional, Sequence
 
 from pynbs import File, Header, Note, Layer, Instrument
 
 from common import resource_path
-environ["PATH"] += resource_path('ffmpeg', 'bin')
+if os_name == 'nt':
+    environ["PATH"] += resource_path('ffmpeg', 'bin')
 
 from nbswave import audio, nbs, SongRenderer
 from nbswave.main import MissingInstrumentException
