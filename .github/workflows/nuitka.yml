@@ -8,6 +8,10 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
         arch: [x86, x64]
+        exclude:
+          - os: ubuntu-latest
+            arch: x86
+    
     runs-on: ${{ matrix.os }}
 
     steps:
