@@ -44,7 +44,7 @@ jobs:
     - name: Build standalone folder (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
-        poetry run nuitka --standalone --enable-plugin=tk-inter --enable-plugin=numpy --include-data-dir=sounds=sounds --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
+        poetry run python3 -m nuitka --standalone --enable-plugin=tk-inter --enable-plugin=numpy --include-data-dir=sounds=sounds --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
