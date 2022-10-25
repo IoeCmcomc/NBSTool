@@ -33,8 +33,7 @@ jobs:
       run: sudo apt install build-essential python3.8-dev python3.8-tk
 
     - name: Install dependencies
-      run: |
-        poetry install
+      run: poetry install
         
     - name: Build standalone folder (Windows)
       if: matrix.os == 'windows-latest'
@@ -56,5 +55,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ runner.os }} ${{ matrix.arch }} Build
-        path: |
-          ${{ runner.os }}_${{ matrix.arch }}.zip
+        path: NBSTool_${{ runner.os }}_${{ matrix.arch }}.zip
