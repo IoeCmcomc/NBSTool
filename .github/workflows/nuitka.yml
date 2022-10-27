@@ -33,7 +33,10 @@ jobs:
       run: sudo apt install build-essential python3.8-dev python3.8-tk
 
     - name: Install dependencies
-      run: poetry install
+      run: |
+        poetry config virtualenvs.in-project true
+        poetry install
+        poetry run python -c "import sys; print(sys.version)"
         
     - name: Build standalone folder (Windows)
       if: matrix.os == 'windows-latest'
