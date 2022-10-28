@@ -60,7 +60,7 @@ from nbs2midi import nbs2midi
 from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
 
-__version__ = '0.1.0'
+__version__ = '1.1.0'
 globalIncVar = 0
 
 
@@ -928,6 +928,7 @@ class AudioExportDialog(ExportDialog):
         self.includeLocked.set(True)  # type: ignore
 
         if not (which('ffmpeg') and which('ffprobe')):
+            instructionMsg = ''
             if os.name == 'nt':
                 instructionMsg = """
 Make sure there are ffmpeg.exe and ffprobe.exe inside the ffmpeg/bin folder.
