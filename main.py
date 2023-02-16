@@ -1319,7 +1319,7 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
                     """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
 execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
-""".format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note['inst']].index(note['layer']), instname=instruments[note.inst].sound_id, key=max(33, min(57, note.key)) - 33)
+""".format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note.inst].index(note.layer), instname=instruments[note.inst].sound_id, key=max(33, min(57, note.key)) - 33)
         if tick < length-1:
             text += "scoreboard players set @s {}_t {}".format(
                 scoreObj, tick)
@@ -1349,22 +1349,22 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
                     try:
                         if len(colNotes[min1]) > 0:
                             text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}\n".format(
-                                scoreObj, min1*80, (max1+1)*80+40, min1-1, bname, min1)
+                                scoreObj, min1*80, (max1+1)*80+160, min1-1, bname, min1)
                     except KeyError:
-                        break
+                        pass
                     if min2 <= length:
                         try:
                             if len(colNotes[min2]) > 0:
                                 text += "execute as @s[scores={{{0}={1}..{2}, {0}_t=..{3}}}] run function {4}:notes/{5}".format(
-                                    scoreObj, min2*80, (max2+1)*80+40, min2-1, bname, min2)
+                                    scoreObj, min2*80, (max2+1)*80+160, min2-1, bname, min2)
                         except KeyError:
-                            break
+                            pass
                 else:  # Don't play yet, refine the search
                     for i in range(min1, min(max1, length)+1):
                         try:
                             if len(colNotes[i]) > 0:
                                 text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}\n".format(
-                                    scoreObj, min1*80, (max1+1)*80+40, bname, min1, max1)
+                                    scoreObj, min1*80, (max1+1)*80+160, bname, min1, max1)
                                 break
                         except KeyError:
                             break
@@ -1372,7 +1372,7 @@ execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s 
                         try:
                             if len(colNotes[i]) > 0:
                                 text += "execute as @s[scores={{{}={}..{}}}] run function {}:tree/{}_{}".format(
-                                    scoreObj, min2*80, (max2+2)*80+40, bname, min2, max2)
+                                    scoreObj, min2*80, (max2+2)*80+160, bname, min2, max2)
                                 break
                         except KeyError:
                             break

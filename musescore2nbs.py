@@ -319,7 +319,7 @@ Return:
         raise FileError("This file isn't a MuseScore file")
 
     if version := xml.findtext('programVersion'):
-        if not version.startswith('3'):
+        if not (version.startswith('3') or version.startswith('4')):
             raise NotImplementedError("This file is created by a older version of MuseScore. Please use MuseScore 3 to re-save the files before importing.")
 
     nbs: NbsSong = NbsSong()
