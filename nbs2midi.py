@@ -154,7 +154,10 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     '''
     headers, notes, layers = data.header, data.notes, data.layers
 
-    timeSign = headers.time_sign
+    # The time signature upper number in ONBS
+    # doesn't affect the overall tempo at all.S
+    # timeSign = headers.time_sign
+    timeSign = 4
     tempo = headers.tempo * 60 / 4 # BPM
     layersLen = len(layers)
 
