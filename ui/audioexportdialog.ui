@@ -4,6 +4,7 @@
     <property name="height">100</property>
     <property name="modal">true</property>
     <property name="resizable">none</property>
+    <property name="title" translatable="yes">Export to audio files</property>
     <property name="width">200</property>
     <child>
       <object class="ttk.Frame" id="frame">

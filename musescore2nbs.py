@@ -253,7 +253,7 @@ durationMap = {
     "whole": 16,
 }
 
-MAX_TEMPO = 30
+MAX_TEMPO = 60
 
 class FileError(Exception):
     pass
@@ -454,7 +454,7 @@ Return:
                                 key = int(note.find("pitch").text) - 21
                             else:
                                 drumIndex = int(note.find("pitch").text)
-                                if drumIndex > 23: # Vrevent access to None values in DRUM_INFO
+                                if drumIndex > 23: # Prevent access to None values in DRUM_INFO
                                     _, inst, key = DRUM_INFO[drumIndex if drumIndex < len(DRUM_INFO) else 24]
                                     key += 36
                                     isPerc = True

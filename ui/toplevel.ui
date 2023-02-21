@@ -785,6 +785,13 @@
         <property name="tearoff">false</property>
         <property name="underline">0</property>
         <child>
+          <object class="tk.Menuitem.Command" id="importMidi">
+            <property name="command" type="command" cbtype="simple">callMidiImportDialog</property>
+            <property name="label" translatable="yes">from MIDI files...</property>
+            <property name="underline">0</property>
+          </object>
+        </child>
+        <child>
           <object class="tk.Menuitem.Command" id="importMuseScore">
             <property name="command" type="command" cbtype="simple">callMuseScoreImportDialog</property>
             <property name="label" translatable="yes">from MuseScore files...</property>

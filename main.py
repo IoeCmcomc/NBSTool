@@ -19,7 +19,7 @@
 
 import sys
 import os
-from typing import Callable, Coroutine, Iterable, List, Literal, Union
+from typing import Callable, Coroutine, Iterable, List, Literal, Optional, Union
 import webbrowser
 import copy
 import traceback
@@ -57,6 +57,7 @@ from common import resource_path, BASE_RESOURCE_PATH
 from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
 from mcsp2nbs import mcsp2nbs
 from nbs2midi import nbs2midi
+from midi2nbs import midi2nbs
 from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
 
@@ -416,6 +417,11 @@ class MainWindow():
         self.arrangeMode.set('none')
         # self.builder.get_object('arrangeGroupPrec').state(('!selected',))
 
+    def callMidiImportDialog(self):
+        dialog = MidiImportDialog(self.toplevel, self)
+        dialog.run()
+        del dialog
+    
     def callMuseScoreImportDialog(self):
         dialog = MuseScoreImportDialog(self.toplevel, self)
         dialog.run()
@@ -781,7 +787,7 @@ ExportDialogFunc = Callable[[NbsSong, str, ProgressDialog], Coroutine]
 
 
 class ExportDialog:
-    def __init__(self, master, parent, fileExt: str, title: str, progressTitle: str,
+    def __init__(self, master, parent, fileExt: str, title: Optional[str], progressTitle: str,
                  func: ExportDialogFunc, ui_file='ui/exportdialog.ui'):
         self.master = master
         self.parent = parent
@@ -794,7 +800,8 @@ class ExportDialog:
         builder.add_from_file(resource_path(ui_file))
 
         self.d: Dialog = builder.get_object('dialog', master)
-        self.d.set_title(title)
+        if title:
+            self.d.set_title(title)
         builder.get_object('pathChooser').bind(
             '<<PathChooserPathChanged>>', self.pathChanged)
 
@@ -914,7 +921,7 @@ class JsonExportDialog(ExportDialog):
 
 class AudioExportDialog(ExportDialog):
     def __init__(self, master, parent):
-        super().__init__(master, parent, '.wav', "Audio exporting",
+        super().__init__(master, parent, '.wav', None,
                          "Exporting {} files to audio...", self.audioExport, 'ui/audioexportdialog.ui')
 
         formatCombo = self.builder.get_object('formatCombo')
@@ -1075,6 +1082,123 @@ class MuseScoreImportDialog:
         dialog = ProgressDialog(self.d.toplevel, self)
         # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
         dialog.d.set_title("Importing {} MuseScore files".format(fileCount))
+        dialog.totalMax = fileCount
+        dialog.run(work)
+
+
+class MidiImportDialog:
+    def __init__(self, master, parent):
+        self.master = master
+        self.parent = parent
+
+        self.autoExpand: BooleanVar
+        self.filePaths: StringVar
+        self.expandMult: IntVar
+        self.importDuration: BooleanVar
+        self.durationSpacing: IntVar
+        self.importVelocity: BooleanVar
+        self.importPitch: BooleanVar
+        self.importPanning: BooleanVar
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path('ui/midiimportdialog.ui'))
+
+        self.d: Dialog = builder.get_object('dialog', master)
+
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+        self.autoExpand.set(True)
+        self.importPitch.set(True)
+        self.importPanning.set(True)
+        self.importVelocity.set(True)
+        self.filePaths.trace_add("write", self.pathChanged)
+
+    def run(self):
+        self.d.run()
+
+    def browse(self):
+        types = (("Musical Instrument Digital Interface (MIDI) files",
+                    ('*.mid', '*.midi')), ('All files', '*'),)
+        paths = askopenfilenames(filetypes=types)
+
+        self.filePaths.set(str(paths))
+
+    def autoExpandChanged(self):
+        self.builder.get_object('expandScale')[
+            'state'] = 'disabled' if self.autoExpand.get() else 'normal'
+
+    def importDurationChanged(self):
+        self.builder.get_object('durationSpacingLabel')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        self.builder.get_object('durationSpacingSpin')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+
+    def pathChanged(self, *args):
+        self.builder.get_object('importBtn')['state'] = 'normal' if (
+            self.filePaths.get() != '') else 'disabled'
+
+    def onImport(self, _=None):
+        if not self.autoExpand.get():
+            self.pathChanged()
+            if self.filePaths.get() == '':
+                self.pathChanged()
+                return
+
+        paths = literal_eval(self.filePaths.get())
+        if isinstance(paths, str):
+            paths = parseFilePaths(paths)
+        fileCount = len(paths)
+
+        async def work(dialog: ProgressDialog):
+            try:
+                songsData: list = self.parent.songsData
+                filePaths: list = self.parent.filePaths
+                for i, filePath in enumerate(paths):
+                    try:
+                        dialog.totalProgress.set(i)
+                        dialog.totalText.set(
+                            "Importing {} / {} files".format(i+1, fileCount))
+                        dialog.currentProgress.set(0)
+                        dialog.currentText.set(
+                            "Current file: {}".format(filePath))
+                        expandMult = int(self.expandMult.get()) if not self.autoExpand.get() else 0
+                        task = asyncio.create_task(midi2nbs(
+                            filePath, expandMult, self.importDuration.get(),
+                            self.durationSpacing.get(), self.importVelocity.get(),
+                            self.importPanning.get(), self.importPitch.get(),
+                            dialog))
+                        while True:
+                            done, pending = await asyncio.wait({task}, timeout=0)
+                            if task in done:
+                                songData = task.result()
+                                await task
+                                break
+                        if not songData:
+                            raise Exception(
+                                "The file {} cannot be read as a vaild MIDI file.".format(filePath))
+                        dialog.currentProgress.set(80)
+                        await sleep(0.001)
+                        songsData.append(songData)
+                        filePaths.append('')
+                        self.parent.addFileInfo('', songData)
+                        await sleep(0.001)
+                    except CancelledError:
+                        raise
+                    except Exception as e:
+                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
+                            filePath, e.__class__.__name__, e))
+                        print(traceback.format_exc())
+                        continue
+                dialog.totalProgress.set(dialog.currentMax)
+            except CancelledError:
+                raise
+            # self.d.toplevel.after(1, self.d.destroy)
+
+        dialog = ProgressDialog(self.d.toplevel, self)
+        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialog.d.set_title("Importing {} MIDI files".format(fileCount))
         dialog.totalMax = fileCount
         dialog.run(work)
 

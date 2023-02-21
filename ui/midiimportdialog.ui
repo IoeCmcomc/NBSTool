@@ -1,0 +1,218 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.2">
+  <object class="pygubu.builder.widgets.dialog" id="dialog">
+    <property name="height">100</property>
+    <property name="modal">false</property>
+    <property name="title" translatable="yes">Import from MIDI files</property>
+    <property name="width">200</property>
+    <child>
+      <object class="ttk.Frame" id="frame1">
+        <property name="height">200</property>
+        <property name="padding">5</property>
+        <property name="width">200</property>
+        <layout manager="pack">
+          <property name="expand">true</property>
+          <property name="fill">both</property>
+          <property name="padx">5</property>
+          <property name="pady">3</property>
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="tk.LabelFrame" id="labelframe4">
+            <property name="height">200</property>
+            <property name="padx">5</property>
+            <property name="pady">5</property>
+            <property name="text" translatable="yes">Select files</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="ttk.Entry" id="pathInput">
+                <property name="textvariable">string:filePaths</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">x</property>
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Button" id="browseBtn">
+                <property name="command" type="command" cbtype="simple">browse</property>
+                <property name="text" translatable="yes">Browse...</property>
+                <layout manager="pack">
+                  <property name="side">left</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="tk.LabelFrame" id="labelframe5">
+            <property name="height">200</property>
+            <property name="padx">5</property>
+            <property name="pady">5</property>
+            <property name="text" translatable="yes">Options</property>
+            <property name="width">200</property>
+            <layout manager="pack">
+              <property name="expand">true</property>
+              <property name="fill">both</property>
+              <property name="pady">7</property>
+              <property name="side">top</property>
+            </layout>
+            <child>
+              <object class="tk.Frame" id="frame2">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Checkbutton" id="checkbutton2">
+                    <property name="text" translatable="yes">Import note velocity</property>
+                    <property name="variable">boolean:importVelocity</property>
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Checkbutton" id="checkbutton3">
+                    <property name="text" translatable="yes">Import note panning</property>
+                    <property name="variable">boolean:importPanning</property>
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Checkbutton" id="checkbutton4">
+                    <property name="text" translatable="yes">Import note pitch (microtones)</property>
+                    <property name="variable">boolean:importPitch</property>
+                    <layout manager="pack">
+                      <property name="anchor">nw</property>
+                      <property name="side">left</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Separator" id="separator1">
+                <property name="orient">horizontal</property>
+                <layout manager="pack">
+                  <property name="fill">x</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Frame" id="frame3">
+                <property name="height">200</property>
+                <property name="width">200</property>
+                <layout manager="pack">
+                  <property name="fill">both</property>
+                  <property name="pady">5</property>
+                  <property name="side">top</property>
+                </layout>
+                <child>
+                  <object class="ttk.Checkbutton" id="checkbutton5">
+                    <property name="command" type="command" cbtype="simple">importDurationChanged</property>
+                    <property name="text" translatable="yes">Import each long MIDI note as multiple notes</property>
+                    <property name="variable">boolean:importDuration</property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="columnspan">3</property>
+                      <property name="row">0</property>
+                      <property name="sticky">w</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Label" id="durationSpacingLabel">
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">Spacing between notes: </property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="padx">20</property>
+                      <property name="row">1</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Spinbox" id="durationSpacingSpin">
+                    <property name="from_">0</property>
+                    <property name="increment">1</property>
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">1</property>
+                    <property name="textvariable">int:durationSpacing</property>
+                    <property name="to">10</property>
+                    <layout manager="grid">
+                      <property name="column">1</property>
+                      <property name="row">1</property>
+                      <property name="sticky">e</property>
+                    </layout>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Separator" id="separator2">
+                <property name="orient">horizontal</property>
+                <layout manager="pack">
+                  <property name="fill">x</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="ttk.Checkbutton" id="checkbutton1">
+                <property name="command" type="command" cbtype="simple">autoExpandChanged</property>
+                <property name="text" translatable="yes">Automatically expand the spaces between notes to fit as many notes as possible.</property>
+                <property name="variable">boolean:autoExpand</property>
+                <layout manager="pack">
+                  <property name="anchor">nw</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="tk.Scale" id="expandScale">
+                <property name="from_">1</property>
+                <property name="label" translatable="yes">Expand multiplier (manual space-expanding):</property>
+                <property name="length">300</property>
+                <property name="orient">horizontal</property>
+                <property name="resolution">1</property>
+                <property name="state">disabled</property>
+                <property name="tickinterval">1</property>
+                <property name="to">30</property>
+                <property name="variable">string:expandMult</property>
+                <layout manager="pack">
+                  <property name="expand">true</property>
+                  <property name="fill">x</property>
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Button" id="importBtn">
+            <property name="command" type="command" cbtype="simple">onImport</property>
+            <property name="state">disabled</property>
+            <property name="text" translatable="yes">Import</property>
+            <layout manager="pack">
+              <property name="anchor">e</property>
+              <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

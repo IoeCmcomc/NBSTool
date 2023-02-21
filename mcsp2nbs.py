@@ -39,7 +39,7 @@ def mcsp2nbs(filename: str) -> NbsSong:
         header.auto_save = auto_save != 0
         header.auto_save_time = auto_save
         header.name = main_elements.pop(0)
-        header.author =main_elements.pop(0)
+        header.author = main_elements.pop(0)
         header.orig_author = main_elements.pop(0)
         header.import_name = filename
 
