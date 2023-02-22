@@ -18,73 +18,30 @@
 
 
 from asyncio import sleep
+from numpy import interp
 
 from mido import Message, MetaMessage, MidiFile, MidiTrack, bpm2tempo
 
 from nbsio import NbsSong
+from common import MIDI_DRUMS, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
 
-PERCUSSIONS = (
-        #(percussion_key, instrument, key)
-        (35, 2, 64),
-        (36, 2, 60),
-        (37, 4, 60),
-        (38, 3, 62),
-        #(39, 4, 60),
-        (40, 3, 58),
-        #(41, 2, 60),
-        (42, 3, 76),
-        (43, 2, 67),
-        #(44, 3, 76),
-        (45, 2, 69),
-        (46, 2, 72),
-        (47, 2, 74),
-        (48, 2, 77),
-        (49, 2, 71),
-        (50, 3, 77),
-        (51, 3, 78),
-        (52, 3, 62),
-        (53, 3, 67),
-        (54, 3, 72),
-        (55, 3, 73),
-        (56, 4, 55),
-        #(57, 3, 67),
-        (58, 4, 56),
-        #(59, 3, 67),
-        (60, 4, 63),
-        (61, 4, 57),
-        (62, 4, 62),
-        (63, 2, 76),
-        (64, 3, 69),
-        #(65, 3, 67),
-        #(66, 3, 62),
-        #(67, 4, 62),
-        (68, 4, 58),
-        (69, 4, 74),
-        (70, 4, 77),
-        (73, 3, 71),
-        (74, 4, 65),
-        (75, 4, 72),
-        (76, 4, 64),
-        (77, 4, 59),
-        (80, 4, 71),
-        (81, 4, 76),
-        (82, 3, 78)
-    )
+MIDI_DRUMS_BY_NBS_KEY_INST = {
+    (obj.nbs_pitch, obj.nbs_instrument): obj.pitch for obj in MIDI_DRUMS}
 
 INST_PROGRAMS = {
     0: 1, # Harp: Piano
-    1: 33, # Double bass: Acoustic bass
-    5: 25, # Guitar: Acoustic guitar (nylon)
-    6: 74, # Flute: Flute
-    7: 10, # Bell: Glockenspiel
-    8: 113, # Chime: Tinkle bell (wind chime)
-    9: 14, # Xylophone: Xylophone
-    10: 12, # Iron Xylophone: Vibraphone
-    11: 1,
-    12: 1,
-    13: 81, # Bit: Lead 1 (square)
-    14: 106, # Banjo: Banjo
-    15: 6, # Pling: Electric piano 2
+    1: 32, # Double bass: Acoustic bass
+    5: 28, # Guitar: Acoustic guitar (steel)
+    6: 73, # Flute: Flute
+    7: 10, # Bell: Music box
+    8: 112, # Chime: Tinkle bell (wind chime)
+    9: 13, # Xylophone: Xylophone
+    10: 11, # Iron Xylophone: Vibraphone
+    11: 12, # Cow Bell: Marimba
+    12: 43, # Didgeridoo: Contrabass
+    13: 80, # Bit: Lead 1 (square)
+    14: 105, # Banjo: Banjo
+    15: 16, # Pling: Drawbar organ
 }
 
 INST2PITCH = {
@@ -118,10 +75,9 @@ def firstInstInLayer(nbs: NbsSong, layer: int) -> int:
 class MsgComparator:
     def __init__(self, msg: Message) -> None:
         self.msg = msg
-        self.isMeta = isinstance(msg, MetaMessage)
 
     def __lt__(self, other: 'MsgComparator') -> bool:
-        if (not self.isMeta) and isinstance(other.msg, Message):
+        if (not self.msg.is_meta) and other.msg.is_meta:
             return self.msg.time < other.msg.time # type: ignore
         else:
             return False
@@ -155,23 +111,30 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     headers, notes, layers = data.header, data.notes, data.layers
 
     # The time signature upper number in ONBS
-    # doesn't affect the overall tempo at all.S
+    # doesn't affect the overall tempo at all.
     # timeSign = headers.time_sign
     timeSign = 4
-    tempo = headers.tempo * 60 / 4 # BPM
+    tempo = headers.tempo * 60 / timeSign # BPM
     layersLen = len(layers)
 
     mid = MidiFile(type=1)
     tpb = mid.ticks_per_beat
-    note_tpb = int(tpb / 4)
-    tracks = []
+    note_tpb = int(tpb / timeSign)
+    tracks: list[MidiTrack] = []
 
     for i in range(data.maxLayer+1):
+        layer = layers[i]
         programCode = INST_PROGRAMS.get(firstInstInLayer(data, i), 1) - 1
 
         track = MidiTrack()
+        track.append(MetaMessage(
+            'time_signature', numerator=headers.time_sign, denominator=4, time=0))
         track.append(MetaMessage('set_tempo', tempo=bpm2tempo(tempo), time=0))
         track.append(Message('program_change', program=programCode, time=0))
+        track.append(Message(
+            'control_change', control=7, value=int(layer.volume * 127 / 100), time=0))
+        pan = int(interp(layer.pan, (-100, 100), (0, 127)))
+        track.append(Message('control_change', control=10, value=pan, time=0))
 
         tracks.append(track)
     if dialog:
@@ -183,23 +146,18 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
         abs_time = int(note.tick / timeSign * tpb)
         pitch = note.key + 21
         trackIndex = note.layer
-        layerVel = 100
-        if trackIndex < layersLen:
-            layerVel = layers[trackIndex].volume
-        velocity = int(note.vel * (layerVel / 100) / 100 * 127)
+        velocity = int(note.vel * 127 / 100)
+        pan = int(interp(layers[trackIndex].pan, (-100, 100), (0, 127)))
 
-        isPerc = False
+        tracks[trackIndex].append(Message(
+            'control_change', control=10, value=pan, time=abs_time))
+        
         if note.isPerc:
             inst: int = note.inst
-            for a, b, c in PERCUSSIONS:
-                if c == pitch and b == inst:
-                    pitch = a
-                    break
-            else:
-                pitch = INST2PITCH[inst]
-            isPerc = True
+            pitch = MIDI_DRUMS_BY_NBS_KEY_INST.get((pitch, inst), INST2PITCH[inst])
+            keyShift = MIDI_INSTRUMENTS[inst].octave_shift * 12
+            pitch -= keyShift
 
-        if isPerc:
             tracks[trackIndex].append(Message('note_on', channel=9, note=pitch, velocity=velocity, time=abs_time))
             tracks[trackIndex].append(Message('note_off', channel=9, note=pitch, velocity=velocity, time=abs_time + note_tpb))
         else:
