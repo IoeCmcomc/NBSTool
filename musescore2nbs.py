@@ -24,211 +24,9 @@ from functools import lru_cache
 from os.path import basename
 from asyncio import sleep
 
-INST_INFO = (
-    ('Acoustic Grand Piano', 0, 0, 'Grand Piano'),
-    ('Bright Acoustic Piano', 0, 0, 'Acoustic Piano'),
-    ('Electric Grand Piano', 13, 0, 'E. Grand Piano'),
-    ('Honky - tonk Piano', 0, 0, 'H.T. Piano'),
-    ('Electric Piano 1', 13, 0, 'E. Piano 1'),
-    ('Electric Piano 2', 13, 0, 'E. Piano 2'),
-    ('Harpsichord', 0, 1, ''),
-    ('Clavinet', 0, 0, ''),
-    ('Celesta', 11, -1, ''),
-    ('Glockenspiel', 11, 0, ''),
-    ('Music Box', 11, 0, ''),
-    ('Vibraphone', 11, 0, ''),
-    ('Marimba', 11, 0, ''),
-    ('Xylophone', 9, 0, ''),
-    ('Tubular Bells', 7, -1, 'T. Bells'),
-    ('Dulcimer', 7, 0, ''),
-    ('Drawbar Organ', 1, 1, 'D. Organ'),
-    ('Percussive Organ', 1, 1, 'P. Organ'),
-    ('Rock Organ', 0, 0, ''),
-    ('Church Organ', 0, 0, ''),
-    ('Reed Organ', 0, 0, ''),
-    ('Accordion', 0, 0, ''),
-    ('Harmonica', 0, 0, ''),
-    ('Tango Accordion', 0, 0, 'T. Accordion'),
-    ('Acoustic Guitar (nylon)', 5, 0, 'A.Guitar(nylon)'),
-    ('Acoustic Guitar (steel)', 5, 0, 'A.Guitar(steel)'),
-    ('Electric Guitar (jazz)', 5, 1, 'E.Guitar(jazz)'),
-    ('Electric Guitar (clean)', 5, 0, 'E.Guitar(clean)'),
-    ('Electric Guitar (muted)', -1, 0, 'E.Guitar(mute)'),
-    ('Overdriven Guitar', 5, -1, 'OD Guitar'),
-    ('Distortion Guitar', 5, -1, 'Dist. Guitar'),
-    ('Guitar Harmonics', 5, 0, 'Guitar H.'),
-    ('Acoustic Bass', 1, 1, 'A. Bass'),
-    ('Electric Bass (finger)', 1, 2, 'E.Bass (finger)'),
-    ('Electric Bass (pick)', 1, 2, 'E.Bass (pick)'),
-    ('Fretless Bass', 1, 2, ''),
-    ('Slap Bass 1', 1, 2, ''),
-    ('Slap Bass 2', 1, 2, ''),
-    ('Synth Bass 1', 1, 2, ''),
-    ('Synth Bass 2', 1, 2, ''),
-    ('Violin', 6, 0, ''),
-    ('Viola', 6, 0, ''),
-    ('Cello', 6, 0, ''),
-    ('Contrabass', 6, 0, ''),
-    ('Tremolo Strings', 0, 0, 'T. Strings'),
-    ('Pizzicato Strings', 0, 0, 'P. Strings'),
-    ('Orchestral Harp', 8, 0, 'O. Harp'),
-    ('Timpani', 3, 1, ''),
-    ('String Ensemble 1', 0, 0, 'String E. 1'),
-    ('String Ensemble 2', 0, 0, 'String E. 2'),
-    ('Synth Strings 1', 0, 0, 'S. Strings 1'),
-    ('Synth Strings 2', 0, 0, 'S. Strings 2'),
-    ('Choir Aahs', 0, 0, ''),
-    ('Voice Oohs', 0, 0, ''),
-    ('Synth Choir', 0, 0, ''),
-    ('Orchestra hit', 0, 0, 'O. Hit'),
-    ('Trumpet', 0, 0, ''),
-    ('Trombone', 0, 0, ''),
-    ('Tuba', 0, 0, ''),
-    ('Muted Trumpet', 0, 0, ''),
-    ('French Horn', 0, 0, ''),
-    ('Brass Section', 0, 0, ''),
-    ('Synth Brass 1', 1, 1, 'S. Brass 1'),
-    ('Synth Brass 2', 1, 1, 'S. Brass 2'),
-    ('Soprano Sax', 6, 0, ''),
-    ('Alto Sax', 6, 0, ''),
-    ('Tenor Sax', 6, 0, ''),
-    ('Baritone Sax', 6, 0, ''),
-    ('Oboe', 6, 0, ''),
-    ('English Horn', 6, 0, ''),
-    ('Bassoon', 6, -1, ''),
-    ('Clarinet', 6, 0, ''),
-    ('Piccolo', 6, -1, ''),
-    ('Flute', 6, -1, ''),
-    ('Recorder', 6, -1, ''),
-    ('Pan Flute', 6, -1, ''),
-    ('Blown Bottle', 6, -1, ''),
-    ('Shakuhachi', 6, -1, ''),
-    ('Whistle', 6, -1, ''),
-    ('Ocarina', 6, -1, ''),
-    ('Lead 1 (square)', 0, 0, 'L.1 (square)'),
-    ('Lead 2 (sawtooth)', 0, 0, 'L.2 (sawtooth)'),
-    ('Lead 3 (calliope)', 0, 0, 'L.3 (calliope)'),
-    ('Lead 4 (chiff)', 0, 0, 'L.4 (chiff)'),
-    ('Lead 5 (charang)', 0, 0, 'L.5 (charang)'),
-    ('Lead 6 (voice)', 0, 0, 'L.6 (voice)'),
-    ('Lead 7 (fifths)', 0, 0, 'L.7 (fifths)'),
-    ('Lead 8 (bass + lead)', 0, 1, 'L.8 (bass + lead)'),
-    ('Pad 1 (new age)', 0, 0, 'P.1 (new age)'),
-    ('Pad 2 (warm)', 0, 0, 'P.2 (warm)'),
-    ('Pad 3 (polysynth)', 0, 0, 'P.3 (polysynth)'),
-    ('Pad 4 (choir)', 0, 0, 'P.4 (choir)'),
-    ('Pad 5 (bowed)', 0, 0, 'P.5 (bowed)'),
-    ('Pad 6 (metallic)', 0, 0, 'P.6 (metallic)'),
-    ('Pad 7 (halo)', 0, 0, 'P.7 (halo)'),
-    ('Pad 8 (sweep)', 0, 0, 'P.8 (sweep)'),
-    ('FX 1 (rain)', -1, 0, 'Fx (rain)'),
-    ('FX 2 (soundtrack)', -1, 0, 'Fx (strack)'),
-    ('FX 3 (crystal)', 13, 0, 'Fx (crystal)'),
-    ('FX 4 (atmosphere)', 0, 0, 'Fx (atmosph.)'),
-    ('FX 5 (brightness)', 0, 0, 'Fx (bright.)'),
-    ('FX 6 (goblins)', -1, 0, 'Fx (goblins)'),
-    ('FX 7 (echoes)', -1, 0, 'Fx (echoes)'),
-    ('FX 8 (sci - fi)', -1, 0, 'Fx (sci - fi)'),
-    ('Sitar', 14, 0, ''),
-    ('Banjo', 14, 0, ''),
-    ('Shamisen', 14, 0, ''),
-    ('Koto', 14, 0, ''),
-    ('Kalimba', 1, 1, ''),
-    ('Bagpipe', 0, 0, ''),
-    ('Fiddle', 0, 0, ''),
-    ('Shanai', 0, 0, ''),
-    ('Tinkle Bell', 7, -1, ''),
-    ('Agogo', 0, 0, ''),
-    ('Steel Drums', 10, 0, ''),
-    ('Woodblock', 4, 0, ''),
-    ('Taiko Drum', 3, 0, ''),
-    ('Melodic Tom', 3, -1, ''),
-    ('Synth Drum', 3, 0, ''),
-    ('Reverse Cymbal', -1, 0, 'Rev. Cymbal'),
-    ('Guitar Fret Noise', -1, 0, 'Guitar F. Noise'),
-    ('Breath Noise', -1, 0, ''),
-    ('Seashore', -1, 0, ''),
-    ('Bird Tweet', -1, 0, ''),
-    ('Telephone Ring', -1, 0, 'Telephone'),
-    ('Helicopter', -1, 0, ''),
-    ('Applause', -1, 0, ''),
-    ('Gunshot', 0, 0, ''),
-    ('Percussion', -1, 0, ''),
-)
+from common import MIDI_INSTRUMENTS, MIDI_DRUMS
 
-_EMPTY_TUPLE = ('', -1, -1)
-
-DRUM_INFO = (
-    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
-    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
-    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
-    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
-    _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE, _EMPTY_TUPLE,
-    ('Zap', -1, 0),
-    ('Brush hit hard', -1, 0),
-    ('Brush circle', -1, 0),
-    ('Brush hit soft', -1, 0),
-    ('Brush hit and circle', -1, 0),
-    ('Drumroll', -1, 0),
-    ('Castanets', -1, 0),
-    ('Snare Drum 3', -1, 0),
-    ('Drumsticks hitting', -1, 0),
-    ('Bass Drum 3', -1, 0),
-    ('Hard hit snare', -1, 0),
-    ('Bass Drum 2', 2, 10),
-    ('Bass Drum 1', 2, 6),
-    ('Side Stick', 4, 6),
-    ('Snare Drum 1', 3, 8),
-    ('Hand Clap', 4, 6),
-    ('Snare Drum 2', 3, 4),
-    ('Low Tom 2', 2, 6),
-    ('Closed Hi - hat', 3, 22),
-    ('Low Tom 1', 2, 13),
-    ('Pedal Hi - hat', 3, 22),
-    ('Mid Tom 2', 2, 15),
-    ('Open Hi - hat', 3, 18),
-    ('Mid Tom 1', 2, 20),
-    ('High Tom 2', 2, 23),
-    ('Crash Cymbal 1', 3, 17),
-    ('High Tom 1', 2, 23),
-    ('Ride Cymbal 1', 3, 24),
-    ('Chinese Cymbal', 3, 8),
-    ('Ride Bell', 3, 13),
-    ('Tambourine', 4, 18),
-    ('Splash Cymbal', 3, 18),
-    ('Cowbell', 4, 1),
-    ('Crash Cymbal 2', 3, 13),
-    ('Vibra Slap', 4, 2),
-    ('Ride Cymbal 2', 3, 13),
-    ('High Bongo', 4, 9),
-    ('Low Bongo', 4, 2),
-    ('Mute High Conga', 4, 8),
-    ('Open High Conga', 2, 22),
-    ('Low Conga', 2, 15),
-    ('High Timbale', 3, 13),
-    ('Low Timbale', 3, 8),
-    ('High Agogo', 4, 8),
-    ('Low Agogo', 4, 3),
-    ('Cabasa', 4, 20),
-    ('Maracas', 4, 23),
-    ('Short Whistle', -1, 0),
-    ('Long Whistle', -1, 0),
-    ('Short Goiro', 4, 17),
-    ('Long Goiro', 4, 11),
-    ('Claves', 4, 18),
-    ('High Wood Block', 4, 9),
-    ('Low Wood Block', 4, 5),
-    ('Mute Cuoca', -1, 0),
-    ('Open Cuoca', -1, 0),
-    ('Mute Triangle', 4, 17),
-    ('Open Triangle', 4, 22),
-    ('Shaker', 3, 22),
-    ('Jingle bell', -1, 0),
-    ('Bell tree', -1, 0),
-    ('Castanets', 4, 21),
-    ('Mute Surdo', 2, 14),
-    ('Open Surdo', 2, 7),
-)
+MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 
 expandMulDict = {
     "64th": 4,
@@ -320,7 +118,7 @@ Return:
 
     if version := xml.findtext('programVersion'):
         if not (version.startswith('3') or version.startswith('4')):
-            raise NotImplementedError("This file is created by a older version of MuseScore. Please use MuseScore 3 to re-save the files before importing.")
+            raise NotImplementedError("This file is created by a older version of MuseScore. Please use MuseScore 3 or 4 to re-save the files before importing.")
 
     nbs: NbsSong = NbsSong()
 
@@ -362,13 +160,15 @@ Return:
 
     staffInsts = {}
     for part in score.iterfind("Part"):
-        isPerc = bool(part.xpath("Instrument[@id='drumset']")) or bool(part.xpath("Staff/StaffType[@group='percussion']"))
+        isPerc = bool(part.xpath("Instrument[@id='drumset']")) \
+            or bool(part.xpath("Staff/StaffType[@group='percussion']"))
         program = int(part.find("Instrument/Channel/program").get("value"))
         for staff in part.iterfind("Staff"):
             staffId = int(staff.get("id"))
             if staffId not in emptyStaffs:
                 # INST_INFO[-1] is the percussion (drumset) instrument
-                staffInsts[staffId] = INST_INFO[program] if not isPerc else INST_INFO[-1]
+                staffInsts[staffId] = \
+                    MIDI_INSTRUMENTS[program] if not isPerc else MIDI_INSTRUMENTS[-1]
 
     tempo: float = header.tempo
 
@@ -454,11 +254,10 @@ Return:
                                 key = int(note.find("pitch").text) - 21
                             else:
                                 drumIndex = int(note.find("pitch").text)
-                                if drumIndex > 23: # Prevent access to None values in DRUM_INFO
-                                    _, inst, key = DRUM_INFO[drumIndex if drumIndex < len(DRUM_INFO) else 24]
-                                    key += 36
-                                    isPerc = True
-                                    if inst == -1: inst = 0
+                                _, _, inst, key = MIDI_DRUMS_BY_MIDI_PITCH.get(drumIndex, MIDI_DRUMS[27])
+                                key += 36
+                                isPerc = True
+                                if inst == -1: inst = 0
                             tuning = note.find("tuning")
                             pitch = int(float(tuning.text)) if tuning is not None else 0
                             # TODO: Support relative velocity
