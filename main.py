@@ -1200,9 +1200,8 @@ class ImportDialog:
         self.progressTitle = progressTitle
         self.func = func
 
-        self.autoExpand: BooleanVar
+        
         self.filePaths: StringVar
-        self.expandMult: IntVar
 
         self.builder = builder = pygubu.Builder()
         builder.add_resource_path(resource_path())
@@ -1317,142 +1316,52 @@ class JsonImportDialog(ImportDialog):
         return nbs
 
 
-class MuseScoreImportDialog:
+class MuseScoreImportDialog(ImportDialog):
     def __init__(self, master, parent):
-        self.master = master
-        self.parent = parent
-
         self.autoExpand: BooleanVar
-        self.filePaths: StringVar
         self.expandMult: IntVar
 
-        self.builder = builder = pygubu.Builder()
-        builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/musescoreimportdialog.ui'))
-
-        self.d: Dialog = builder.get_object('dialog', master)
-
-        builder.connect_callbacks(self)
-        builder.import_variables(self)
+        fileExts = (("MuseScore files", ('*.mscz', '*.mscx')), ('All files', '*'),)
+        super().__init__(master, parent, fileExts, None,
+            "Importing {} MIDI files", self.convert, "ui/musescoreimportdialog.ui")
 
         self.autoExpand.set(True)
-        self.filePaths.trace_add("write", self.pathChanged)
 
-    def run(self):
-        self.d.run()
-
-    def browse(self):
-        types = (("MuseScore files", ('*.mscz', '*.mscx')), ('All files', '*'),)
-        paths = askopenfilenames(filetypes=types)
-
-        self.filePaths.set(str(paths))
+    async def convert(self, filepath: str, dialog: ProgressDialog):
+        return await musescore2nbs(
+            filepath, self.expandMult.get(), self.autoExpand.get(), dialog)
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[
             'state'] = 'disabled' if self.autoExpand.get() else 'normal'
 
-    def pathChanged(self, *args):
-        self.builder.get_object('importBtn')['state'] = 'normal' if (
-            self.filePaths.get() != '') else 'disabled'
 
-    def onImport(self, _=None):
-        if not self.autoExpand.get():
-            self.pathChanged()
-            if self.filePaths.get() == '':
-                self.pathChanged()
-                return
-
-        paths = literal_eval(self.filePaths.get())
-        if isinstance(paths, str):
-            paths = parseFilePaths(paths)
-        fileCount = len(paths)
-
-        async def work(dialog: ProgressDialog):
-            try:
-                songsData: list = self.parent.songsData
-                filePaths: list = self.parent.filePaths
-                for i, filePath in enumerate(paths):
-                    try:
-                        dialog.totalProgress.set(i)
-                        dialog.totalText.set(
-                            "Importing {} / {} files".format(i+1, fileCount))
-                        dialog.currentProgress.set(0)
-                        dialog.currentText.set(
-                            "Current file: {}".format(filePath))
-                        task = asyncio.create_task(musescore2nbs(
-                            filePath, self.expandMult.get(), self.autoExpand.get(), dialog))
-                        while True:
-                            done, pending = await asyncio.wait({task}, timeout=0)
-                            if task in done:
-                                songData = task.result()
-                                await task
-                                break
-                        if not songData:
-                            raise Exception(
-                                "The file {} cannot be read as a vaild XML file.".format(filePath))
-                        dialog.currentProgress.set(80)
-                        await sleep(0.001)
-                        songsData.append(songData)
-                        filePaths.append('')
-                        self.parent.addFileInfo('', songData)
-                        await sleep(0.001)
-                    except CancelledError:
-                        raise
-                    except Exception as e:
-                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
-                            filePath, e.__class__.__name__, e))
-                        print(traceback.format_exc())
-                        continue
-                dialog.totalProgress.set(dialog.currentMax)
-            except CancelledError:
-                raise
-            # self.d.toplevel.after(1, self.d.destroy)
-
-        dialog = ProgressDialog(self.d.toplevel, self)
-        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
-        dialog.d.set_title("Importing {} MuseScore files".format(fileCount))
-        dialog.totalMax = fileCount
-        dialog.run(work)
-
-
-class MidiImportDialog:
+class MidiImportDialog(ImportDialog):
     def __init__(self, master, parent):
-        self.master = master
-        self.parent = parent
-
         self.autoExpand: BooleanVar
-        self.filePaths: StringVar
         self.expandMult: IntVar
         self.importDuration: BooleanVar
         self.durationSpacing: IntVar
         self.importVelocity: BooleanVar
         self.importPitch: BooleanVar
         self.importPanning: BooleanVar
-
-        self.builder = builder = pygubu.Builder()
-        builder.add_resource_path(resource_path())
-        builder.add_from_file(resource_path('ui/midiimportdialog.ui'))
-
-        self.d: Dialog = builder.get_object('dialog', master)
-
-        builder.connect_callbacks(self)
-        builder.import_variables(self)
+        
+        fileExts = (("Musical Instrument Digital Interface (MIDI) files",
+                    ('*.mid', '*.midi')), ('All files', '*'),)
+        super().__init__(master, parent, fileExts, None,
+            "Importing {} MIDI files", self.convert, "ui/midiimportdialog.ui")
 
         self.autoExpand.set(True)
         self.importPitch.set(True)
         self.importPanning.set(True)
         self.importVelocity.set(True)
-        self.filePaths.trace_add("write", self.pathChanged)
 
-    def run(self):
-        self.d.run()
-
-    def browse(self):
-        types = (("Musical Instrument Digital Interface (MIDI) files",
-                    ('*.mid', '*.midi')), ('All files', '*'),)
-        paths = askopenfilenames(filetypes=types)
-
-        self.filePaths.set(str(paths))
+    async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
+        expandMult = int(self.expandMult.get()) if not self.autoExpand.get() else 0
+        return await midi2nbs(filepath, expandMult, self.importDuration.get(),
+                            self.durationSpacing.get(), self.importVelocity.get(),
+                            self.importPanning.get(), self.importPitch.get(),
+                            dialog)
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[
@@ -1463,73 +1372,6 @@ class MidiImportDialog:
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
         self.builder.get_object('durationSpacingSpin')[
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
-
-    def pathChanged(self, *args):
-        self.builder.get_object('importBtn')['state'] = 'normal' if (
-            self.filePaths.get() != '') else 'disabled'
-
-    def onImport(self, _=None):
-        if not self.autoExpand.get():
-            self.pathChanged()
-            if self.filePaths.get() == '':
-                self.pathChanged()
-                return
-
-        paths = literal_eval(self.filePaths.get())
-        if isinstance(paths, str):
-            paths = parseFilePaths(paths)
-        fileCount = len(paths)
-
-        async def work(dialog: ProgressDialog):
-            try:
-                songsData: list = self.parent.songsData
-                filePaths: list = self.parent.filePaths
-                for i, filePath in enumerate(paths):
-                    try:
-                        dialog.totalProgress.set(i)
-                        dialog.totalText.set(
-                            "Importing {} / {} files".format(i+1, fileCount))
-                        dialog.currentProgress.set(0)
-                        dialog.currentText.set(
-                            "Current file: {}".format(filePath))
-                        expandMult = int(self.expandMult.get()) if not self.autoExpand.get() else 0
-                        task = asyncio.create_task(midi2nbs(
-                            filePath, expandMult, self.importDuration.get(),
-                            self.durationSpacing.get(), self.importVelocity.get(),
-                            self.importPanning.get(), self.importPitch.get(),
-                            dialog))
-                        while True:
-                            done, pending = await asyncio.wait({task}, timeout=0)
-                            if task in done:
-                                songData = task.result()
-                                await task
-                                break
-                        if not songData:
-                            raise Exception(
-                                "The file {} cannot be read as a vaild MIDI file.".format(filePath))
-                        dialog.currentProgress.set(80)
-                        await sleep(0.001)
-                        songsData.append(songData)
-                        filePaths.append('')
-                        self.parent.addFileInfo('', songData)
-                        await sleep(0.001)
-                    except CancelledError:
-                        raise
-                    except Exception as e:
-                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
-                            filePath, e.__class__.__name__, e))
-                        print(traceback.format_exc())
-                        continue
-                dialog.totalProgress.set(dialog.currentMax)
-            except CancelledError:
-                raise
-            # self.d.toplevel.after(1, self.d.destroy)
-
-        dialog = ProgressDialog(self.d.toplevel, self)
-        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
-        dialog.d.set_title("Importing {} MIDI files".format(fileCount))
-        dialog.totalMax = fileCount
-        dialog.run(work)
 
 
 class AboutDialog:
