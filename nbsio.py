@@ -285,8 +285,7 @@ class NbsSong:
                         lock = False
                     vol = readNumeric(f, BYTE)  # Volume
                     vol = 100 if vol == -1 else vol
-                    stereo = readNumeric(
-                        f, BYTE) if file_version >= 2 else 100  # Stereo
+                    stereo = (readNumeric(f, BYTE) - 100) if file_version >= 2 else 0  # Stereo
                     layers.append(Layer(name, lock, vol, stereo))
                 name = vol = stereo = None
                 # Custom instrument

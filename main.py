@@ -19,7 +19,7 @@
 
 import sys
 import os
-from typing import Callable, Coroutine, Iterable, List, Literal, Optional, Union
+from typing import Callable, Coroutine, Iterable, List, Literal, Optional, Union, Any
 import webbrowser
 import copy
 import traceback
@@ -29,6 +29,7 @@ import asyncio
 from asyncio import sleep, CancelledError
 from pathlib import Path
 from ast import literal_eval
+from datetime import datetime
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -52,9 +53,10 @@ from datetime import timedelta
 from copy import deepcopy
 
 from pydub.utils import which
+from jsonschema import validate
 
 from common import resource_path, BASE_RESOURCE_PATH
-from nbsio import NBS_VERSION, VANILLA_INSTS, NbsSong, Note
+from nbsio import NBS_VERSION, VANILLA_INSTS, Layer, NbsSong, Note, Instrument
 from mcsp2nbs import mcsp2nbs
 from nbs2midi import nbs2midi
 from midi2nbs import midi2nbs
@@ -64,6 +66,199 @@ from nbs2audio import nbs2audio
 __version__ = '1.1.0'
 globalIncVar = 0
 
+NBS_JSON_SCHEMA = {
+    "type":"object",
+    "properties":{
+        "header":{
+            "type":"object",
+            "properties":{
+                "length":{
+                    "type":"integer"
+                },
+                "file_version":{
+                    "type":"integer"
+                },
+                "vani_inst":{
+                    "type":"integer"
+                },
+                "height":{
+                    "type":"integer"
+                },
+                "name":{
+                    "type":"string"
+                },
+                "author":{
+                    "type":"string"
+                },
+                "orig_author":{
+                    "type":"string"
+                },
+                "description":{
+                    "type":"string"
+                },
+                "tempo":{
+                    "type":"number"
+                },
+                "auto_save":{
+                    "type":"boolean"
+                },
+                "auto_save_time":{
+                    "type":"integer"
+                },
+                "time_sign":{
+                    "type":"integer"
+                },
+                "minutes_spent":{
+                    "type":"integer"
+                },
+                "left_clicks":{
+                    "type":"integer"
+                },
+                "right_clicks":{
+                    "type":"integer"
+                },
+                "block_added":{
+                    "type":"integer"
+                },
+                "block_removed":{
+                    "type":"integer"
+                },
+                "import_name":{
+                    "type":"string"
+                },
+                "loop":{
+                    "type":"boolean"
+                },
+                "loop_max":{
+                    "type":"integer"
+                },
+                "loop_start":{
+                    "type":"integer"
+                }
+            },
+            "required":[
+                "author",
+                "auto_save",
+                "auto_save_time",
+                "block_added",
+                "block_removed",
+                "description",
+                "file_version",
+                "height",
+                "import_name",
+                "left_clicks",
+                "length",
+                "minutes_spent",
+                "name",
+                "orig_author",
+                "right_clicks",
+                "tempo",
+                "time_sign",
+                "vani_inst"
+            ]
+        },
+        "notes":{
+            "type":"array",
+            "items":{
+                "type":"object",
+                "properties":{
+                    "tick":{
+                        "type":"integer"
+                    },
+                    "layer":{
+                        "type":"integer"
+                    },
+                    "inst":{
+                        "type":"integer"
+                    },
+                    "key":{
+                        "type":"integer"
+                    },
+                    "vel":{
+                        "type":"integer"
+                    },
+                    "pan":{
+                        "type":"integer"
+                    },
+                    "pitch":{
+                        "type":"integer"
+                    }
+                },
+                "required":[
+                    "inst",
+                    "key",
+                    "layer",
+                    "pan",
+                    "pitch",
+                    "tick",
+                    "vel"
+                ]
+            }
+        },
+        "layers":{
+            "type":"array",
+            "items":{
+                "type":"object",
+                "properties":{
+                    "name":{
+                        "type":"string"
+                    },
+                    "lock":{
+                        "type":"boolean"
+                    },
+                    "volume":{
+                        "type":"integer"
+                    },
+                    "pan":{
+                        "type":"integer"
+                    }
+                },
+                "required":[
+                    "lock",
+                    "name",
+                    "pan",
+                    "volume"
+                ]
+            }
+        },
+        "custom_instruments":{
+            "type":"array",
+            "items":{
+                "type":"object",
+                "properties":{
+                    "name":{
+                        "type":"string"
+                    },
+                    "filePath":{
+                        "type":"string"
+                    },
+                    "pitch":{
+                        "type":"integer"
+                    },
+                    "pressKeys":{
+                        "type":"boolean"
+                    },
+                    "sound_id":{
+                        "type":"string"
+                    }
+                },
+                "required":[
+                    "filePath",
+                    "name",
+                    "pitch",
+                    "pressKeys",
+                    "sound_id"
+                ]
+            }
+        }
+    },
+    "required":[
+        "custom_instruments",
+        "header",
+        "layers",
+        "notes"
+    ]
+}
 
 class MainWindow():
     def __init__(self):
@@ -345,8 +540,10 @@ class MainWindow():
                     i = fileTable.index(item)
                     filePath = self.filePaths[i]
                     if filePath == '':
-                        filePath = self.songsData[i].header.import_name.rsplit('.', 1)[
-                            0] + '.nbs'
+                        fileName = self.songsData[i].header.import_name.rsplit('.', 1)[0]
+                        if fileName == '':
+                            fileName = f'Untitled {datetime.now()}'
+                        filePath = fileName + '.nbs'
                         savedPath = os.path.join(path, filePath)
                         fileTable.item(item, text=savedPath)
                         self.filePaths[i] = savedPath
@@ -424,6 +621,11 @@ class MainWindow():
     
     def callMuseScoreImportDialog(self):
         dialog = MuseScoreImportDialog(self.toplevel, self)
+        dialog.run()
+        del dialog
+
+    def callJsonImportDialog(self):
+        dialog = JsonImportDialog(self.toplevel, self)
         dialog.run()
         del dialog
 
@@ -785,7 +987,6 @@ class ProgressDialog:
 
 ExportDialogFunc = Callable[[NbsSong, str, ProgressDialog], Coroutine]
 
-
 class ExportDialog:
     def __init__(self, master, parent, fileExt: str, title: Optional[str], progressTitle: str,
                  func: ExportDialogFunc, ui_file='ui/exportdialog.ui'):
@@ -906,8 +1107,7 @@ class JsonExportDialog(ExportDialog):
         insts = [inst.__dict__ for inst in data.customInsts]
 
         exportData = {'header': data.header.__dict__, 'notes': notes,
-                      'layers': layers, 'custom_instruments': insts,
-                      'appendix': data.appendix}
+                      'layers': layers, 'custom_instruments': insts}
 
         dialog.currentProgress.set(60)  # 60%
         await sleep(0.001)
@@ -986,6 +1186,135 @@ def parseFilePaths(string: str) -> tuple:
         else:
             filePath += char
     return tuple(ret)
+
+
+ImportDialogFunc = Callable[[str, ProgressDialog], Coroutine[Any, Any, NbsSong]]
+
+class ImportDialog:
+    def __init__(self, master, parent, fileExts: tuple, title: Optional[str], progressTitle: str,
+                 func: ImportDialogFunc, ui_file='ui/importdialog.ui'):
+        self.master = master
+        self.parent = parent
+        self.fileExts = fileExts
+        self.title = title
+        self.progressTitle = progressTitle
+        self.func = func
+
+        self.autoExpand: BooleanVar
+        self.filePaths: StringVar
+        self.expandMult: IntVar
+
+        self.builder = builder = pygubu.Builder()
+        builder.add_resource_path(resource_path())
+        builder.add_from_file(resource_path(ui_file))
+
+        self.d: Dialog = builder.get_object('dialog', master)
+        if title:
+            self.d.set_title(title)
+
+        builder.connect_callbacks(self)
+        builder.import_variables(self)
+
+        self.filePaths.trace_add("write", self.pathChanged)
+
+    def run(self):
+        self.d.run()
+
+    def browse(self):
+        paths = askopenfilenames(filetypes=self.fileExts)
+
+        self.filePaths.set(str(paths))
+
+    def pathChanged(self, *args):
+        self.builder.get_object('importBtn')['state'] = 'normal' if (
+            self.filePaths.get() != '') else 'disabled'
+
+    def onImport(self, _=None):
+        self.pathChanged()
+        if self.filePaths.get() == '':
+            self.pathChanged()
+            return
+
+        paths = literal_eval(self.filePaths.get())
+        if isinstance(paths, str):
+            paths = parseFilePaths(paths)
+        fileCount = len(paths)
+
+        async def work(dialog: ProgressDialog):
+            try:
+                songsData: list = self.parent.songsData
+                filePaths: list = self.parent.filePaths
+                for i, filePath in enumerate(paths):
+                    try:
+                        dialog.totalProgress.set(i)
+                        dialog.totalText.set(
+                            "Importing {} / {} files".format(i+1, fileCount))
+                        dialog.currentProgress.set(0)
+                        dialog.currentText.set(
+                            "Current file: {}".format(filePath))
+                        task = asyncio.create_task(self.func(filePath, dialog))
+                        while True:
+                            done, pending = await asyncio.wait({task}, timeout=0)
+                            if task in done:
+                                songData = task.result()
+                                await task
+                                break
+                        if not songData:
+                            raise Exception(
+                                "The file {} is empty or cannot be imported.".format(filePath))
+                        dialog.currentProgress.set(80)
+                        await sleep(0.001)
+                        songsData.append(songData)
+                        filePaths.append('')
+                        self.parent.addFileInfo('', songData)
+                        await sleep(0.001)
+                    except CancelledError:
+                        raise
+                    except Exception as e:
+                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
+                            filePath, e.__class__.__name__, e))
+                        print(traceback.format_exc())
+                        continue
+                dialog.totalProgress.set(dialog.currentMax)
+            except CancelledError:
+                raise
+            # self.d.toplevel.after(1, self.d.destroy)
+
+        dialog = ProgressDialog(self.d.toplevel, self)
+        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialog.d.set_title(self.progressTitle.format(fileCount))
+        dialog.totalMax = fileCount
+        dialog.run(work)
+
+
+class JsonImportDialog(ImportDialog):
+    def __init__(self, master, parent):
+        fileExts = (("JSON files", '*.json'), ('All files', '*'),)
+        super().__init__(master, parent, fileExts, "Import from JSON files",
+            "Importing {} JSON files", self.convert)
+    
+    async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
+        j = {}
+        with open(filepath, 'r') as f:
+            j = json.load(f)
+        validate(j, NBS_JSON_SCHEMA)
+
+        if dialog:
+            dialog.currentProgress.set(50)
+            await sleep(0.001)
+
+        nbs = NbsSong()
+        header, notes, layers, customInsts = nbs.header, nbs.notes, nbs.layers, nbs.customInsts
+        header.__dict__ = j['header']
+        header.import_name = os.path.basename(filepath)
+        for note in j['notes']:
+            notes.append(Note(**note))
+        for layer in j['layers']:
+            layers.append(Layer(**layer))
+        for inst in j['custom_instruments']:
+            customInsts.append(Instrument(**inst))
+
+        return nbs
 
 
 class MuseScoreImportDialog:
@@ -1327,7 +1656,7 @@ def compactNotes(data: NbsSong, groupPerc: Union[int, BooleanVar] = 1) -> None:
 def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None):
     def writejson(path, jsout):
         with open(path, 'w') as f:
-            json.dump(jsout, f, ensure_ascii=False)
+            json.dump(jsout, f, ensure_ascii=True)
 
     def writemcfunction(path, text):
         with open(path, 'w') as f:
