@@ -24,6 +24,7 @@ import warnings
 from warnings import warn
 from dataclasses import dataclass
 from functools import total_ordering
+import traceback
 
 BYTE = Struct('<B')
 SHORT = Struct('<H')
@@ -60,8 +61,8 @@ def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
 
 def write_string(f: BinaryIO, v) -> None:
     if not v.isascii():
-        warn("The string '{}' will be written to file as '{}'.".format(
-            v, v.encode("ascii", "replace")))
+        previewStr = v.encode("ascii", "replace")
+        warn(f"The string '{v}' will be written to file as '{previewStr}'.")
         v = v.encode("ascii", "replace")
     else:
         v = v.encode()
@@ -172,7 +173,7 @@ class NbsSong:
         return self.header.length
 
     def __repr__(self):
-        return "<NbsSong notes={}, layers={}, customInsts={}>".format(len(self.notes), len(self.layers), len(self.customInsts))
+        return f"<NbsSong notes={len(self.notes)}, layers={len(self.layers)}, customInsts={len(self.customInsts)}>"
 
     def readHeader(self, f: BinaryIO) -> None:
         '''Read a .nbs file header from a file object'''
@@ -193,7 +194,7 @@ class NbsSong:
                 f, BYTE)  # Version
             if file_version > NBS_VERSION:
                 raise NotImplementedError(
-                    "This format version ({}) is not supported.".format(file_version))
+                    f"This format version ({file_version}) is not supported.")
             header.vani_inst = readNumeric(f, BYTE)
         if file_version >= 3:
             header.length = readNumeric(f, SHORT)
@@ -303,7 +304,7 @@ class NbsSong:
                 try:
                     f.close()
                 except:
-                    pass
+                    print(traceback.format_exc())
         self.notes, self.layers, self.customInsts, self.hasPerc, self.maxLayer, self.usedInsts = \
             notes, layers, customInsts, hasPerc, maxLayer, (tuple(
                 usedInsts[0]), tuple(usedInsts[1]))

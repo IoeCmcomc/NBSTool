@@ -88,13 +88,13 @@ def writencf(data):
 					else:
 						ele = str(subi) + ele
 				else:
-					ext.append('{}-'.format(subi))
+					ext.append(f'{subi}-')
 				dur -= sub
 				c += 1
 
 		key = note['key'] - 27
 
-		ele += '{}{}'.format(tunes[key%12], key//12 + 1) + ' '.join(ext)
+		ele += f'{tunes[key%12]}{key//12 + 1}' + ' '.join(ext)
 
 		out.append(ele)
 

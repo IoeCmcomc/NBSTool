@@ -3,6 +3,7 @@ from os import environ, name as os_name
 from typing import Optional, Sequence
 
 from pynbs import File, Header, Note, Layer, Instrument
+from pydub import AudioSegment
 
 from common import resource_path
 if os_name == 'nt':
@@ -81,12 +82,11 @@ class Renderer(SongRenderer):
         ignore_missing_instruments: bool = False,
         sample_rate: Optional[int] = 44100,
         channels: Optional[int] = 2,
-        bit_depth: Optional[int] = 16,
+        bit_depth: int = 16,
     ) -> audio.Track:
 
         track_length = self.get_length(self._song.weighted_notes())  # type: ignore
 
-        assert bit_depth is not None
         mixer = audio.Mixer(
             sample_width=bit_depth // 8,
             frame_rate=sample_rate,
@@ -102,8 +102,8 @@ class Renderer(SongRenderer):
         last_pan = None
 
         note_count = len(sorted_notes)
-        sound = sound1 = sound2 = sound3 = None
         for i, note in enumerate(sorted_notes):
+            sound = sound1 = sound2 = sound3 = sound4 = AudioSegment()
 
             ins = note.instrument
             key = note.key
@@ -134,14 +134,12 @@ class Renderer(SongRenderer):
 
                 sound1 = audio.sync(sound1)
 
-            assert sound1 is not None
             if key != last_key:
                 last_vol = None
                 last_pan = None
                 pitch = audio.key_to_pitch(key)
                 sound2 = audio.change_speed(sound1, pitch)
 
-            assert sound2 is not None
             if vol != last_vol:
                 last_pan = None
                 gain = audio.vol_to_gain(vol)

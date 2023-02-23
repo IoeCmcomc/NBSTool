@@ -19,6 +19,7 @@
 
 import sys
 import os
+from os import path as os_path
 from typing import Callable, Coroutine, Iterable, List, Literal, Optional, Union, Any
 import webbrowser
 import copy
@@ -389,8 +390,8 @@ class MainWindow():
             self.selectedFilesVersion = -1
             return
         self.selectedFilesVersion = fileVersion
-        self.selectedFilesVerStr.set("Selected file(s) format version: {: >8}".format(
-            fileVersion if fileVersion > 0 else 'Classic'))
+        self.selectedFilesVerStr.set(
+            f"Selected file(s) format version: {fileVersion if fileVersion > 0 else 'Classic': >8}")
         notebook.select(1)
         for i, index in enumerate(selection):
             header = self.songsData[index].header
@@ -458,7 +459,7 @@ class MainWindow():
         global globalIncVar
         if filePath == '':
             globalIncVar += 1
-            filePath = "[Not saved] ({})".format(globalIncVar)
+            filePath = f"[Not saved] ({globalIncVar})"
         header = songData.header
         length = timedelta(seconds=floor(
             header.length / header.tempo)) if header.length != None else "Not calculated"
@@ -488,8 +489,7 @@ class MainWindow():
                         "This file format is not supported. However, you can try importing from the 'Import' menu instead.")
                 self.songsData.append(songData)
             except Exception as e:
-                showerror("Opening file error", 'Cannot open file "{}"\n{}: {}'.format(
-                    filePath, e.__class__.__name__, e))
+                showerror("Opening file error", f'Cannot open file "{filePath}"\n{e.__class__.__name__}: {e}')
                 print(traceback.format_exc())
                 continue
             self.addFileInfo(filePath, songData)
@@ -536,22 +536,23 @@ class MainWindow():
             Path(path).mkdir(parents=True, exist_ok=True)
             self.disabledFileTable()
             for item in selection:
+                i = fileTable.index(item)
+                filePath = self.filePaths[i]
+                if filePath == '':
+                    fileName = self.songsData[i].header.import_name.rsplit('.', 1)[0]
+                    if fileName == '':
+                        fileName = f'Untitled {datetime.now()}'
+                    filePath = fileName + '.nbs'
+                savedPath = os.path.join(path, filePath)
+                fileTable.item(item, text=savedPath)
+                self.filePaths[i] = savedPath
                 try:
-                    i = fileTable.index(item)
-                    filePath = self.filePaths[i]
-                    if filePath == '':
-                        fileName = self.songsData[i].header.import_name.rsplit('.', 1)[0]
-                        if fileName == '':
-                            fileName = f'Untitled {datetime.now()}'
-                        filePath = fileName + '.nbs'
-                        savedPath = os.path.join(path, filePath)
-                        fileTable.item(item, text=savedPath)
-                        self.filePaths[i] = savedPath
                     self.songsData[i].write(os.path.join(
                         path, os.path.basename(filePath)))
                 except Exception as e:
-                    showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
-                        os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))  # type: ignore
+                    showerror("Saving file error",
+                        f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}'
+                    )
                     print(traceback.format_exc())
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -578,8 +579,8 @@ class MainWindow():
                 self.songsData[i].write(os.path.join(
                     path, os.path.basename(filePath)))
             except Exception as e:
-                showerror("Saving file error", 'Cannot save file "{}"\n{}: {}'.format(
-                    os.path.join(path, os.path.basename(filePath)), e.__class__.__name__, e))
+                showerror("Saving file error", 
+                    f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}')
                 print(traceback.format_exc())
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
@@ -1504,7 +1505,7 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
         with open(path, 'w') as f:
             f.write(text)
 
-    def makeFolderTree(inp, a=[]):
+    def makeFolderTree(inp, a=list()):
         if isinstance(inp, (tuple, set)):
             for el in inp:
                 makeFolderTree(el, copy.copy(a))

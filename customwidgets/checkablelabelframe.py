@@ -26,6 +26,7 @@ from tkinter.messagebox import showinfo
 from tkinter import Checkbutton, Button, IntVar
 from tkinter.ttk import LabelFrame
 from tkinter.ttk import Widget as TtkWidget
+import traceback
 from typing import Any
 
 class CheckableLabelFrame(LabelFrame):
@@ -104,7 +105,7 @@ class CheckableLabelFrame(LabelFrame):
                         else:
                             descendent["state"] = state
                 except tk.TclError:
-                    pass
+                    print(traceback.format_exc())
 
 
     def _handler(self) -> None:
