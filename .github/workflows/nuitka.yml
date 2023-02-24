@@ -6,7 +6,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-20.04]
         arch: [x86, x64]
         exclude:
           - os: ubuntu-20.04
