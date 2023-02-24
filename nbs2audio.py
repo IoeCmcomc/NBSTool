@@ -50,6 +50,8 @@ def convert(data: NbsSong) -> File:
 
     layers = [Layer(id=i, name=layer.name, lock=layer.lock, volume=layer.volume,
                     panning=layer.pan) for i, layer in enumerate(data.layers)]
+    while len(layers) < data.maxLayer+1:
+        layers.append(Layer(id=len(layers)))
 
     instruments = [Instrument(id=i, name=inst.name, file=inst.filePath, pitch=inst.pitch,
                               press_key=inst.pressKeys) for i, inst in enumerate(VANILLA_INSTS + data.customInsts)]
@@ -105,9 +107,8 @@ class Renderer(SongRenderer):
         last_pan = None
 
         note_count = len(sorted_notes)
+        sound = sound1 = sound2 = sound3 = sound4 = AudioSegment.empty()
         for i, note in enumerate(sorted_notes):
-            sound = sound1 = sound2 = sound3 = sound4 = AudioSegment()
-
             ins = note.instrument
             key = note.key
             vol = note.velocity
