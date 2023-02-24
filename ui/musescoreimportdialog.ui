@@ -106,6 +106,16 @@
             </layout>
           </object>
         </child>
+        <child>
+          <object class="customwidgets.wrapmessage" id="wrapmessage1">
+            <property name="foreground">#ff8000</property>
+            <property name="text" translatable="yes">MuseScore file format doesn't have any official specifications because the file format is constantly changing and not interchangeable by design. Therefore, importing from MuseScore files will be removed in upcoming versions.</property>
+            <layout manager="pack">
+              <property name="fill">both</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
   </object>
