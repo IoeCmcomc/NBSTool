@@ -41,7 +41,7 @@ jobs:
     - name: Build standalone folder (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        poetry run nuitka --standalone --enable-plugin=tk-inter --include-data-dir=sounds=sounds --include-data-dir=ffmpeg=ffmpeg --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --windows-icon-from-ico=icon.ico --windows-product-name=NBSTool --windows-company-name=IoeCmcomc --windows-file-version=1.1.0.0 --windows-product-version=1.1.0.0 --windows-file-description=NBSTool --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
+        poetry run nuitka --standalone --enable-plugin=tk-inter --include-data-dir=sounds=sounds --include-data-dir=ffmpeg=ffmpeg --include-data-dir=ui=ui --include-data-files=icon.ico=icon.ico --windows-icon-from-ico=icon.ico --windows-product-name=NBSTool --windows-company-name=IoeCmcomc --windows-file-version=1.2.0.0 --windows-product-version=1.2.0.0 --windows-file-description=NBSTool --disable-console --show-anti-bloat-changes --assume-yes-for-downloads main.py
 
     - name: Build standalone folder (Linux)
       if: matrix.os == 'ubuntu-20.04'

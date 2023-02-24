@@ -61,7 +61,7 @@ from nbs2audio import nbs2audio
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 NBS_JSON_SCHEMA = {
     "type":"object",
