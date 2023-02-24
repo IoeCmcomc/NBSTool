@@ -70,67 +70,100 @@ NBS_JSON_SCHEMA = {
             "type":"object",
             "properties":{
                 "length":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 65535
                 },
                 "file_version":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 255
                 },
                 "vani_inst":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 65535
                 },
                 "height":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 65535
                 },
                 "name":{
-                    "type":"string"
+                    "type":"string",
+                    "maxLength": 4294967295
                 },
                 "author":{
-                    "type":"string"
+                    "type":"string",
+                    "maxLength": 4294967295
                 },
                 "orig_author":{
-                    "type":"string"
+                    "type":"string",
+                    "maxLength": 4294967295
                 },
                 "description":{
-                    "type":"string"
+                    "type":"string",
+                    "maxLength": 4294967295
                 },
                 "tempo":{
-                    "type":"number"
+                    "type":"number",
+                    "minimun": 0,
+                    "maximum": 655.35
                 },
                 "auto_save":{
                     "type":"boolean"
                 },
                 "auto_save_time":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 255
                 },
                 "time_sign":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 255
                 },
                 "minutes_spent":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 4294967295
                 },
                 "left_clicks":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 4294967295
                 },
                 "right_clicks":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 4294967295
                 },
                 "block_added":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 4294967295
                 },
                 "block_removed":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 4294967295
                 },
                 "import_name":{
-                    "type":"string"
+                    "type":"string",
+                    "maxLength": 4294967295
                 },
                 "loop":{
                     "type":"boolean"
                 },
                 "loop_max":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 255
                 },
                 "loop_start":{
-                    "type":"integer"
+                    "type":"integer",
+                    "minimun": 0,
+                    "maximum": 65535
                 }
             },
             "required":[
@@ -156,39 +189,51 @@ NBS_JSON_SCHEMA = {
         },
         "notes":{
             "type":"array",
+            # "uniqueItems": True,
             "items":{
                 "type":"object",
                 "properties":{
                     "tick":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 65535
                     },
                     "layer":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 65535
                     },
                     "inst":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 255
                     },
                     "key":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 87
                     },
                     "vel":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 100
                     },
                     "pan":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": -100,
+                        "maximum": 100
                     },
                     "pitch":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": -32768,
+                        "maximum": 32767
                     }
                 },
                 "required":[
                     "inst",
                     "key",
                     "layer",
-                    "pan",
-                    "pitch",
-                    "tick",
-                    "vel"
+                    "pan"
                 ]
             }
         },
@@ -198,23 +243,25 @@ NBS_JSON_SCHEMA = {
                 "type":"object",
                 "properties":{
                     "name":{
-                        "type":"string"
+                        "type":"string",
+                        "maxLength": 4294967295
                     },
                     "lock":{
                         "type":"boolean"
                     },
                     "volume":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 100
                     },
                     "pan":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": -100,
+                        "maximum": 100
                     }
                 },
                 "required":[
-                    "lock",
-                    "name",
-                    "pan",
-                    "volume"
+                    "name"
                 ]
             }
         },
@@ -224,19 +271,24 @@ NBS_JSON_SCHEMA = {
                 "type":"object",
                 "properties":{
                     "name":{
-                        "type":"string"
+                        "type":"string",
+                        "maxLength": 4294967295
                     },
                     "filePath":{
-                        "type":"string"
+                        "type":"string",
+                        "maxLength": 4294967295
                     },
                     "pitch":{
-                        "type":"integer"
+                        "type":"integer",
+                        "minimun": 0,
+                        "maximum": 87
                     },
                     "pressKeys":{
                         "type":"boolean"
                     },
                     "sound_id":{
-                        "type":"string"
+                        "type":"string",
+                        "maxLength": 4294967295
                     }
                 },
                 "required":[
@@ -1321,6 +1373,7 @@ class JsonImportDialog(ImportDialog):
         for inst in j['custom_instruments']:
             customInsts.append(Instrument(**inst))
 
+        nbs.correctData()
         return nbs
 
 
