@@ -1004,7 +1004,10 @@ class ProgressDialog:
 
     @property
     def totalMax(self) -> int:
-        return self.builder.get_object('totalProgressBar')['maximum']
+        try:
+            return self.builder.get_object('totalProgressBar')['maximum']
+        except Exception:
+            return -1
 
     @totalMax.setter
     def totalMax(self, value: int) -> None:
@@ -1108,10 +1111,20 @@ class ExportDialog:
                 dialog.totalText.set(f"Exporting {i+1} / {len(indexes)} files")
                 dialog.currentProgress.set(0)
                 origPath = filePaths[i]
+                if not origPath:
+                    origPath = asksaveasfilename(
+                    filetypes=((self.fileExt+' files', self.fileExt),),
+                    initialfile=path.basename(songsData[i].header.import_name).rsplit('.', 1)[0],
+                    defaultextension=self.fileExt)
+                if not origPath:
+                    if self.d.toplevel:
+                        self.d.toplevel.after(1, self.d.destroy)  # type: ignore
+                    return
                 baseName = path.basename(origPath)
                 if baseName.endswith('.nbs'):
                     baseName = baseName[:-4]
-                baseName += self.fileExt
+                if not baseName.endswith(self.fileExt):
+                    baseName += self.fileExt
 
                 filePath = ''
                 if not self.isFolderMode:
@@ -1121,8 +1134,9 @@ class ExportDialog:
                 try:
                     dialog.currentText.set(f"Current file: {filePath}")
                     # Prevent data from unintended changes
-                    songData = deepcopy(songsData[i])
+                    songData: NbsSong = deepcopy(songsData[i])
                     compactNotes(songData, True)
+                    songData.correctData()
                     dialog.currentProgress.set(10)  # 10%
                     await func(songData, filePath, dialog)
                 except CancelledError:
