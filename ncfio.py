@@ -17,7 +17,10 @@
 #‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import re, math, operator
+import math
+import operator
+import re
+
 
 def readncf(text):
 	groups = re.findall(r"((?:1|2|4|8|16|32)\.?)(?:(#?[a-g])([1-3])|-)", text)

@@ -17,55 +17,51 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-import sys
-import os
-from os import path as os_path
-from typing import Callable, Coroutine, Iterable, List, Literal, Optional, Union, Any
-import webbrowser
-import copy
-import traceback
-import re
-import json
 import asyncio
-from asyncio import sleep, CancelledError
-from pathlib import Path
-from ast import literal_eval
-from datetime import datetime
-
+import json
+import os
+import re
+import sys
 import tkinter as tk
 import tkinter.ttk as ttk
-
-from tkinter import BooleanVar, StringVar, IntVar, Variable
+import traceback
+import webbrowser
+from ast import literal_eval
+from asyncio import CancelledError, sleep
+from copy import copy, deepcopy
+from datetime import timedelta
+from math import floor, log2
+from os import path as os_path
+from pathlib import Path
+from random import choice, randint
+from time import time
+from tkinter import BooleanVar, IntVar, StringVar, Variable
+from tkinter.filedialog import (askdirectory, askopenfilename,
+                                askopenfilenames, asksaveasfilename)
 from tkinter.messagebox import showerror, showwarning
-from tkinter.filedialog import askopenfilename, asksaveasfilename, askdirectory, askopenfilenames
+from typing import (Any, Callable, Coroutine, Iterable, List, Literal,
+                    Optional, Union)
 
 import pygubu
-from pygubu import Builder
-from pygubu.widgets.dialog import Dialog
-# Explict imports for PyInstaller
-from pygubu.builder import ttkstdwidgets, tkstdwidgets
-from pygubu.builder.widgets import tkscrollbarhelper, dialog, pathchooserinput
-import customwidgets
 import pygubu.builder.widgets.combobox
-
-from random import randint
-from math import floor, log2
-from datetime import timedelta
-from copy import deepcopy
-
-from pydub.utils import which
 from jsonschema import validate
+from pydub.utils import which
+from pygubu import Builder
+# Explict imports for PyInstaller
+from pygubu.builder import tkstdwidgets, ttkstdwidgets
+from pygubu.builder.widgets import dialog, pathchooserinput, tkscrollbarhelper
+from pygubu.widgets.dialog import Dialog
 
-from common import resource_path, BASE_RESOURCE_PATH
-from nbsio import NBS_VERSION, VANILLA_INSTS, Layer, NbsSong, Note, Instrument
+import customwidgets
+from common import BASE_RESOURCE_PATH, resource_path
 from mcsp2nbs import mcsp2nbs
-from nbs2midi import nbs2midi
 from midi2nbs import midi2nbs
 from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
+from nbs2midi import nbs2midi
+from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 
 __version__ = '1.1.0'
-globalIncVar = 0
 
 NBS_JSON_SCHEMA = {
     "type":"object",
@@ -261,6 +257,16 @@ NBS_JSON_SCHEMA = {
     ]
 }
 
+NBSTOOL_FIRST_COMMIT_TIMESTAMP = 1565100420
+CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJLKMNPQRSTVWXYZ"
+VOWELS = "ueoai"
+def genRandomFilename(prefix: str = '') -> str:
+    randChars = (item for sublist in (
+        (choice(CONSONANTS), choice(VOWELS)) for _ in range(4)) for item in sublist)
+    return prefix + ''.join(randChars) + str(
+        int(time()) - NBSTOOL_FIRST_COMMIT_TIMESTAMP)
+
+
 class MainWindow():
     def __init__(self):
         builder: Builder = pygubu.Builder()
@@ -282,6 +288,7 @@ class MainWindow():
         self.toplevel.title("NBSTool")
         centerToplevel(self.toplevel)
 
+        self.popupMenu: tk.Menu
         self.initMenuBar()
         self.initVarsAndCallbacksFrom(builder)
         self.initFormatTab()
@@ -364,8 +371,7 @@ class MainWindow():
             ver: int = header.file_version
             if (ver != fileVersion) and (fileVersion != -1):
                 return -1
-            else:
-                fileVersion = ver
+            fileVersion = ver
         return fileVersion
 
     def updateHeaderNotebook(self, selection: Iterable) -> None:
@@ -432,7 +438,7 @@ class MainWindow():
         checkBox: ttk.Checkbutton = self.builder.get_object('headerLoopCheck')
         loop = self.headerLoop.get()
         state = 'normal' if ((not 'alternate' in self.builder.get_object(
-            'headerLoopCheck').state()) and self.headerLoop.get()) else 'disabled'
+            'headerLoopCheck').state()) and loop) else 'disabled'
         for child in self.builder.get_object('headerLoopFrame').winfo_children():
             if child is not checkBox:
                 child.configure(state=state)
@@ -456,13 +462,11 @@ class MainWindow():
         self.addFiles()
 
     def addFileInfo(self, filePath: str, songData: NbsSong) -> None:
-        global globalIncVar
         if filePath == '':
-            globalIncVar += 1
-            filePath = f"[Not saved] ({globalIncVar})"
+            filePath = genRandomFilename('unsaved_')
         header = songData.header
         length = timedelta(seconds=floor(
-            header.length / header.tempo)) if header.length != None else "Not calculated"
+            header.length / header.tempo)) if header.length > 0 else "Not calculated"
         self.fileTable.insert("", 'end', text=filePath, values=(
             length, header.name, header.author, header.orig_author))
 
@@ -529,8 +533,8 @@ class MainWindow():
                 self.enableFileTable()
                 self.builder.get_object('applyBtn')['state'] = 'normal'
                 return
-            else:
-                path = askdirectory(title="Select folder to save")
+            
+            path = askdirectory(title="Select folder to save")
             if path == '':
                 return
             Path(path).mkdir(parents=True, exist_ok=True)
@@ -541,7 +545,7 @@ class MainWindow():
                 if filePath == '':
                     fileName = self.songsData[i].header.import_name.rsplit('.', 1)[0]
                     if fileName == '':
-                        fileName = f'Untitled {datetime.now()}'
+                        fileName = genRandomFilename('untitled_')
                     filePath = fileName + '.nbs'
                 savedPath = os.path.join(path, filePath)
                 fileTable.item(item, text=savedPath)
@@ -616,41 +620,41 @@ class MainWindow():
         # self.builder.get_object('arrangeGroupPrec').state(('!selected',))
 
     def callMidiImportDialog(self):
-        dialog = MidiImportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = MidiImportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
     
     def callMuseScoreImportDialog(self):
-        dialog = MuseScoreImportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = MuseScoreImportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
 
     def callJsonImportDialog(self):
-        dialog = JsonImportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = JsonImportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
 
     def callDatapackExportDialog(self):
-        dialog = DatapackExportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = DatapackExportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
 
     def callMidiExportDialog(self):
-        dialog = MidiExportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = MidiExportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
 
     def callAudioExportDialog(self):
-        dialog = AudioExportDialog(self.toplevel, self)
-        dialog.run()
-        del dialog
+        dialogue = AudioExportDialog(self.toplevel, self)
+        dialogue.run()
+        del dialogue
 
     def callJsonExportDialog(self):
         JsonExportDialog(self.toplevel, self).run()
 
     def callAboutDialog(self):
-        dialog = AboutDialog(self.toplevel, self)
-        del dialog
+        dialogue = AboutDialog(self.toplevel, self)
+        del dialogue
 
     def windowBind(self):
         toplevel = self.toplevel
@@ -682,10 +686,11 @@ class MainWindow():
                            self._on_treeview_shift_up)
         mainwin.bind_class("Treeview", "<Button-1>",
                            self._on_treeview_left_click, add=True)
-        # Credit: https://stackoverflow.com/a/63173461/12682038
 
-        def treeview_select_all(event): return event.widget.selection_add(
-            event.widget.get_children())
+        # Credit: https://stackoverflow.com/a/63173461/12682038
+        def treeview_select_all(event):
+            return event.widget.selection_add(event.widget.get_children())
+
         mainwin.bind_class("Treeview", "<Control-a>", treeview_select_all)
         mainwin.bind_class("Treeview", "<Control-A>", treeview_select_all)
 
@@ -711,6 +716,7 @@ class MainWindow():
         tree.selection_add(next_item)
         tree.focus(next_item)
         tree.see(next_item)
+        return None
 
     def _on_treeview_shift_up(self, event):
         tree: ttk.Treeview = event.widget
@@ -726,6 +732,7 @@ class MainWindow():
         tree.selection_add(prev_item)
         tree.focus(prev_item)
         tree.see(prev_item)
+        return None
 
     def _on_treeview_left_click(self, event):
         tree = event.widget
@@ -776,9 +783,9 @@ class MainWindow():
                 for i, index in enumerate(selectedIndexes):
                     dialog.totalProgress.set(i)
                     fileName = os.path.split(self.filePaths[i])[1]
-                    dialog.currentText.set("Current file: {}".format(fileName))
+                    dialog.currentText.set(f"Current file: {fileName}")
                     dialog.totalText.set(
-                        "Processing {} / {} files".format(i+1, selectionLen))
+                        f"Processing {i+1} / {selectionLen} files")
                     dialog.currentProgress.set(0)
                     songData: NbsSong = deepcopy(self.songsData[index])
                     dialog.setCurrentPercentage(randint(20, 25))
@@ -824,10 +831,10 @@ class MainWindow():
             finally:
                 get_object('applyBtn')['state'] = 'normal'
 
-        dialog = ProgressDialog(self.toplevel, self)
-        dialog.d.set_title("Applying tools to {} files".format(selectionLen))
-        dialog.totalMax = selectionLen
-        dialog.run(work)
+        dialogue = ProgressDialog(self.toplevel, self)
+        dialogue.d.set_title(f"Applying tools to {selectionLen} files")
+        dialogue.totalMax = selectionLen
+        dialogue.run(work)
 
     def collapseNotes(self, notes) -> None:
         layer = 0
@@ -846,7 +853,7 @@ class MainWindow():
             if value != '' and value.isdigit():
                 try:
                     setattr(header, key, int(value))
-                except:
+                except ValueError:
                     print(f'Non-integer value: {value}')
         get_object = self.builder.get_object
         if not 'alternate' in get_object('headerAutosaveCheck').state():
@@ -967,7 +974,7 @@ class ProgressDialog:
     async def updateProgress(self) -> None:
         self.task = asyncio.create_task(self.work(dialog=self))
         while True:  # wait the async task finish
-            done, pending = await asyncio.wait({self.task}, timeout=0)
+            done, _ = await asyncio.wait({self.task}, timeout=0)
             self.d.toplevel.update()  # type: ignore
             if self.task in done:
                 await self.task
@@ -1042,47 +1049,45 @@ class ExportDialog:
                 return
 
         async def work(dialog: ProgressDialog):
-            try:
-                songsData = self.parent.songsData
-                filePaths = self.parent.filePaths
-                for i in indexes:
-                    dialog.totalProgress.set(i)
-                    dialog.totalText.set(
-                        "Exporting {} / {} files".format(i+1, len(indexes)))
-                    dialog.currentProgress.set(0)
-                    origPath = filePaths[i]
-                    baseName = path.basename(origPath)
-                    if baseName.endswith('.nbs'):
-                        baseName = baseName[:-4]
-                    baseName += self.fileExt
+            songsData = self.parent.songsData
+            filePaths = self.parent.filePaths
+            for i in indexes:
+                dialog.totalProgress.set(i)
+                dialog.totalText.set(f"Exporting {i+1} / {len(indexes)} files")
+                dialog.currentProgress.set(0)
+                origPath = filePaths[i]
+                baseName = path.basename(origPath)
+                if baseName.endswith('.nbs'):
+                    baseName = baseName[:-4]
+                baseName += self.fileExt
 
-                    filePath = ''
-                    if not self.isFolderMode:
-                        filePath = path.join(path.dirname(origPath), baseName)
-                    else:
-                        filePath = path.join(self.exportPath.get(), baseName)
-                    try:
-                        dialog.currentText.set(
-                            "Current file: {}".format(filePath))
-                        # Prevent data from unintended changes
-                        songData = deepcopy(songsData[i])
-                        compactNotes(songData, True)
-                        dialog.currentProgress.set(10)  # 10%
-                        await func(songData, filePath, dialog)
-                    except Exception as e:
-                        showerror("Exporting files error", 'Cannot export file "{}"\n{}: {}'.format(
-                            filePath, e.__class__.__name__, e))
-                        print(traceback.format_exc())
-                dialog.totalProgress.set(dialog.currentMax)
-            except CancelledError:
-                raise
+                filePath = ''
+                if not self.isFolderMode:
+                    filePath = path.join(path.dirname(origPath), baseName)
+                else:
+                    filePath = path.join(self.exportPath.get(), baseName)
+                try:
+                    dialog.currentText.set(f"Current file: {filePath}")
+                    # Prevent data from unintended changes
+                    songData = deepcopy(songsData[i])
+                    compactNotes(songData, True)
+                    dialog.currentProgress.set(10)  # 10%
+                    await func(songData, filePath, dialog)
+                except CancelledError:
+                    raise
+                except Exception as e:
+                    showerror("Exporting files error",
+                        f'Cannot export file "{filePath}"\n{e.__class__.__name__}: {e}')
+                    print(traceback.format_exc())
+            dialog.totalProgress.set(dialog.currentMax)
+ 
             self.d.toplevel.after(1, self.d.destroy)  # type: ignore
 
-        dialog = ProgressDialog(self.d.toplevel, self)
-        dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
-        dialog.d.set_title(self.progressTitle.format(len(indexes)))
-        dialog.totalMax = len(indexes)
-        dialog.run(work)
+        dialogue = ProgressDialog(self.d.toplevel, self)
+        dialogue.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialogue.d.set_title(self.progressTitle.format(len(indexes)))
+        dialogue.totalMax = len(indexes)
+        dialogue.run(work)
 
 
 class MidiExportDialog(ExportDialog):
@@ -1113,8 +1118,8 @@ class JsonExportDialog(ExportDialog):
         dialog.currentProgress.set(60)  # 60%
         await sleep(0.001)
 
-        with open(filepath, 'w') as f:
-            json.dump(exportData, f, ensure_ascii=False, indent=4)
+        with open(filepath, 'w', encoding='ascii') as f:
+            json.dump(exportData, f, ensure_ascii=True, indent=4)
 
         dialog.currentProgress.set(90)  # 90%
         await sleep(0.001)
@@ -1122,6 +1127,11 @@ class JsonExportDialog(ExportDialog):
 
 class AudioExportDialog(ExportDialog):
     def __init__(self, master, parent):
+        self.formatVar: tk.StringVar
+        self.stereo: tk.BooleanVar
+        self.includeLocked: tk.BooleanVar
+        self.ignoreMissingSounds: tk.BooleanVar
+
         super().__init__(master, parent, '.wav', None,
                          "Exporting {} files to audio...", self.audioExport, 'ui/audioexportdialog.ui')
 
@@ -1152,14 +1162,14 @@ Use "sudo apt install ffmpeg" command to install ffmpeg."""
         self.fileExt = '.' + self.builder.get_object('formatCombo').current()
 
     async def audioExport(self, data: NbsSong, filepath: str, dialog: ProgressDialog):
-        format = self.builder.get_object('formatCombo').current()
+        fmt = self.builder.get_object('formatCombo').current()
         samplingRate = self.builder.get_object('samplingRateCombo').current()
 
         channels = int(self.stereo.get()) + 1  # type: ignore
         includeLocked = self.includeLocked.get()  # type: ignore
         ignoreMissingSounds = self.ignoreMissingSounds.get()  # type: ignore
 
-        await nbs2audio(data, filepath, dialog, format, samplingRate,
+        await nbs2audio(data, filepath, dialog, fmt, samplingRate,
                         channels, exclude_locked_layers=not includeLocked,
                         ignore_missing_instruments=ignoreMissingSounds)
 
@@ -1241,50 +1251,47 @@ class ImportDialog:
         fileCount = len(paths)
 
         async def work(dialog: ProgressDialog):
-            try:
-                songsData: list = self.parent.songsData
-                filePaths: list = self.parent.filePaths
-                for i, filePath in enumerate(paths):
-                    try:
-                        dialog.totalProgress.set(i)
-                        dialog.totalText.set(
-                            "Importing {} / {} files".format(i+1, fileCount))
-                        dialog.currentProgress.set(0)
-                        dialog.currentText.set(
-                            "Current file: {}".format(filePath))
-                        task = asyncio.create_task(self.func(filePath, dialog))
-                        while True:
-                            done, pending = await asyncio.wait({task}, timeout=0)
-                            if task in done:
-                                songData = task.result()
-                                await task
-                                break
-                        if not songData:
-                            raise Exception(
-                                "The file {} is empty or cannot be imported.".format(filePath))
-                        dialog.currentProgress.set(80)
-                        await sleep(0.001)
-                        songsData.append(songData)
-                        filePaths.append('')
-                        self.parent.addFileInfo('', songData)
-                        await sleep(0.001)
-                    except CancelledError:
-                        raise
-                    except Exception as e:
-                        showerror("Importing file error", 'Cannot import file "{}"\n{}: {}'.format(
-                            filePath, e.__class__.__name__, e))
-                        print(traceback.format_exc())
-                        continue
+            songsData: list = self.parent.songsData
+            filePaths: list = self.parent.filePaths
+            for i, filePath in enumerate(paths):
+                try:
+                    dialog.totalProgress.set(i)
+                    dialog.totalText.set(
+                        f"Importing {i+1} / {fileCount} files")
+                    dialog.currentProgress.set(0)
+                    dialog.currentText.set(
+                        f"Current file: {filePath}")
+                    task = asyncio.create_task(self.func(filePath, dialog))
+                    while True:
+                        done, _ = await asyncio.wait({task}, timeout=0)
+                        if task in done:
+                            songData = task.result()
+                            await task
+                            break
+                    if not songData:
+                        raise ImportError(
+                            f"The file {filePath} is empty or cannot be imported.")
+                    dialog.currentProgress.set(80)
+                    await sleep(0.001)
+                    songsData.append(songData)
+                    filePaths.append('')
+                    self.parent.addFileInfo('', songData)
+                    await sleep(0.001)
+                except CancelledError:
+                    raise
+                except Exception as e:
+                    showerror("Importing file error",
+                        f'Cannot import file "{filePath}"\n{e.__class__.__name__}: {e}')
+                    print(traceback.format_exc())
+                    continue
                 dialog.totalProgress.set(dialog.currentMax)
-            except CancelledError:
-                raise
             # self.d.toplevel.after(1, self.d.destroy)
 
-        dialog = ProgressDialog(self.d.toplevel, self)
-        # dialog.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
-        dialog.d.set_title(self.progressTitle.format(fileCount))
-        dialog.totalMax = fileCount
-        dialog.run(work)
+        dialogue = ProgressDialog(self.d.toplevel, self)
+        # dialogue.d.bind('<<DialogClose>>', lambda _: self.d.destroy())
+        dialogue.d.set_title(self.progressTitle.format(fileCount))
+        dialogue.totalMax = fileCount
+        dialogue.run(work)
 
 
 class JsonImportDialog(ImportDialog):
@@ -1295,7 +1302,7 @@ class JsonImportDialog(ImportDialog):
     
     async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
         j = {}
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='ascii') as f:
             j = json.load(f)
         validate(j, NBS_JSON_SCHEMA)
 
@@ -1442,17 +1449,16 @@ def centerToplevel(obj, width=None, height=None, mwidth=None, mheight=None):
         root.destroy()
         return size
 
-    ScreenWidth, ScreenHeight = get_curr_screen_size()
+    screenWidth, screenHeight = get_curr_screen_size()
 
-    WindowWidth = width or obj.winfo_width()
-    WindowHeight = height or obj.winfo_height()
+    windowWidth = width or obj.winfo_width()
+    windowHeight = height or obj.winfo_height()
 
-    WinPosX = int(ScreenWidth / 2 - WindowWidth / 2)
-    WinPosY = int(ScreenHeight / 2.3 - WindowHeight / 2)
+    winPosX = int(screenWidth / 2 - windowWidth / 2)
+    winPosY = int(screenHeight / 2.3 - windowHeight / 2)
 
     obj.minsize(mwidth or obj.winfo_width(), mheight or obj.winfo_height())
-    obj.geometry("{}x{}+{}+{}".format(WindowWidth,
-                                      WindowHeight, WinPosX, WinPosY))
+    obj.geometry(f"{windowHeight}x{windowHeight}+{winPosX}+{winPosY}")
     # obj.update()
     obj.update_idletasks()
 
@@ -1505,13 +1511,16 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
         with open(path, 'w') as f:
             f.write(text)
 
-    def makeFolderTree(inp, a=list()):
+    def makeFolderTree(inp):
+        _makeFolderTree(inp, [])
+
+    def _makeFolderTree(inp, a: list):
         if isinstance(inp, (tuple, set)):
             for el in inp:
-                makeFolderTree(el, copy.copy(a))
+                _makeFolderTree(el, copy(a))
         elif isinstance(inp, dict):
             for k, v in inp.items():
-                makeFolderTree(v, a + [k])
+                _makeFolderTree(v, a + [k])
         elif isinstance(inp, str):
             p = os.path.join(*a, inp)
             os.makedirs(p, exist_ok=True)

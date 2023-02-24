@@ -109,7 +109,7 @@
             <child>
               <object class="ttk.Checkbutton" id="ignoreMissingSoundsCheck">
                 <property name="text" translatable="yes">Ignore missing custom sound files</property>
-                <property name="variable">string:ignoreMissingSounds</property>
+                <property name="variable">boolean:ignoreMissingSounds</property>
                 <layout manager="grid">
                   <property name="column">0</property>
                   <property name="columnspan">2</property>

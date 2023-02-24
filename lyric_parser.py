@@ -17,10 +17,11 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
+from collections import deque
+
 from lark.lark import Lark
 from lark.tree import Tree
 from lark.visitors import Interpreter, visit_children_decor
-from collections import deque
 
 LYRIC_PARSER_GRAMMAR = r"""
 %import common (CR, LF)
@@ -89,7 +90,7 @@ class LyricCaptionExtractor(Interpreter):
         self._add_then_append(elem)
         try:
             pipes = t.children[1]
-            for _ in range(len(pipes)):
+            for _ in pipes:
                 self._append_current()
         except IndexError:
             pass

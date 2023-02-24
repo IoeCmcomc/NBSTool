@@ -18,12 +18,12 @@
 
 
 from asyncio import sleep
-from numpy import interp
 
 from mido import Message, MetaMessage, MidiFile, MidiTrack, bpm2tempo
+from numpy import interp
 
+from common import MIDI_DRUMS, MIDI_INSTRUMENTS
 from nbsio import NbsSong
-from common import MIDI_DRUMS, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
 
 MIDI_DRUMS_BY_NBS_KEY_INST = {
     (obj.nbs_pitch, obj.nbs_instrument): obj.pitch for obj in MIDI_DRUMS}
@@ -79,8 +79,7 @@ class MsgComparator:
     def __lt__(self, other: 'MsgComparator') -> bool:
         if (not self.msg.is_meta) and other.msg.is_meta:
             return self.msg.time < other.msg.time # type: ignore
-        else:
-            return False
+        return False
 
 def absTrack2DeltaTrack(track) -> MidiTrack:
     '''It takes a track of absolute time messages and returns a track of delta
@@ -115,7 +114,6 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     # timeSign = headers.time_sign
     timeSign = 4
     tempo = headers.tempo * 60 / timeSign # BPM
-    layersLen = len(layers)
 
     mid = MidiFile(type=1)
     tpb = mid.ticks_per_beat
@@ -141,7 +139,6 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
         dialog.currentProgress.set(25) # 25%
         await sleep(0.001)
 
-    accumulate_time = 0
     for note in notes:
         abs_time = int(note.tick / timeSign * tpb)
         pitch = note.key + 21

@@ -17,14 +17,14 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 import zipfile
-
-from lxml import etree
-from nbsio import Layer, NbsSong, Note
+from asyncio import sleep
 from functools import lru_cache
 from os.path import basename
-from asyncio import sleep
 
-from common import MIDI_INSTRUMENTS, MIDI_DRUMS
+from lxml import etree
+
+from common import MIDI_DRUMS, MIDI_INSTRUMENTS
+from nbsio import Layer, NbsSong, Note
 
 MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 

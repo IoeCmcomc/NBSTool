@@ -17,16 +17,16 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-from math import gcd
 from asyncio import sleep
+from math import gcd
 from os.path import basename
-from typing import Tuple, Union
+from typing import Optional, Tuple
+
+from mido import MidiFile, merge_tracks, tempo2bpm
 from numpy import interp
 
-from mido import MidiFile, tempo2bpm, merge_tracks
-
+from common import MIDI_DRUMS, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
 from nbsio import Layer, NbsSong, Note
-from common import MIDI_INSTRUMENTS, MIDI_DRUMS, NBS_PITCH_IN_MIDI_PITCHBEND
 
 MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 
@@ -37,18 +37,17 @@ It also limits the maximum expand multiplier."""
 
 def extractKeyAndInst(
     msg, trackInst: int, keyShift: int
-) -> Union[Tuple[int, int], None]:
+) -> Optional[Tuple[int, int]]:
     if msg.channel == 9:
         midiDrum = MIDI_DRUMS_BY_MIDI_PITCH.get(msg.note, MIDI_DRUMS_BY_MIDI_PITCH[27])
         if midiDrum.nbs_instrument == -1:
             return None
         key = midiDrum.nbs_pitch + 36
         inst = midiDrum.nbs_instrument
-        return key, inst
     else:
         key = max(0, (msg.note - 21) + keyShift)
-        return key, trackInst
-
+        inst = trackInst
+    return key, inst
 
 async def midi2nbs(
     filepath: str,
@@ -211,16 +210,13 @@ async def midi2nbs(
                     extracted = extractKeyAndInst(msg, trackInst, keyShift)
                     if not extracted:
                         continue
+                    note = None
                     key, inst = extracted
-                    note = next(
-                        filter(
-                            lambda note: (note.key == key)
-                            and (note.inst == inst)
-                            and not note.isPerc,
-                            currentNotes,
-                        ),
-                        None,
-                    )
+                    for headNote in currentNotes:
+                        if (headNote.key == key)  and (headNote.inst == inst) \
+                                and not headNote.isPerc:
+                            note = headNote
+                            break
                     if note:
                         for durationIndex, newTick in enumerate(
                             range(tick - duration, tick)

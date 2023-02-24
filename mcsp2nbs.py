@@ -1,6 +1,7 @@
 from asyncio import sleep
-from nbsio import NbsSong, Note
 from re import finditer
+
+from nbsio import NbsSong, Note
 
 NOTE_REGEX = r'(\d+)?>(.)'
 

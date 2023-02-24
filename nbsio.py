@@ -17,14 +17,14 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
-from struct import Struct
-from pprint import pprint
-from typing import BinaryIO, List
+import traceback
 import warnings
-from warnings import warn
 from dataclasses import dataclass
 from functools import total_ordering
-import traceback
+from pprint import pprint
+from struct import Struct
+from typing import BinaryIO, List, Tuple
+from warnings import warn
 
 BYTE = Struct('<B')
 SHORT = Struct('<H')
@@ -89,8 +89,8 @@ class Note:
         if isinstance(other, Note):
             return (self.tick, self.layer, self.key, self.inst) \
                 == (other.tick, other.layer, other.key, other.inst)
-        else:
-            return False
+        
+        return False
 
     def __lt__(self, other) -> bool:
         return (self.tick, self.layer, self.key, self.inst) \
@@ -166,6 +166,10 @@ class NbsSong:
         self.layers: List[Layer] = []
         self.customInsts: List[Instrument] = []
         self.appendix = None
+        self.hasPerc = False
+        self.maxLayer = 0
+        self.usedInsts: Tuple[Tuple[Instrument], Tuple[Instrument]]
+
         if f:
             self.read(f)
 
@@ -278,7 +282,7 @@ class NbsSong:
                 header.length = tick + 1
                 # indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
                 # Layers
-                for i in range(header.height):
+                for _ in range(header.height):
                     name = readString(f)  # Layer name
                     if header.file_version >= 4:
                         lock = readNumeric(f, BYTE) == 1  # Lock

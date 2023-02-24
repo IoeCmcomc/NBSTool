@@ -18,8 +18,8 @@
 
 
 import sys
-from os.path import join, abspath, dirname, normpath
 from collections import namedtuple
+from os.path import abspath, dirname, join, normpath
 
 # from main import __file__ as __mainfile__
 

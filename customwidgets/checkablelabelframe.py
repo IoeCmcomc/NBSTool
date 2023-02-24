@@ -20,19 +20,19 @@
 from __future__ import print_function
 
 import tkinter as tk
-
+import traceback
+from tkinter import Button, Checkbutton, IntVar
 from tkinter.messagebox import showinfo
-
-from tkinter import Checkbutton, Button, IntVar
 from tkinter.ttk import LabelFrame
 from tkinter.ttk import Widget as TtkWidget
-import traceback
 from typing import Any
+
 
 class CheckableLabelFrame(LabelFrame):
     """LabelFrame widget with a tkinter.Checkbutton as the label."""
     def __init__(self, master=None, **kwargs):
         self.variable: IntVar = IntVar()
+        self.callback_update_name: str = ''
         self.command = None
 
         super().__init__(master, **kwargs)
@@ -40,7 +40,9 @@ class CheckableLabelFrame(LabelFrame):
         self.checkbutton = Checkbutton(self, text=self["text"], variable=self.variable, command=self._handler)
         self.configure(labelwidget=self.checkbutton)
 
-    def configure(self, cnf={}, **kw):
+    def configure(self, cnf = None, **kw):
+        if cnf is None:
+            cnf = {}
         def pop_config(key) -> Any:
             nonlocal kw
             value = None
@@ -60,11 +62,11 @@ class CheckableLabelFrame(LabelFrame):
             self.checkbutton["text"] = text
 
         if variable:
-            if self.variable:
-                self.variable.trace_remove('write', self.updateState) #type: ignore
+            if self.variable and self.callback_update_name:
+                self.variable.trace_remove('write', self.callback_update_name) #type: ignore
             variable.set(1)
             self.checkbutton["variable"] = variable
-            variable.trace_add('write', self.updateState)
+            self.callback_update_name = variable.trace_add('write', self.updateState)
             self.variable = variable
 
         if command:
@@ -78,9 +80,9 @@ class CheckableLabelFrame(LabelFrame):
     def cget(self, key):
         if key == 'variable':
             return self.variable
-        elif key == 'command':
+        if key == 'command':
             return self.command
-        elif key == 'text':
+        if key == 'text':
             return self.checkbutton["text"]
 
         return super().cget(key)

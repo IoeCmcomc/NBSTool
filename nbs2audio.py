@@ -1,18 +1,21 @@
 from asyncio import sleep
-from os import environ, name as os_name
+from os import environ
+from os import name as os_name
 from typing import Optional, Sequence
 
-from pynbs import File, Header, Note, Layer, Instrument
 from pydub import AudioSegment
+from pynbs import File, Header, Instrument, Layer, Note
 
 from common import resource_path
+
 if os_name == 'nt':
     environ["PATH"] += resource_path('ffmpeg', 'bin')
 
-from nbswave import audio, nbs, SongRenderer
+from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
 
 from nbsio import VANILLA_INSTS, NbsSong
+
 
 SOUND_FOLDER = resource_path('sounds')
 
@@ -126,8 +129,8 @@ class Renderer(SongRenderer):
                         raise MissingInstrumentException(
                             f"The sound file for instrument {ins_name} was not found: {ins_file}"
                         )
-                    else:
-                        continue
+                    
+                    continue
 
                 if sound1 is None:  # Sound file not assigned
                     continue
@@ -167,7 +170,7 @@ class Renderer(SongRenderer):
         return mixer.to_audio_segment()
 
 async def nbs2audio(data: NbsSong, filepath: str, dialog=None,
-    format: str = 'wav',
+    fmt: str = 'wav',
     sample_rate: int = 44100,
     channels: int = 2,
     bit_depth: int = 16,
@@ -208,7 +211,7 @@ async def nbs2audio(data: NbsSong, filepath: str, dialog=None,
 
     track.save(
         filepath,
-        format,
+        fmt,
         bit_depth // 8,
         sample_rate,
         channels,

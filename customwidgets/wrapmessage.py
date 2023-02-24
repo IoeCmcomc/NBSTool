@@ -33,7 +33,9 @@ class WrapMessage(Message):
         super().__init__(master, **kwargs)
         self.bind("<Configure>", self._adjustWidth)
 
-    def configure(self, cnf={}, **kw):
+    def configure(self, cnf = None, **kw):
+        if cnf is None:
+            cnf = {}
         key = 'padding'
         if key in cnf:
             self.padding = int(cnf[key])
