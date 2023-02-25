@@ -1,7 +1,9 @@
+
 [![License](https://img.shields.io/github/license/IoeCmcomc/NBSTool "License")](https://opensource.org/licenses/MIT "License")
 [![GitHub issues](https://img.shields.io/github/issues/IoeCmcomc/NBSTool)](https://github.com/IoeCmcomc/NBSTool/issues)
 ![GitHub all releases](https://img.shields.io/github/downloads/IoeCmcomc/NBSTool/total)
 ![GitHub repo size](https://img.shields.io/github/repo-size/IoeCmcomc/NBSTool)
+[![Code grade](https://api.codiga.io/project/35820/status/svg)](https://app.codiga.io/hub/project/35820/NBSTool)
 
 ------------
 
@@ -19,11 +21,11 @@
 
 ## Features
 - Work with multiple files;
-- Open old formats (such as .mcsp2).
+- Open old formats (such as .mcsp2);
 - Modify header information and change between versions;
 - Arrange notes by instruments;
-- Import from [MuseScore](https://github.com/musescore/MuseScore) files;
-  - Only files created by MuseScore 3 are supported;
+- [**Deprecated**] Import from [MuseScore](https://github.com/musescore/MuseScore) files:
+  - Only files created by MuseScore 3 and 4 are supported;
   - Support the following features:
     - Song title, author, tempo and time signature (with some limits);
     - Most of GM instruments to Minecraft instruments;
@@ -32,6 +34,12 @@
     - Notes' tuning and velocity;
     - Tuplets and notes whose duration less than 16th (by expanding the spaces between notes);
     - Voices.
+ - Import from MIDI files:
+   -   Only type 1MIDI files are tested;
+   -   Support importing note velocity, note panning and note fine-pitch;
+   -   Allow importing MIDI notes as multiple successive fading-out NBS notes;
+   -   Can automatically expand distance between notes to fit as many note as possible.
+- Import from JSON files;
 - Export to JSON, MIDI or audio files:
   - MIDI conversion does not support custom instruments;
   - JSON export files are useful to understand how .nbs files are stored internally;
