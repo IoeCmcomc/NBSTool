@@ -160,6 +160,10 @@ VANILLA_INSTS = [
 
 
 class NbsSong:
+    class ParseWarning(Warning):
+        "Warning category for parsing malformed files"
+        pass
+
     def __init__(self, f=None):
         self.header = Header()
         self.notes: List[Note] = []
@@ -229,7 +233,6 @@ class NbsSong:
         notes = []
         maxLayer = 0
         usedInsts = [[], []]
-        hasPerc = False
         layers = []
         customInsts = []
         appendix = None
@@ -280,9 +283,14 @@ class NbsSong:
                     maxLayer = max(layer, maxLayer)
                 # if header['length'] is None:
                 header.length = tick + 1
+                self.notes = notes
+                self.maxLayer = maxLayer
                 # indexByTick = tuple([ (tk, tuple([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])
                 # Layers
-                for _ in range(header.height):
+                for i in range(header.height):
+                    if len(f.peek(1)) == 0: # End of file
+                        warnings.warn(f"Data for layer {i+1} does not exist. {header.height} layers are declared in the header", NbsSong.ParseWarning)
+                        return
                     name = readString(f)  # Layer name
                     if header.file_version >= 4:
                         lock = readNumeric(f, BYTE) == 1  # Lock
@@ -293,15 +301,20 @@ class NbsSong:
                     stereo = (readNumeric(f, BYTE) - 100) if file_version >= 2 else 0  # Stereo
                     layers.append(Layer(name, lock, vol, stereo))
                 name = vol = stereo = None
+                self.layers = layers
                 # Custom instrument
                 inst_count = readNumeric(f, BYTE)
                 for i in range(inst_count):
+                    if len(f.peek(1)) == 0: # End of file
+                        warnings.warn(f"Data for custom instrument {i+1} does not exist. {header.height} custom instruments are declared in the header", NbsSong.ParseWarning)
+                        return
                     name = readString(f)  # Instrument name
                     filePath = readString(f)  # Sound file path
                     pitch = readNumeric(f, BYTE)  # Pitch
                     shouldPressKeys = bool(readNumeric(f, BYTE))  # Press key
                     customInsts.append(Instrument(
                         name, filePath, pitch, shouldPressKeys))
+                self.customInsts = customInsts
                 # Rest of the file
                 appendix = f.read()
             finally:
@@ -309,9 +322,7 @@ class NbsSong:
                     f.close()
                 except:
                     print(traceback.format_exc())
-        self.notes, self.layers, self.customInsts, self.hasPerc, self.maxLayer, self.usedInsts = \
-            notes, layers, customInsts, hasPerc, maxLayer, (tuple(
-                usedInsts[0]), tuple(usedInsts[1]))
+        self.usedInsts =  (tuple(usedInsts[0]), tuple(usedInsts[1]))
         if appendix:
             self.appendix = appendix
 
