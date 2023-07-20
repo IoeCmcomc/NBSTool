@@ -50,6 +50,7 @@ class LyricCaptionExtractor(Interpreter):
         self.line: str
         self.full_line: str
         self.dash_detected = False
+        self.curr_part_no = 0
 
     def _append_current(self):
         #print(self.line+'|')
@@ -72,10 +73,16 @@ class LyricCaptionExtractor(Interpreter):
     def start(self, t):
         self.__init__()
 
+    def part(self, t):
+        if self.curr_part_no != 0:
+            self.captions.append(("", ""))
+        self.curr_part_no += 1
+        self.visit_children(t)
+
     def a_line(self, t):
         self.line = ''
         lineno = t.meta.line
-        self.full_line = self.lines[lineno-1]
+        self.full_line = self.lines[lineno-1].replace('_', '')
         size = len(t.children)
         i = 0
         for c in t.children:
@@ -103,7 +110,7 @@ def lyric2captions(lyric: str) -> 'deque[tuple[str, str]]':
     parser = Lark(LYRIC_PARSER_GRAMMAR, parser='lalr', debug=True, propagate_positions=True, cache=True)
     tree = parser.parse(lyric)
     extractor = LyricCaptionExtractor()
-    return extractor.extract(tree, text)
+    return extractor.extract(tree, lyric)
 
 if __name__ == "__main__":
     import cProfile
@@ -178,7 +185,9 @@ Yêu say đắm như ngày đầu
 Mùa xuân đến bình yên cho anh những giấc mơ
 Hạ lưu giữ ngày mưa ngọt ngào nên thơ
 Mùa thu lá vàng rơi đông sang anh nhớ em
-Tình yêu bé nhỏ xin dành tặng riêng em!"""
+Tình yêu bé nhỏ xin dành tặng riêng em!
+
+a b c d e-f-g h_i_j k"""
 
     pr = cProfile.Profile()
     pr.enable()

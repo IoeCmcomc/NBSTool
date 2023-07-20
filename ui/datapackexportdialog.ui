@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.1">
+<interface version="1.2">
   <object class="pygubu.builder.widgets.dialog" id="dialog">
     <property name="height">100</property>
     <property name="modal">true</property>
@@ -16,14 +16,12 @@
           <property name="fill">both</property>
           <property name="padx">10</property>
           <property name="pady">5</property>
-          <property name="propagate">True</property>
           <property name="side">top</property>
         </layout>
         <child>
           <object class="tk.Label" id="label">
             <property name="text" translatable="yes">Unique scorebroad ID:</property>
             <layout manager="pack">
-              <property name="propagate">True</property>
               <property name="side">top</property>
             </layout>
           </object>
@@ -35,7 +33,6 @@
             <layout manager="pack">
               <property name="fill">x</property>
               <property name="pady">10</property>
-              <property name="propagate">True</property>
               <property name="side">top</property>
             </layout>
           </object>
@@ -47,8 +44,24 @@
             <property name="state">disabled</property>
             <property name="text" translatable="yes">Export</property>
             <layout manager="pack">
-              <property name="propagate">True</property>
               <property name="side">bottom</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="tk.Label" id="label1">
+            <property name="text" translatable="yes">Lyrics file (optional):</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="pygubu.builder.widgets.pathchooserinput" id="lyricsFileSelector">
+            <property name="textvariable">string:lyricsFilePath</property>
+            <property name="type">file</property>
+            <layout manager="pack">
+              <property name="side">top</property>
             </layout>
           </object>
         </child>

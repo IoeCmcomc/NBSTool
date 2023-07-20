@@ -39,8 +39,9 @@ from tkinter import BooleanVar, IntVar, StringVar, Variable
 from tkinter.filedialog import (askdirectory, askopenfilename,
                                 askopenfilenames, asksaveasfilename)
 from tkinter.messagebox import showerror, showwarning
-from typing import (Any, Callable, Coroutine, Iterable, List, Literal,
+from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
                     Optional, Union)
+import uuid
 
 import pygubu
 import pygubu.builder.widgets.combobox
@@ -60,6 +61,7 @@ from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
+from lyric_parser import lyric2captions
 
 __version__ = '1.2.0'
 
@@ -948,14 +950,17 @@ class DatapackExportDialog:
         def wnbsIDVaildate(P):
             isVaild = bool(re.match(r"^(\d|\w|[-_.])+$", P))
             button["state"] = "normal" if isVaild and (
-                14 >= len(P) > 0) else "disabled"
+                60 >= len(P) > 0) else "disabled"
             return isVaild
 
         self.entry = entry = builder.get_object('IDEntry')
         vcmd = (master.register(wnbsIDVaildate), '%P')
         entry.configure(validatecommand=vcmd)
 
+        self.lyricsFilePath: tk.StringVar
+
         builder.connect_callbacks(self)
+        builder.import_variables(self)
 
     def run(self):
         self.d.run()
@@ -968,8 +973,17 @@ class DatapackExportDialog:
         path = askdirectory(title="Select folder to save")
         if path == '':
             return
+        
+        lyrics: Optional[str] = None
+
+        try:
+            with open(self.lyricsFilePath.get(), 'r', encoding='utf-8') as f:
+                lyrics = f.read()
+        except:
+            pass
+
         exportDatapack(self.parent.songsData[index], os.path.join(
-            path, self.entry.get()), self.entry.get(), 'wnbs')
+            path, self.entry.get()), self.entry.get(), 'wnbs', lyrics)
 
 
 class ProgressDialog:
@@ -1569,13 +1583,18 @@ def compactNotes(data: NbsSong, groupPerc: Union[int, BooleanVar] = 1) -> None:
     data.maxLayer = outerLayer - 1
 
 
-def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None):
+# Source: https://stackoverflow.com/a/37095855
+def to_signed_32(n: int) -> int:
+    n &= 0xffffffff
+    return (n ^ 0x80000000) - 0x80000000
+
+def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, lyrics=None):
     def writejson(path, jsout):
         with open(path, 'w') as f:
             json.dump(jsout, f, ensure_ascii=True)
 
     def writemcfunction(path, text):
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             f.write(text)
 
     def makeFolderTree(inp):
@@ -1590,6 +1609,7 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
                 _makeFolderTree(v, a + [k])
         elif isinstance(inp, str):
             p = os.path.join(*a, inp)
+            print(p)
             os.makedirs(p, exist_ok=True)
         else:
             return
@@ -1602,10 +1622,17 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
         bname = os.path.basename(path)
 
     data.correctData()
+
+    lyrics_inst = 0
+    if lyrics:
+        lyrics_layer = next((i for i, x in enumerate(data.layers) if 'lyric' in x.name.lower()), -1)
+        lyrics_inst = next((x.inst for i, x in enumerate(data.notes) if x.layer == lyrics_layer), -1)
+
     compactNotes(data, groupPerc=False)
     data.correctData()
 
     instruments = VANILLA_INSTS + data.customInsts
+    layers = data.layers
 
     instLayers = {}
     for note in data.notes:
@@ -1614,7 +1641,7 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
         elif note.layer not in instLayers[note.inst]:
             instLayers[note.inst].append(note.layer)
 
-    scoreObj = bname[:13]
+    scoreObj = bname[:50]
     speed = int(min(data.header.tempo * 4, 120))
     length = data.header.length + 1
 
@@ -1635,8 +1662,21 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, master=None
         }
     )
 
+    captions: Optional[Deque] = None
+    lyrics_uuid = None
+    uuid_arr_str = ''
+    lyrics_layer: int = -1
+    if lyrics:
+        captions = lyric2captions(lyrics)
+        lyrics_uuid = uuid.uuid4()
+        uuid_int = lyrics_uuid.int
+        # Source: https://stackoverflow.com/a/32053256/12682038
+        uuid_array = ((uuid_int >> x) & 0xFFFFFFFF for x in reversed(range(0, 128, 32)))
+        uuid_arr_str = ', '.join(str(to_signed_32(num)) for num in uuid_array)
+        lyrics_layer = next((i for i, x in enumerate(layers) if 'lyric' in x.name.lower()), -1)
+
     writejson(os.path.join(path, 'pack.mcmeta'), {"pack": {
-        "description": "Note block song datapack made with NBSTool.", "pack_format": 6}})
+        "description": "Note block song datapack made with NBSTool.", "pack_format": 8}})
     writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
                            'load.json'), jsout={"values": ["{}:load".format(bname)]})
     writejson(os.path.join(path, 'data', 'minecraft', 'tags', 'functions',
@@ -1649,7 +1689,7 @@ scoreboard players set speed {0} {1}""".format(scoreObj, speed))
     writemcfunction(os.path.join(path, 'data', bname, 'functions', 'tick.mcfunction'),
                     """execute as @a[tag={0}] run scoreboard players operation @s {0} += speed {0}
 execute as @a[tag={0}] run function {1}:tree/0_{2}
-execute as @e[type=armor_stand, tag=WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname, 2**(floor(log2(length))+1)-1))
+execute as @e[type=armor_stand, tag={3}_WNBS_Marker] at @s unless block ~ ~-1 ~ minecraft:note_block run kill @s""".format(scoreObj, bname, 2**(floor(log2(length))+1)-1, scoreObj))
     writemcfunction(os.path.join(path, 'data', bname, 'functions', 'play.mcfunction'),
                     """tag @s add {0}
 scoreboard players set @s {0}_t -1
@@ -1659,18 +1699,22 @@ scoreboard players set @s {0}_t -1
     writemcfunction(os.path.join(path, 'data', bname, 'functions', 'stop.mcfunction'),
                     """tag @s remove {0}
 scoreboard players reset @s {0}
-scoreboard players reset @s {0}_t""".format(scoreObj))
+scoreboard players reset @s {0}_t
+data modify entity {1} CustomName set value ''""".format(scoreObj, lyrics_uuid))
     writemcfunction(os.path.join(path, 'data', bname, 'functions', 'uninstall.mcfunction'),
                     """scoreboard objectives remove {0}
 scoreboard objectives remove {0}_t""".format(scoreObj))
 
+
     text = ''
     for k, v in instLayers.items():
         for i in range(len(v)):
-            text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
-                    "{}-{}".format(instruments[k].sound_id,
-                                   i), "{}-{}".format(k, i)
+            text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["{}_WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
+                    "{}-{}".format(instruments[k].sound_id, i), scoreObj, "{}-{}".format(k, i)
             )
+    if lyrics:
+        assert not uuid_arr_str is None
+        text += f'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"lyrics\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["{scoreObj}_WNBS_Marker"], UUID: [I;{uuid_arr_str}], CustomName: "{{\\"text\\":\\"\\"}}", CustomNameVisible: 1b }} }}\n'
     writemcfunction(os.path.join(path, 'data', bname,
                                  'functions', 'give.mcfunction'), text)
 
@@ -1687,11 +1731,31 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
         if tick in colNotes:
             currNotes = colNotes[tick]
             for note in currNotes:
-                text += \
-                    """execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
-execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
-execute as @e[type=armor_stand, tag=WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
+                if note.inst != lyrics_inst:
+                    text += \
+                        """execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
+execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
+execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
 """.format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note.inst].index(note.layer), instname=instruments[note.inst].sound_id, key=max(33, min(57, note.key)) - 33)
+                else:
+                    if captions:
+                        caption = captions.popleft()
+                        component = [
+                            "",
+                            {
+                                "text": caption[0],
+                                "color": "yellow",
+                                "bold": True,
+                            },
+                            {
+                                "text": caption[1],
+                            }
+                        ]
+                        raw_text = json.dumps(component, ensure_ascii=False)
+                        text += f"data modify entity {lyrics_uuid} CustomName set value '{raw_text}'\n"
+                        # print(f"data modify entity {lyrics_uuid} CustomName set value '{raw_text}'\n")
+
+
         if tick < length-1:
             text += "scoreboard players set @s {}_t {}".format(
                 scoreObj, tick)
