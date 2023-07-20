@@ -54,7 +54,7 @@ def convert(data: NbsSong) -> File:
         layers.append(Layer(id=len(layers)))
 
     instruments = [Instrument(id=i, name=inst.name, file=inst.filePath, pitch=inst.pitch,
-                              press_key=inst.pressKeys) for i, inst in enumerate(VANILLA_INSTS + data.customInsts)]
+                              press_key=inst.pressKeys) for i, inst in enumerate(data.customInsts)]
 
     return File(header, notes, layers, instruments)
 
@@ -85,12 +85,13 @@ class Renderer(SongRenderer):
         self,
         notes: Sequence[nbs.Note],
         ignore_missing_instruments: bool = False,
-        sample_rate: Optional[int] = 44100,
-        channels: Optional[int] = 2,
+        sample_rate: int = 44100,
+        channels: int = 2,
         bit_depth: int = 16,
     ) -> audio.Track:
 
-        track_length = self.get_length(self._song.weighted_notes())  # type: ignore
+        tempo_segments = self._song.tempo_segments
+        track_length = self.get_length(self._song.weighted_notes(), tempo_segments) # type: ignore
 
         mixer = audio.Mixer(
             sample_width=bit_depth // 8,
@@ -158,9 +159,9 @@ class Renderer(SongRenderer):
             last_vol = vol
             last_pan = pan
 
-            pos = note.tick / self._song.header.tempo * 1000
+            pos = tempo_segments[note.tick]
 
-            mixer.overlay(sound, position=pos)
+            mixer.overlay(sound, position=int(pos))
 
             if self.dialog:
                 newPercent = 30 + i * 50 / note_count
