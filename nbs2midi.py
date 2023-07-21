@@ -18,12 +18,13 @@
 
 
 from asyncio import sleep
+from itertools import repeat
 
 from mido import Message, MetaMessage, MidiFile, MidiTrack, bpm2tempo
 from numpy import interp
 
 from common import MIDI_DRUMS, MIDI_INSTRUMENTS
-from nbsio import NbsSong
+from nbsio import NbsSong, Layer
 
 MIDI_DRUMS_BY_NBS_KEY_INST = {
     (obj.nbs_pitch, obj.nbs_instrument): obj.pitch for obj in MIDI_DRUMS}
@@ -108,6 +109,9 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     
     '''
     headers, notes, layers = data.header, data.notes, data.layers
+    default_layer = Layer("")
+    if (data.maxLayer >= headers.height):
+        layers.extend(repeat(default_layer, data.maxLayer+1 - headers.height))
 
     # The time signature upper number in ONBS
     # doesn't affect the overall tempo at all.
@@ -144,20 +148,20 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
         pitch = note.key + 21
         trackIndex = note.layer
         velocity = int(note.vel * 127 / 100)
-        pan = int(interp(layers[trackIndex].pan, (-100, 100), (0, 127)))
+        pan = int(interp(layers[trackIndex].pan * note.pan, (-10000, 10000), (0, 127)))
+        inst: int = note.inst
 
         tracks[trackIndex].append(Message(
             'control_change', control=10, value=pan, time=abs_time))
         
         if note.isPerc:
-            inst: int = note.inst
             pitch = MIDI_DRUMS_BY_NBS_KEY_INST.get((pitch, inst), INST2PITCH[inst])
-            keyShift = MIDI_INSTRUMENTS[inst].octave_shift * 12
-            pitch -= keyShift
 
             tracks[trackIndex].append(Message('note_on', channel=9, note=pitch, velocity=velocity, time=abs_time))
             tracks[trackIndex].append(Message('note_off', channel=9, note=pitch, velocity=velocity, time=abs_time + note_tpb))
         else:
+            # keyShift = MIDI_INSTRUMENTS[INST_PROGRAMS.get(inst, 1)-1].octave_shift * 12
+            # pitch += keyShift
             tracks[trackIndex].append(Message('note_on', note=pitch, velocity=velocity, time=abs_time))
             tracks[trackIndex].append(Message('note_off', note=pitch, velocity=velocity, time=abs_time + note_tpb))
 

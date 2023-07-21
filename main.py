@@ -1348,7 +1348,7 @@ class ImportDialog:
                             songData = task.result()
                             await task
                             break
-                    if not songData:
+                    if songData is None:
                         raise ImportError(
                             f"The file {filePath} is empty or cannot be imported.")
                     dialog.currentProgress.set(80)
