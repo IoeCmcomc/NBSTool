@@ -63,7 +63,7 @@ from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 from lyric_parser import lyric2captions
 
-__version__ = '1.2.0'
+__version__ = '1.3.0'
 
 NBS_JSON_SCHEMA = {
     "type":"object",
