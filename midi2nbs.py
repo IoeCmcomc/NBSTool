@@ -20,12 +20,15 @@
 from asyncio import sleep
 from math import gcd
 from os.path import basename
+from collections import namedtuple
 from typing import Optional, Tuple
+from dataclasses import dataclass
+from traceback import print_exc
 
 from mido import MidiFile, merge_tracks, tempo2bpm
 from numpy import interp
 
-from common import MIDI_DRUMS, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
+from common import MIDI_DRUMS, MidiInstrument, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
 from nbsio import Layer, NbsSong, Note
 
 MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
@@ -34,12 +37,19 @@ NOTE_POS_MULTIPLIER = 18
 """The value must be divisible by 2, 3 (to handle triplets).
 It also limits the maximum expand multiplier."""
 
+MidiNoteMsgKey = namedtuple("MidiNoteMsgKey", ("note", "channel"))
+
+@dataclass
+class MidiNoteMsgValue:
+    note: Note
+    duration: int = 1
 
 def extractKeyAndInst(
     msg, trackInst: int, keyShift: int
 ) -> Optional[Tuple[int, int]]:
     if msg.channel == 9:
-        midiDrum = MIDI_DRUMS_BY_MIDI_PITCH.get(msg.note, MIDI_DRUMS_BY_MIDI_PITCH[27])
+        midiDrum = MIDI_DRUMS_BY_MIDI_PITCH.get(
+            msg.note, MIDI_DRUMS_BY_MIDI_PITCH[27])
         if midiDrum.nbs_instrument == -1:
             return None
         key = midiDrum.nbs_pitch + 36
@@ -48,6 +58,7 @@ def extractKeyAndInst(
         key = max(0, (msg.note - 21) + keyShift)
         inst = trackInst
     return key, inst
+
 
 async def midi2nbs(
     filepath: str,
@@ -92,7 +103,8 @@ async def midi2nbs(
             #  Perform automatic space expanding (if specified)
             if msg.type == "note_on":
                 if msg.velocity > 0:
-                    notePos = round(absTime * timeSign * NOTE_POS_MULTIPLIER / tpb)
+                    notePos = round(absTime * timeSign *
+                                    NOTE_POS_MULTIPLIER / tpb)
                     if notePos % 2 == 1:
                         notePos += 1  # Make all notePos even
                         # to reduce the expand multiplier
@@ -141,9 +153,9 @@ async def midi2nbs(
         pitch = 0
         baseLayer = ceilingLayer + 1
         layer = -1
-        lastTick = -1
-        duration = 0
-        currentNotes = []  # Notes in the current tick
+        isNoteEnd = False
+        playingNotes: dict[MidiNoteMsgKey, MidiNoteMsgValue] = {}  # Messages of playing notes
+        currentNotes: list[Note] = []  # Notes in the current tickz
         for msg in track:
             innerBaseLayer = baseLayer
             absTime += msg.time
@@ -161,32 +173,46 @@ async def midi2nbs(
                     velocity = (
                         int(msg.velocity * 100 / 127) if importVelocities else 100
                     )
-                    if velocity > 0:
-                        enoughSpace = tick != lastTick
+                    if msg.velocity > 0 and velocity > 0:
+                        enoughSpace = not playingNotes
                         if not enoughSpace:
                             layer += 1
                             if layer >= len(layers):
                                 layers.append(
                                     Layer(
                                         f"{trackName} ({layer-innerBaseLayer+1})",
-                                        False,
-                                        trackVel,
+                                        False, trackVel,
                                     )
                                 )
                         else:
                             layer = innerBaseLayer
 
-                        note = Note(tick, layer, inst, key, velocity, pan, pitch)
+                        note = Note(tick, layer, inst, key,
+                                    velocity, pan, pitch)
                         notes.append(note)
                         currentNotes.append(note)
+                        if importDurations:
+                            playingNotes[MidiNoteMsgKey(msg.note, msg.channel)] = MidiNoteMsgValue(note)
                         ceilingLayer = max(ceilingLayer, layer)
-                        lastTick = tick
-                    elif importDurations:
-                        duration = tick - lastTick
+                    elif importDurations and msg.velocity == 0:
+                        try:
+                            playingNote = playingNotes[MidiNoteMsgKey(
+                            msg.note, msg.channel)]
+                            playingNote.duration = tick - playingNote.note.tick
+                            isNoteEnd = True
+                        except KeyError:
+                            pass
                 elif importDurations and (msg.type == "note_off"):
-                    duration = tick - lastTick
+                    try:
+                        playingNote = playingNotes[MidiNoteMsgKey(
+                            msg.note, msg.channel)]
+                        playingNote.duration = tick - playingNote.note.tick
+                        isNoteEnd = True
+                    except KeyError:
+                        print_exc()
+                        print(playingNotes)
                 elif (msg.type == "program_change") and not isPerc:
-                    midiInst: MidiInstrument = MIDI_INSTRUMENTS[msg.program]  # type: ignore
+                    midiInst: MidiInstrument = MIDI_INSTRUMENTS[msg.program] # type: ignore
                     trackInst = midiInst.nbs_instrument
                     if trackInst == -1:
                         trackInst = 0
@@ -206,36 +232,34 @@ async def midi2nbs(
                 elif importPitches and (msg.type == "pitchwheel"):
                     pitch = int(msg.pitch / NBS_PITCH_IN_MIDI_PITCHBEND)
 
-                if duration > 0 and currentNotes:
-                    extracted = extractKeyAndInst(msg, trackInst, keyShift)
-                    if not extracted:
-                        continue
-                    note = None
-                    key, inst = extracted
-                    for headNote in currentNotes:
-                        if (headNote.key == key)  and (headNote.inst == inst) \
-                                and not headNote.isPerc:
-                            note = headNote
-                            break
-                    if note:
-                        for durationIndex, newTick in enumerate(
-                            range(tick - duration, tick)
-                        ):
-                            vel = int(note.vel * (duration - durationIndex) / duration)
-                            if (vel > 1) and (durationIndex % durationSpacing == 0):
-                                newNote = Note(
-                                    newTick,
-                                    note.layer,
-                                    note.inst,
-                                    note.key,
-                                    vel,
-                                    pan,
-                                    pitch,
-                                )
-                                notes.append(newNote)
-                        currentNotes.remove(note)
-                    duration = 0
-        
+                if isNoteEnd and currentNotes:
+                    midiMsgKey = MidiNoteMsgKey(msg.note, msg.channel)
+                    if midiMsgKey in playingNotes:
+                        playingNote = playingNotes[midiMsgKey]
+                        extracted = extractKeyAndInst(msg, trackInst, keyShift)
+                        duration = playingNote.duration
+                        if extracted and duration > 1:
+                            note = playingNote.note
+                            key, inst = extracted
+                            if not note.isPerc:
+                                for durationIndex, newTick in enumerate(
+                                    range(tick - duration, tick)
+                                ):
+                                    if durationIndex == 0:
+                                        continue
+                                    vel = int(
+                                        note.vel * (duration - durationIndex) / duration)
+                                    if (vel > 1) and (durationIndex % durationSpacing == 0):
+                                        newNote = Note(newTick, note.layer,
+                                                    note.inst, note.key, vel,
+                                                    pan, pitch,
+                                                    )
+                                        notes.append(newNote)
+                                currentNotes.remove(note)
+                        del playingNotes[midiMsgKey]
+                        layer -= 1
+                    isNoteEnd = False
+
         if dialog:
             dialog.currentProgress.set(40 + i * 40 / totalTracks)
             await sleep(0.001)
