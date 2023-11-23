@@ -29,12 +29,12 @@ from mido import MidiFile, merge_tracks, tempo2bpm
 from numpy import interp
 
 from common import MIDI_DRUMS, MidiInstrument, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
-from nbsio import Layer, NbsSong, Note
+from nbsio import Layer, NbsSong, Note, PERC_INSTS
 
 MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 
 NOTE_POS_MULTIPLIER = 18
-"""The value must be divisible by 2, 3 (to handle triplets).
+"""The value must be divisible by 2, 3 to handle triplets.
 It also limits the maximum expand multiplier."""
 
 MidiNoteMsgKey = namedtuple("MidiNoteMsgKey", ("note", "channel"))
@@ -144,20 +144,23 @@ async def midi2nbs(
         if i in emptyTracks:
             continue
         absTime: int = 0
-        isPerc = i in percTracks
-        trackName = "Percussion" if isPerc else ""
         trackInst: int = 0
         keyShift: int = 0
         trackVel = 100
+        isPerc = i in percTracks
+        trackName = "Percussion" if isPerc else ""
+        if isPerc:
+            layers.append(Layer(trackName, False, trackVel))
         pan = 0
         pitch = 0
         baseLayer = ceilingLayer + 1
-        layer = -1
+        layer = baseLayer
+        lastTick = -1
         isNoteEnd = False
         playingNotes: dict[MidiNoteMsgKey, MidiNoteMsgValue] = {}  # Messages of playing notes
-        currentNotes: list[Note] = []  # Notes in the current tickz
+        currentNotes: list[Note] = []  # Notes in the current tick
+        innerBaseLayer = baseLayer
         for msg in track:
-            innerBaseLayer = baseLayer
             absTime += msg.time
             if msg.is_meta:
                 if (msg.type == "track_name") and not trackName:
@@ -165,6 +168,7 @@ async def midi2nbs(
                     layers.append(Layer(trackName, False, trackVel))
             else:
                 tick = round(absTime * timeSign / tpb * expandMultiplier)
+
                 if msg.type == "note_on":
                     extracted = extractKeyAndInst(msg, trackInst, keyShift)
                     if not extracted:
@@ -174,7 +178,10 @@ async def midi2nbs(
                         int(msg.velocity * 100 / 127) if importVelocities else 100
                     )
                     if msg.velocity > 0 and velocity > 0:
-                        enoughSpace = not playingNotes
+                        if importDurations and (inst not in PERC_INSTS):
+                            enoughSpace = not playingNotes
+                        else:
+                            enoughSpace = tick != lastTick
                         if not enoughSpace:
                             layer += 1
                             if layer >= len(layers):
@@ -194,6 +201,7 @@ async def midi2nbs(
                         if importDurations:
                             playingNotes[MidiNoteMsgKey(msg.note, msg.channel)] = MidiNoteMsgValue(note)
                         ceilingLayer = max(ceilingLayer, layer)
+                        lastTick = tick
                     elif importDurations and msg.velocity == 0:
                         try:
                             playingNote = playingNotes[MidiNoteMsgKey(

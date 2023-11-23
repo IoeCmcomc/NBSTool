@@ -322,7 +322,7 @@ class NbsSong:
                     f.close()
                 except:
                     print(traceback.format_exc())
-        self.usedInsts =  (tuple(usedInsts[0]), tuple(usedInsts[1]))
+        self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         if appendix:
             self.appendix = appendix
 
