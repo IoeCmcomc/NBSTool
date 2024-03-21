@@ -62,7 +62,7 @@ def mcsp2nbs(filename: str) -> NbsSong:
                 for keys, inst in NOTE_MAPPING.items():
                     if note_data in keys:
                         key = keys.index(note_data) + 33
-                        notes.append(Note(int(tick), layer, inst, key, 100, 100, 100))
+                        notes.append(Note(int(tick), layer, inst, key))
                         break
                 else:
                     raise KeyError(note_data)
