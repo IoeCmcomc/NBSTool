@@ -7,7 +7,8 @@ authors = ["IoeCmcomc"]
 [tool.poetry.dependencies]
 python = ">=3.8, <3.11"
 Pillow = ">=9.0.0"
-pygubu = ">=0.11, <0.24"
+# pygubu = ">=0.11, <0.24"
+pygubu = ">=0.11"
 mido = ">=1.2.9"
 lxml = ">=4.9.1"
 lark = ">=1.0.0"
@@ -17,7 +18,8 @@ nbswave = {git = "https://github.com/Bentroen/nbswave.git"}
 [tool.poetry.dev-dependencies]
 
 [tool.poetry.group.dev.dependencies]
-pygubu-designer = "~0.28"
+# pygubu-designer = "~0.28"
+pygubu-designer = ">=0.28"
 Nuitka = "^1.1.6"
 orderedset = "^2.0.3"
 zstandard = "^0.18.0"

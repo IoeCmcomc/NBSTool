@@ -44,13 +44,13 @@ from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
 import uuid
 
 import pygubu
-import pygubu.builder.widgets.combobox
+import pygubu.widgets.combobox
 from jsonschema import validate
 from pydub.utils import which
 from pygubu import Builder
 # Explict imports for PyInstaller
-from pygubu.builder import tkstdwidgets, ttkstdwidgets
-from pygubu.builder.widgets import dialog, pathchooserinput, tkscrollbarhelper
+# from pygubu.builder import tkstdwidgets, ttkstdwidgets
+from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
 from pygubu.widgets.dialog import Dialog
 
 import customwidgets
@@ -1753,7 +1753,6 @@ execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] 
                         ]
                         raw_text = json.dumps(component, ensure_ascii=False)
                         text += f"data modify entity {lyrics_uuid} CustomName set value '{raw_text}'\n"
-                        # print(f"data modify entity {lyrics_uuid} CustomName set value '{raw_text}'\n")
 
 
         if tick < length-1:
