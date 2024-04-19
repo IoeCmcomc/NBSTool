@@ -42,6 +42,7 @@ from tkinter.messagebox import showerror, showwarning
 from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
                     Optional, Union)
 import uuid
+from itertools import repeat
 
 import pygubu
 import pygubu.widgets.combobox
@@ -410,6 +411,8 @@ class MainWindow():
         self.arrangeMode: StringVar
         self.flipHorizontallyCheckVar: BooleanVar
         self.flipVerticallyCheckVar: BooleanVar
+        self.applyLayerVolCheckVar: BooleanVar
+        self.applyLayerPanCheckVar: BooleanVar
         self.groupPerc: BooleanVar
 
         builder.import_variables(self)
@@ -844,7 +847,6 @@ class MainWindow():
                     songData: NbsSong = deepcopy(self.songsData[index])
                     dialog.setCurrentPercentage(randint(20, 25))
                     await sleep(0.001)
-                    dialog.currentMax = len(songData.notes)*2
                     length = songData.header.length
                     maxLayer = songData.maxLayer
 
@@ -862,14 +864,38 @@ class MainWindow():
                                 note.tick = length - note.tick
                             if self.flipVerticallyCheckVar.get():
                                 note.layer = maxLayer - note.layer
-                            dialog.currentProgress.set(
-                                dialog.currentProgress.get()+1)
                     songData.sortNotes()
+                    dialog.setCurrentPercentage(45)
+                    await sleep(0.001)
 
                     if self.arrangeMode.get() == 'collapse':
                         self.collapseNotes(songData.notes)
                     elif self.arrangeMode.get() == 'instruments':
                         compactNotes(songData, self.groupPerc.get())
+                    songData.sortNotes()
+                    dialog.setCurrentPercentage(60)
+                    await sleep(0.001)
+
+                    if self.applyLayerVolCheckVar.get() or self.applyLayerPanCheckVar.get():
+                        applyVol: bool = self.applyLayerVolCheckVar.get()
+                        applyPan: bool = self.applyLayerPanCheckVar.get()
+
+                        default_layer = Layer("")
+                        if (songData.maxLayer >= songData.header.height):
+                            songData.layers.extend(repeat(default_layer, songData.maxLayer+1 - songData.header.height))
+
+                        for note in songData.notes:
+                            layer = songData.layers[note.layer]
+                            if applyVol:
+                                note.vel = (note.vel * layer.volume) // 100
+                            if applyPan and (layer.pan != 0):
+                                note.pan = (note.pan + layer.pan) // 2
+
+                        for layer in songData.layers:
+                            if applyVol:
+                                layer.volume = 100
+                            if applyPan:
+                                layer.pan = 0
 
                     dialog.setCurrentPercentage(randint(75, 85))
                     await sleep(0.001)
