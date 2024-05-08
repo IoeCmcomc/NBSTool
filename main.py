@@ -1122,8 +1122,7 @@ class ExportDialog:
 
     def exportModeChanged(self):
         self.isFolderMode = self.exportMode.get() == 'folder'
-        self.builder.get_object('pathChooser')[
-            'state'] = 'normal' if self.isFolderMode else 'disabled'
+        self.builder.get_object('pathChooser').configure(state='normal' if self.isFolderMode else 'disabled')
         self.pathChanged()
 
     def pathChanged(self, _=None):
@@ -1234,6 +1233,7 @@ class JsonExportDialog(ExportDialog):
 class AudioExportDialog(ExportDialog):
     def __init__(self, master, parent):
         self.formatVar: tk.StringVar
+        self.sampleRateVar: tk.IntVar
         self.stereo: tk.BooleanVar
         self.includeLocked: tk.BooleanVar
         self.ignoreMissingSounds: tk.BooleanVar
@@ -1246,7 +1246,7 @@ class AudioExportDialog(ExportDialog):
         self.formatVar.trace('w', self.formatChanged)  # type: ignore
 
         samplingRateCombo = self.builder.get_object('samplingRateCombo')
-        samplingRateCombo.current(44100)
+        samplingRateCombo.set(44100)
 
         self.stereo.set(True)  # type: ignore
         self.includeLocked.set(True)  # type: ignore

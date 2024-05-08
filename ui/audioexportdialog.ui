@@ -1,5 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.2">
+<interface version="1.4" author="PygubuDesigner 0.39.2">
+  <project>
+    <settings />
+    <customwidgets />
+  </project>
   <object class="pygubu.builder.widgets.dialog" id="dialog">
     <property name="height">100</property>
     <property name="modal">true</property>
@@ -69,6 +73,7 @@
             </child>
             <child>
               <object class="pygubu.builder.widgets.combobox" id="samplingRateCombo">
+                <property name="keyvariable">int:sampleRateVar</property>
                 <property name="values">[[44100, "44100 Hz"], [48000, "48000 Hz"], [88200, "88200 Hz"], [96000, "96000 Hz"], [384000, "384000 Hz"]]</property>
                 <layout manager="grid">
                   <property name="column">3</property>

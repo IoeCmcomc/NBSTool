@@ -773,13 +773,13 @@ files = [
 
 [[package]]
 name = "pygubu"
-version = "0.34"
+version = "0.35.1"
 description = "A simple GUI builder for the python tkinter module"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pygubu-0.34-py3-none-any.whl", hash = "sha256:ecd16134344665b2f76f4f107ae960db3b76c2be5df679b922dd518c48481ddd"},
-    {file = "pygubu-0.34.tar.gz", hash = "sha256:39cc53b25bcaca61e2b628584818d4124aeee68bf76df067ad152cb2182902ff"},
+    {file = "pygubu-0.35.1-py3-none-any.whl", hash = "sha256:557ebd28e5eb51ac9313de4b0d0fae372ba216a0c21cdada3f21e1279679a75e"},
+    {file = "pygubu-0.35.1.tar.gz", hash = "sha256:69d8d14ae1dcc89ed2724e0ba87dad28440ed4dd13422512a78f8ea9c791a93d"},
 ]
 
 [package.dependencies]
@@ -798,20 +798,20 @@ ttkwidgets = ["ttkwidgets"]
 
 [[package]]
 name = "pygubu-designer"
-version = "0.38"
+version = "0.39.2"
 description = "A simple GUI designer for the python tkinter module"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "pygubu-designer-0.38.tar.gz", hash = "sha256:e7cc37446aa2b339229fe01f7a4f49d69eed0ab411c5aa9eb38699a2e25c3fac"},
-    {file = "pygubu_designer-0.38-py3-none-any.whl", hash = "sha256:9876fb8eda6d8815e01f8a8110bcd52054f5756e63f6f257e0829da7359016e5"},
+    {file = "pygubu_designer-0.39.2-py3-none-any.whl", hash = "sha256:71c718eb0e32241b3b1755ad600768ff0129b9ea83de89b84d6813a44ec4a09e"},
+    {file = "pygubu_designer-0.39.2.tar.gz", hash = "sha256:e61bf0ac1b166b5fb0fdf99a0836f8462e23ea7785fcbecad0406bca6640ef26"},
 ]
 
 [package.dependencies]
 appdirs = ">=1.4.3"
 autopep8 = ">=1.7"
 Mako = ">=1.1.4"
-pygubu = ">=0.33"
+pygubu = ">=0.35.1"
 screeninfo = ">=0.8"
 
 [package.extras]
