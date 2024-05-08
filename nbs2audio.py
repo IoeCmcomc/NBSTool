@@ -5,15 +5,10 @@ from typing import Optional, Sequence
 
 from pydub import AudioSegment
 from pynbs import File, Header, Instrument, Layer, Note
-
-from common import resource_path
-
-if os_name == 'nt':
-    environ["PATH"] += resource_path('ffmpeg', 'bin')
-
 from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
 
+from common import resource_path
 from nbsio import VANILLA_INSTS, NbsSong
 
 

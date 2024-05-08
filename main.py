@@ -47,7 +47,6 @@ from itertools import repeat
 import pygubu
 import pygubu.widgets.combobox
 from jsonschema import validate
-from pydub.utils import which
 from pygubu import Builder
 # Explict imports for PyInstaller
 # from pygubu.builder import tkstdwidgets, ttkstdwidgets
@@ -56,6 +55,13 @@ from pygubu.widgets.dialog import Dialog
 
 import customwidgets
 from common import BASE_RESOURCE_PATH, resource_path
+
+if os.name == 'nt': # Windows
+    # Add the path of the ffmpeg before the first pydub import statement
+    os.environ["PATH"] += resource_path('ffmpeg', 'bin')
+
+from pydub.utils import which
+
 from mcsp2nbs import mcsp2nbs
 from midi2nbs import midi2nbs
 from musescore2nbs import musescore2nbs
