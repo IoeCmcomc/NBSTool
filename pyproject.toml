@@ -3,6 +3,7 @@ name = "nbstool"
 version = "1.3.0"
 description = "A tool to work with .nbs (Note Block Studio) files."
 authors = ["IoeCmcomc"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.8, <3.11"
