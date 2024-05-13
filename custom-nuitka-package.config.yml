@@ -1,0 +1,50 @@
+# yamllint disable rule:line-length
+# yamllint disable rule:indentation
+# yamllint disable rule:comments-indentation
+# too many spelling things, spell-checker: disable
+---
+
+- module-name: '__main__'
+  data-files:
+    dirs:
+      - 'ui'
+      - 'sounds'
+    patterns:
+      - 'icon.ico'
+  # dlls:
+  #   - from_filenames:
+  #       relative_path: 'ffmpeg/bin'
+  #       prefixes:
+  #         - 'ffmpeg'
+  #         - 'ffprobe'
+  #       executable: 'yes'
+  #     when: 'win32'
+
+- module-name: 'nbs2audio'
+  dlls:
+    - from_filenames:
+        relative_path: 'ffmpeg/bin'
+        prefixes:
+          - 'ffmpeg'
+          - 'ffprobe'
+        executable: 'yes'
+      when: 'win32'
+
+- module-name: 'pygubu'
+  implicit-imports:
+    - depends:
+      - 'pygubu.builder.widgets'
+      - 'pygubu.builder.widgets.tkscrollbarhelper'
+      - 'pygubu.builder.widgets.dialog'
+      - 'pygubu.builder.widgets.pathchooserinput'
+      - 'pygubu.builder.widgets.combobox'
+      when: 'version("pygubu") < (0, 24)'
+    - depends:
+      - 'pygubu.plugins.tk.tkstdwidgets'
+      - 'pygubu.plugins.ttk.ttkstdwidgets'
+      - 'pygubu.plugins.pygubu.tkscrollbarhelper'
+      - 'pygubu.plugins.pygubu.dialog'
+      - 'pygubu.plugins.pygubu.pathchooserinput'
+      - 'pygubu.plugins.pygubu.combobox'
+      when: 'version("pygubu") > (0, 24)'
+      

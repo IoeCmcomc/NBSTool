@@ -24,11 +24,14 @@ else: # Normal import call
     from .wrapmessage import WrapMessage
     from .checkablelabelframe import CheckableLabelFrame
 
-# from pygubu import BuilderObject, register_widget
+from packaging.version import Version
+import pygubu
 
-from pygubu.component.builderobject import BuilderObject
-from pygubu.api.v1 import register_widget
-
+if Version(pygubu.__version__) >= Version('0.24'):
+    from pygubu.component.builderobject import BuilderObject
+    from pygubu.api.v1 import register_widget
+else:
+        from pygubu import BuilderObject, register_widget    
 
 class WrapMessageBuilder(BuilderObject):
     class_ = WrapMessage

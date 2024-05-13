@@ -347,3 +347,4 @@ main.dist/
 .mscbackup/
 
 setup.py
+compilation-report.xml
