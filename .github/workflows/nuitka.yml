@@ -38,9 +38,15 @@ jobs:
         poetry install
         poetry run python -c "import sys; print(sys.version)"
         
-    - name: Build standalone folder
+    - name: Build standalone folder (Windows)
+      if: matrix.os == 'windows-latest'
       run: |
         poetry run nuitka main.py
+
+    - name: Build standalone folder (Linux)
+      if: matrix.os == 'ubuntu-20.04'
+      run: |
+        poetry run python3 -m nuitka main.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
