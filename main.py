@@ -1696,7 +1696,7 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, lyrics=None
 
     scoreObj = bname[:50]
     speed = int(min(data.header.tempo * 4, 120))
-    length = data.header.length + 1
+    length = data.header.length
 
     makeFolderTree(
         {path: {

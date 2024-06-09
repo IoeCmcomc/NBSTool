@@ -1,4 +1,3 @@
-from asyncio import sleep
 from re import finditer
 
 from nbsio import NbsSong, Note

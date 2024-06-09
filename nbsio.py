@@ -172,7 +172,7 @@ class NbsSong:
         self.appendix = None
         self.hasPerc = False
         self.maxLayer = 0
-        self.usedInsts: Tuple[Tuple[Instrument], Tuple[Instrument]]
+        self.usedInsts: Tuple[Tuple[int], Tuple[int]]
 
         if f:
             self.read(f)
@@ -351,7 +351,7 @@ class NbsSong:
                     usedInsts[0].append(inst)
             maxLayer = max(layer, maxLayer)
 
-        header.length = tick
+        header.length = tick + 1
         header.height = len(self.layers)
         header.vani_inst = 16 if header.file_version > 0 else 10
         self.maxLayer = maxLayer
