@@ -14,7 +14,7 @@ pygubu = ">=0.23"
 mido = ">=1.2.9"
 lxml = ">=4.9.1"
 lark = ">=1.0.0"
-jsonschema = "^4.17.3"
+jsonschema = ">=4.17.3"
 nbswave = {git = "https://github.com/Bentroen/nbswave.git"}
 
 [tool.poetry.dev-dependencies]
