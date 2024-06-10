@@ -1328,6 +1328,7 @@ class ImpulseExportDialog(ExportDialog):
     def __init__(self, master, parent):
         super().__init__(master, parent, '.it', "Impulse Tracker exporting",
                          "Exporting {} files to Impulse Tracker format (.it)...", nbs2it)
+        self.shouldCompactNotes = False
         
         if not checkFFmpeg():
             self.d.destroy()
