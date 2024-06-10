@@ -148,7 +148,9 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
         pitch = note.key + 21
         trackIndex = note.layer
         velocity = int(note.vel * 127 / 100)
-        pan = int(interp(layers[trackIndex].pan * note.pan, (-10000, 10000), (0, 127)))
+        # pan = int(interp(layers[trackIndex].pan * note.pan, (-10000, 10000), (0, 127)))
+        pan = int(interp((layers[trackIndex].pan + note.pan) / 2, (-100, 100), (0, 127)))
+
         inst: int = note.inst
 
         tracks[trackIndex].append(Message(

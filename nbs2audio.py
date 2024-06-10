@@ -1,3 +1,22 @@
+# This file is a part of:
+# ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+#  ███▄▄▄▄   ▀█████████▄     ▄████████     ███      ▄██████▄   ▄██████▄   ▄█
+#  ███▀▀▀██▄   ███    ███   ███    ███ ▀█████████▄ ███    ███ ███    ███ ███
+#  ███   ███   ███    ███   ███    █▀     ▀███▀▀██ ███    ███ ███    ███ ███
+#  ███   ███  ▄███▄▄▄██▀    ███            ███   ▀ ███    ███ ███    ███ ███
+#  ███   ███ ▀▀███▀▀▀██▄  ▀███████████     ███     ███    ███ ███    ███ ███
+#  ███   ███   ███    ██▄          ███     ███     ███    ███ ███    ███ ███
+#  ███   ███   ███    ███    ▄█    ███     ███     ███    ███ ███    ███ ███▌    ▄
+#   ▀█   █▀  ▄█████████▀   ▄████████▀     ▄████▀    ▀██████▀   ▀██████▀  █████▄▄██
+# __________________________________________________________________________________
+# NBSTool is a tool to work with .nbs (Note Block Studio) files.
+# Author: IoeCmcomc (https://github.com/IoeCmcomc)
+# Programming language: Python
+# License: MIT license
+# Source codes are hosted on: GitHub (https://github.com/IoeCmcomc/NBSTool)
+# ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+
+
 from asyncio import sleep
 from os import environ
 from os import name as os_name
@@ -5,14 +24,16 @@ from typing import Optional, Sequence
 
 from pydub import AudioSegment
 from pynbs import File, Header, Instrument, Layer, Note
+
+from common import load_sound
+
 from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
 
-from common import resource_path
+from common import resource_path, SOUND_FOLDER
 from nbsio import VANILLA_INSTS, NbsSong
 
-
-SOUND_FOLDER = resource_path('sounds')
+audio.load_sound = load_sound
 
 def convert(data: NbsSong) -> File:
     oldHeader = data.header

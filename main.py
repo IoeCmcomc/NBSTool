@@ -63,7 +63,7 @@ from itertools import repeat
 import logging
 import sys
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 import pygubu
 import pygubu.widgets.combobox
@@ -90,6 +90,7 @@ from nbs2audio import nbs2audio
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 from lyric_parser import lyric2captions
+from nbs2impulsetracker import nbs2it
 
 __version__ = '1.3.0'
 
@@ -409,6 +410,8 @@ class MainWindow():
                 2, state="normal" if selectionNotEmpty else "disable")
             exportMenu.entryconfig(
                 3, state="normal" if selectionNotEmpty else "disable")
+            exportMenu.entryconfig(
+                4, state="normal" if selectionNotEmpty else "disable")
 
         self.fileTable.bind("<<TreeviewSelect>>", on_fileTable_select)
 
@@ -735,6 +738,9 @@ class MainWindow():
 
     def callJsonExportDialog(self):
         JsonExportDialog(self.toplevel, self).run()
+    
+    def callImpulseExportDialog(self):
+        ImpulseExportDialog(self.toplevel, self).run()
 
     def callAboutDialog(self):
         dialogue = AboutDialog(self.toplevel, self)
@@ -1144,6 +1150,8 @@ class ExportDialog:
 
         self.exportModeChanged()
 
+        self.shouldCompactNotes = True
+
     def run(self):
         self.d.run()
 
@@ -1201,7 +1209,8 @@ class ExportDialog:
                     dialog.currentText.set(f"Current file: {filePath}")
                     # Prevent data from unintended changes
                     songData: NbsSong = deepcopy(songsData[i])
-                    compactNotes(songData, True)
+                    if self.shouldCompactNotes:
+                        compactNotes(songData, True)
                     songData.correctData()
                     dialog.currentProgress.set(10)  # 10%
                     await func(songData, filePath, dialog)
@@ -1257,6 +1266,25 @@ class JsonExportDialog(ExportDialog):
         await sleep(0.001)
 
 
+def checkFFmpeg(ps: str = '') -> bool:
+    if not (which('ffmpeg') and which('ffprobe')):
+        instructionMsg = ''
+        if os.name == 'nt':
+            instructionMsg = """
+Make sure there are ffmpeg.exe and ffprobe.exe inside the ffmpeg/bin folder.
+If not, you can download ffmpeg then put these two files in ffmpeg/bin folder."""
+        elif os.name == 'posix':
+            instructionMsg = """
+Make sure the ffmpeg package is installed in the system.
+Use "sudo apt install ffmpeg" command to install ffmpeg."""
+        instructionMsg = "NBSTool can't find ffmpeg, which is required to render audio." + instructionMsg
+        if ps:
+            instructionMsg += '\n' + ps
+        showwarning("ffmpeg not found", instructionMsg)
+        return False
+    else:
+        return True
+
 class AudioExportDialog(ExportDialog):
     def __init__(self, master, parent):
         self.formatVar: tk.StringVar
@@ -1278,18 +1306,7 @@ class AudioExportDialog(ExportDialog):
         self.stereo.set(True)  # type: ignore
         self.includeLocked.set(True)  # type: ignore
 
-        if not (which('ffmpeg') and which('ffprobe')):
-            instructionMsg = ''
-            if os.name == 'nt':
-                instructionMsg = """
-Make sure there are ffmpeg.exe and ffprobe.exe inside the ffmpeg/bin folder.
-If not, you can download ffmpeg then put these two files in ffmpeg/bin folder."""
-            elif os.name == 'posix':
-                instructionMsg = """
-Make sure the ffmpeg package is installed in the system.
-Use "sudo apt install ffmpeg" command to install ffmpeg."""
-            showwarning("ffmpeg not found",
-            "NBSTool can't find ffmpeg, which is required to render audio." + instructionMsg)
+        checkFFmpeg()
 
     def formatChanged(self, *args):
         self.fileExt = '.' + self.builder.get_object('formatCombo').current()
@@ -1306,6 +1323,14 @@ Use "sudo apt install ffmpeg" command to install ffmpeg."""
                         channels, exclude_locked_layers=not includeLocked,
                         ignore_missing_instruments=ignoreMissingSounds)
 
+
+class ImpulseExportDialog(ExportDialog):
+    def __init__(self, master, parent):
+        super().__init__(master, parent, '.it', "Impulse Tracker exporting",
+                         "Exporting {} files to Impulse Tracker format (.it)...", nbs2it)
+        
+        if not checkFFmpeg():
+            self.d.destroy()
 
 def parseFilePaths(string: str) -> tuple:
     strLen = len(string)
