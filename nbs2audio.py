@@ -18,21 +18,16 @@
 
 
 from asyncio import sleep
-from os import environ
-from os import name as os_name
-from typing import Optional, Sequence
-
-from pydub import AudioSegment
-from pynbs import File, Header, Instrument, Layer, Note
+from typing import Sequence
 
 from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
-
-from nbsio import VANILLA_INSTS, NbsSong
+from pydub import AudioSegment
+from pynbs import File, Header, Instrument, Layer, Note
 
 from audio_common import load_sound
-from common import resource_path, SOUND_FOLDER
-
+from common import SOUND_FOLDER
+from nbsio import NbsSong
 
 audio.load_sound = load_sound
 

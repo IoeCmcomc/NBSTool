@@ -18,18 +18,19 @@
 
 
 from asyncio import sleep
+from collections import namedtuple
+from dataclasses import dataclass
 from math import gcd
 from os.path import basename
-from collections import namedtuple
-from typing import Optional, Tuple
-from dataclasses import dataclass
 from traceback import print_exc
+from typing import Optional, Tuple
 
 from mido import MidiFile, merge_tracks, tempo2bpm
 from numpy import interp
 
-from common import MIDI_DRUMS, MidiInstrument, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND
-from nbsio import Layer, NbsSong, Note, PERC_INSTS
+from common import (MIDI_DRUMS, MIDI_INSTRUMENTS, NBS_PITCH_IN_MIDI_PITCHBEND,
+                    MidiInstrument)
+from nbsio import PERC_INSTS, Layer, NbsSong, Note
 
 MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 

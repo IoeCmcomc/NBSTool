@@ -35,20 +35,23 @@
 
 
 import asyncio
+import inspect
 import json
+import logging
 import os
+import platform
 import re
 import sys
-import platform
-import inspect
-import warnings
 import tkinter as tk
 import tkinter.ttk as ttk
+import uuid
+import warnings
 import webbrowser
 from ast import literal_eval
 from asyncio import CancelledError, sleep
 from copy import copy, deepcopy
 from datetime import timedelta
+from itertools import repeat
 from math import floor, log2
 from os import path as os_path
 from pathlib import Path
@@ -60,17 +63,11 @@ from tkinter.filedialog import (askdirectory, askopenfilename,
 from tkinter.messagebox import showerror, showwarning
 from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
                     Optional, Union)
-import uuid
-from itertools import repeat
-import logging
-import sys
 
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-
-from loguru import logger
 import pygubu
 import pygubu.widgets.combobox
 from jsonschema import validate
+from loguru import logger
 from pygubu import Builder
 # Explict imports for PyInstaller
 # from pygubu.builder import tkstdwidgets, ttkstdwidgets
@@ -80,20 +77,23 @@ from pygubu.widgets.dialog import Dialog
 import customwidgets.builder
 from common import BASE_RESOURCE_PATH, resource_path
 
+# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+
 if os.name == 'nt':  # Windows
     # Add the path of the ffmpeg before the first pydub import statement
     os.environ["PATH"] += resource_path('ffmpeg', 'bin')
 
 from pydub.utils import which
 
+from lyric_parser import lyric2captions
 from mcsp2nbs import mcsp2nbs
 from midi2nbs import midi2nbs
 from musescore2nbs import musescore2nbs
 from nbs2audio import nbs2audio
+from nbs2impulsetracker import nbs2it
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
-from lyric_parser import lyric2captions
-from nbs2impulsetracker import nbs2it
 
 __version__ = '1.3.0'
 
@@ -1345,7 +1345,7 @@ class ImpulseExportDialog(ExportDialog):
 
         if not checkFFmpeg():
             self.d.close()
-            self.d.toplevel.after(1, self.d.destroy) # type: ignore
+            self.d.toplevel.after(1, self.d.destroy)  # type: ignore
 
 
 def parseFilePaths(string: str) -> tuple:
@@ -1938,16 +1938,21 @@ class InterceptHandler(logging.Handler):
             level, record.getMessage())
 
 
-logger.add(resource_path("logs", "latest.log"), retention=10, compression='bz2')
-logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO, force=True)
+logger.add(resource_path("logs", "latest.log"),
+           retention=10, compression='bz2')
+logging.basicConfig(handlers=[InterceptHandler()],
+                    level=logging.INFO, force=True)
 
 showwarning_ = warnings.showwarning
+
 
 def _showwarning(message, *args, **kwargs):
     logger.warning(message)
     showwarning_(message, *args, **kwargs)
 
+
 warnings.showwarning = _showwarning
+
 
 @logger.catch
 def main() -> None:

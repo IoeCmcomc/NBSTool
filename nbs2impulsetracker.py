@@ -17,28 +17,26 @@
 # ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 
 
+from asyncio import sleep
 from collections.abc import Iterable
+from dataclasses import asdict, dataclass
+from enum import Enum, Flag, IntFlag, auto
+from functools import total_ordering
+from itertools import groupby
+from math import ceil
+from os import path
+from pprint import pprint
 from struct import Struct
 from typing import BinaryIO, Optional
-from math import ceil
-from enum import Enum, Flag, IntFlag, auto
-from pprint import pprint
-from itertools import groupby
-from dataclasses import dataclass, asdict
-from functools import total_ordering
-from os import path
-from asyncio import sleep
 from warnings import warn
 
 from pydub import AudioSegment
 from pydub.effects import normalize
 
-from nbsio import Note as NbsNote
-from nbsio import NbsSong, Layer, Instrument, VANILLA_INSTS
-
-from common import SOUND_FOLDER
 from audio_common import load_sound
-
+from common import SOUND_FOLDER
+from nbsio import VANILLA_INSTS, Instrument, Layer, NbsSong
+from nbsio import Note as NbsNote
 
 DEFAULT_PATTERN_LENGTH = 64
 TRACKER_VERSION = 0xa00a
