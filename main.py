@@ -39,9 +39,11 @@ import json
 import os
 import re
 import sys
+import platform
+import inspect
+import warnings
 import tkinter as tk
 import tkinter.ttk as ttk
-import traceback
 import webbrowser
 from ast import literal_eval
 from asyncio import CancelledError, sleep
@@ -65,6 +67,7 @@ import sys
 
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
+from loguru import logger
 import pygubu
 import pygubu.widgets.combobox
 from jsonschema import validate
@@ -74,10 +77,10 @@ from pygubu import Builder
 from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
 from pygubu.widgets.dialog import Dialog
 
-import customwidgets
+import customwidgets.builder
 from common import BASE_RESOURCE_PATH, resource_path
 
-if os.name == 'nt': # Windows
+if os.name == 'nt':  # Windows
     # Add the path of the ffmpeg before the first pydub import statement
     os.environ["PATH"] += resource_path('ffmpeg', 'bin')
 
@@ -95,109 +98,109 @@ from nbs2impulsetracker import nbs2it
 __version__ = '1.3.0'
 
 NBS_JSON_SCHEMA = {
-    "type":"object",
-    "properties":{
-        "header":{
-            "type":"object",
-            "properties":{
-                "length":{
-                    "type":"integer",
+    "type": "object",
+    "properties": {
+        "header": {
+            "type": "object",
+            "properties": {
+                "length": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 65535
                 },
-                "file_version":{
-                    "type":"integer",
+                "file_version": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 255
                 },
-                "vani_inst":{
-                    "type":"integer",
+                "vani_inst": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 65535
                 },
-                "height":{
-                    "type":"integer",
+                "height": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 65535
                 },
-                "name":{
-                    "type":"string",
+                "name": {
+                    "type": "string",
                     "maxLength": 4294967295
                 },
-                "author":{
-                    "type":"string",
+                "author": {
+                    "type": "string",
                     "maxLength": 4294967295
                 },
-                "orig_author":{
-                    "type":"string",
+                "orig_author": {
+                    "type": "string",
                     "maxLength": 4294967295
                 },
-                "description":{
-                    "type":"string",
+                "description": {
+                    "type": "string",
                     "maxLength": 4294967295
                 },
-                "tempo":{
-                    "type":"number",
+                "tempo": {
+                    "type": "number",
                     "minimun": 0,
                     "maximum": 655.35
                 },
-                "auto_save":{
-                    "type":"boolean"
+                "auto_save": {
+                    "type": "boolean"
                 },
-                "auto_save_time":{
-                    "type":"integer",
+                "auto_save_time": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 255
                 },
-                "time_sign":{
-                    "type":"integer",
+                "time_sign": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 255
                 },
-                "minutes_spent":{
-                    "type":"integer",
+                "minutes_spent": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 4294967295
                 },
-                "left_clicks":{
-                    "type":"integer",
+                "left_clicks": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 4294967295
                 },
-                "right_clicks":{
-                    "type":"integer",
+                "right_clicks": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 4294967295
                 },
-                "block_added":{
-                    "type":"integer",
+                "block_added": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 4294967295
                 },
-                "block_removed":{
-                    "type":"integer",
+                "block_removed": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 4294967295
                 },
-                "import_name":{
-                    "type":"string",
+                "import_name": {
+                    "type": "string",
                     "maxLength": 4294967295
                 },
-                "loop":{
-                    "type":"boolean"
+                "loop": {
+                    "type": "boolean"
                 },
-                "loop_max":{
-                    "type":"integer",
+                "loop_max": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 255
                 },
-                "loop_start":{
-                    "type":"integer",
+                "loop_start": {
+                    "type": "integer",
                     "minimun": 0,
                     "maximum": 65535
                 }
             },
-            "required":[
+            "required": [
                 "author",
                 "auto_save",
                 "auto_save_time",
@@ -218,49 +221,49 @@ NBS_JSON_SCHEMA = {
                 "vani_inst"
             ]
         },
-        "notes":{
-            "type":"array",
+        "notes": {
+            "type": "array",
             # "uniqueItems": True,
-            "items":{
-                "type":"object",
-                "properties":{
-                    "tick":{
-                        "type":"integer",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tick": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 65535
                     },
-                    "layer":{
-                        "type":"integer",
+                    "layer": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 65535
                     },
-                    "inst":{
-                        "type":"integer",
+                    "inst": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 255
                     },
-                    "key":{
-                        "type":"integer",
+                    "key": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 87
                     },
-                    "vel":{
-                        "type":"integer",
+                    "vel": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 100
                     },
-                    "pan":{
-                        "type":"integer",
+                    "pan": {
+                        "type": "integer",
                         "minimun": -100,
                         "maximum": 100
                     },
-                    "pitch":{
-                        "type":"integer",
+                    "pitch": {
+                        "type": "integer",
                         "minimun": -32768,
                         "maximum": 32767
                     }
                 },
-                "required":[
+                "required": [
                     "inst",
                     "key",
                     "layer",
@@ -268,61 +271,61 @@ NBS_JSON_SCHEMA = {
                 ]
             }
         },
-        "layers":{
-            "type":"array",
-            "items":{
-                "type":"object",
-                "properties":{
-                    "name":{
-                        "type":"string",
+        "layers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
                         "maxLength": 4294967295
                     },
-                    "lock":{
-                        "type":"boolean"
+                    "lock": {
+                        "type": "boolean"
                     },
-                    "volume":{
-                        "type":"integer",
+                    "volume": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 100
                     },
-                    "pan":{
-                        "type":"integer",
+                    "pan": {
+                        "type": "integer",
                         "minimun": -100,
                         "maximum": 100
                     }
                 },
-                "required":[
+                "required": [
                     "name"
                 ]
             }
         },
-        "custom_instruments":{
-            "type":"array",
-            "items":{
-                "type":"object",
-                "properties":{
-                    "name":{
-                        "type":"string",
+        "custom_instruments": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
                         "maxLength": 4294967295
                     },
-                    "filePath":{
-                        "type":"string",
+                    "filePath": {
+                        "type": "string",
                         "maxLength": 4294967295
                     },
-                    "pitch":{
-                        "type":"integer",
+                    "pitch": {
+                        "type": "integer",
                         "minimun": 0,
                         "maximum": 87
                     },
-                    "pressKeys":{
-                        "type":"boolean"
+                    "pressKeys": {
+                        "type": "boolean"
                     },
-                    "sound_id":{
-                        "type":"string",
+                    "sound_id": {
+                        "type": "string",
                         "maxLength": 4294967295
                     }
                 },
-                "required":[
+                "required": [
                     "filePath",
                     "name",
                     "pitch",
@@ -332,7 +335,7 @@ NBS_JSON_SCHEMA = {
             }
         }
     },
-    "required":[
+    "required": [
         "custom_instruments",
         "header",
         "layers",
@@ -343,6 +346,8 @@ NBS_JSON_SCHEMA = {
 NBSTOOL_FIRST_COMMIT_TIMESTAMP = 1565100420
 CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJLKMNPQRSTVWXYZ"
 VOWELS = "ueoai"
+
+
 def genRandomFilename(prefix: str = '') -> str:
     randChars = (item for sublist in (
         (choice(CONSONANTS), choice(VOWELS)) for _ in range(4)) for item in sublist)
@@ -362,7 +367,7 @@ class MainWindow():
         style.layout('Barless.TNotebook.Tab', [])  # turn off tabs
         style.configure('Barless.TNotebook', borderwidth=0,
                         highlightthickness=0)
-        if os.name =='posix':
+        if os.name == 'posix':
             ttk.Style().theme_use('clam')
 
         self.fileTable: ttk.Treeview = builder.get_object('fileTable')
@@ -580,8 +585,9 @@ class MainWindow():
                         "This file format is not supported. However, you can try importing from the 'Import' menu instead.")
                 self.songsData.append(songData)
             except Exception as e:
-                showerror("Opening file error", f'Cannot open file "{filePath}"\n{e.__class__.__name__}: {e}')
-                print(traceback.format_exc())
+                showerror("Opening file error",
+                          f'Cannot open file "{filePath}"\n{e.__class__.__name__}: {e}')
+                logger.exception(e)
                 continue
             self.addFileInfo(filePath, songData)
             if i % 3 == 0:
@@ -620,7 +626,7 @@ class MainWindow():
                 self.enableFileTable()
                 self.builder.get_object('applyBtn')['state'] = 'normal'
                 return
-            
+
             path = askdirectory(title="Select folder to save")
             if path == '':
                 return
@@ -630,7 +636,8 @@ class MainWindow():
                 i = fileTable.index(item)
                 filePath = self.filePaths[i]
                 if filePath == '':
-                    fileName = self.songsData[i].header.import_name.rsplit('.', 1)[0]
+                    fileName = self.songsData[i].header.import_name.rsplit('.', 1)[
+                        0]
                     if fileName == '':
                         fileName = genRandomFilename('untitled_')
                     filePath = fileName + '.nbs'
@@ -642,9 +649,9 @@ class MainWindow():
                         path, os.path.basename(filePath)))
                 except Exception as e:
                     showerror("Saving file error",
-                        f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}'
-                    )
-                    print(traceback.format_exc())
+                              f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}'
+                              )
+                    logger.exception(e)
             self.enableFileTable()
             self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -670,9 +677,9 @@ class MainWindow():
                 self.songsData[i].write(os.path.join(
                     path, os.path.basename(filePath)))
             except Exception as e:
-                showerror("Saving file error", 
-                    f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}')
-                print(traceback.format_exc())
+                showerror("Saving file error",
+                          f'Cannot save file "{os_path.join(path, os_path.basename(filePath))}"\n{e.__class__.__name__}: {e}')
+                logger.exception(e)
         self.enableFileTable()
         self.builder.get_object('applyBtn')['state'] = 'normal'
 
@@ -710,7 +717,7 @@ class MainWindow():
         dialogue = MidiImportDialog(self.toplevel, self)
         dialogue.run()
         del dialogue
-    
+
     def callMuseScoreImportDialog(self):
         dialogue = MuseScoreImportDialog(self.toplevel, self)
         dialogue.run()
@@ -738,7 +745,7 @@ class MainWindow():
 
     def callJsonExportDialog(self):
         JsonExportDialog(self.toplevel, self).run()
-    
+
     def callImpulseExportDialog(self):
         ImpulseExportDialog(self.toplevel, self).run()
 
@@ -915,7 +922,8 @@ class MainWindow():
 
                         default_layer = Layer("")
                         if (songData.maxLayer >= songData.header.height):
-                            songData.layers.extend(repeat(default_layer, songData.maxLayer+1 - songData.header.height))
+                            songData.layers.extend(
+                                repeat(default_layer, songData.maxLayer+1 - songData.header.height))
 
                         for note in songData.notes:
                             layer = songData.layers[note.layer]
@@ -1032,7 +1040,7 @@ class DatapackExportDialog:
         path = askdirectory(title="Select folder to save")
         if path == '':
             return
-        
+
         lyrics: Optional[str] = None
 
         try:
@@ -1123,6 +1131,7 @@ class ProgressDialog:
 
 ExportDialogFunc = Callable[[NbsSong, str, ProgressDialog], Coroutine]
 
+
 class ExportDialog:
     def __init__(self, master, parent, fileExt: str, title: Optional[str], progressTitle: str,
                  func: ExportDialogFunc, ui_file='ui/exportdialog.ui'):
@@ -1157,7 +1166,8 @@ class ExportDialog:
 
     def exportModeChanged(self):
         self.isFolderMode = self.exportMode.get() == 'folder'
-        self.builder.get_object('pathChooser').configure(state='normal' if self.isFolderMode else 'disabled')
+        self.builder.get_object('pathChooser').configure(
+            state='normal' if self.isFolderMode else 'disabled')
         self.pathChanged()
 
     def pathChanged(self, _=None):
@@ -1187,12 +1197,14 @@ class ExportDialog:
                 origPath = filePaths[i]
                 if not origPath:
                     origPath = asksaveasfilename(
-                    filetypes=((self.fileExt+' files', self.fileExt),),
-                    initialfile=path.basename(songsData[i].header.import_name).rsplit('.', 1)[0],
-                    defaultextension=self.fileExt)
+                        filetypes=((self.fileExt+' files', self.fileExt),),
+                        initialfile=path.basename(
+                            songsData[i].header.import_name).rsplit('.', 1)[0],
+                        defaultextension=self.fileExt)
                 if not origPath:
                     if self.d.toplevel:
-                        self.d.toplevel.after(1, self.d.destroy)  # type: ignore
+                        self.d.toplevel.after(
+                            1, self.d.destroy)  # type: ignore
                     return
                 baseName = path.basename(origPath)
                 if baseName.endswith('.nbs'):
@@ -1218,10 +1230,10 @@ class ExportDialog:
                     raise
                 except Exception as e:
                     showerror("Exporting files error",
-                        f'Cannot export file "{filePath}"\n{e.__class__.__name__}: {e}')
-                    print(traceback.format_exc())
+                              f'Cannot export file "{filePath}"\n{e.__class__.__name__}: {e}')
+                    logger.exception(e)
             dialog.totalProgress.set(dialog.currentMax)
- 
+
             self.d.toplevel.after(1, self.d.destroy)  # type: ignore
 
         dialogue = ProgressDialog(self.d.toplevel, self)
@@ -1285,6 +1297,7 @@ Use "sudo apt install ffmpeg" command to install ffmpeg."""
     else:
         return True
 
+
 class AudioExportDialog(ExportDialog):
     def __init__(self, master, parent):
         self.formatVar: tk.StringVar
@@ -1329,9 +1342,11 @@ class ImpulseExportDialog(ExportDialog):
         super().__init__(master, parent, '.it', "Impulse Tracker exporting",
                          "Exporting {} files to Impulse Tracker format (.it)...", nbs2it)
         self.shouldCompactNotes = False
-        
+
         if not checkFFmpeg():
-            self.d.destroy()
+            self.d.close()
+            self.d.toplevel.after(1, self.d.destroy) # type: ignore
+
 
 def parseFilePaths(string: str) -> tuple:
     strLen = len(string)
@@ -1358,7 +1373,9 @@ def parseFilePaths(string: str) -> tuple:
     return tuple(ret)
 
 
-ImportDialogFunc = Callable[[str, ProgressDialog], Coroutine[Any, Any, NbsSong]]
+ImportDialogFunc = Callable[[str, ProgressDialog],
+                            Coroutine[Any, Any, NbsSong]]
+
 
 class ImportDialog:
     def __init__(self, master, parent, fileExts: tuple, title: Optional[str], progressTitle: str,
@@ -1370,7 +1387,6 @@ class ImportDialog:
         self.progressTitle = progressTitle
         self.func = func
 
-        
         self.filePaths: StringVar
 
         self.builder = builder = pygubu.Builder()
@@ -1440,8 +1456,8 @@ class ImportDialog:
                     raise
                 except Exception as e:
                     showerror("Importing file error",
-                        f'Cannot import file "{filePath}"\n{e.__class__.__name__}: {e}')
-                    print(traceback.format_exc())
+                              f'Cannot import file "{filePath}"\n{e.__class__.__name__}: {e}')
+                    logger.exception(e)
                     continue
                 dialog.totalProgress.set(dialog.currentMax)
             # self.d.toplevel.after(1, self.d.destroy)
@@ -1457,8 +1473,8 @@ class JsonImportDialog(ImportDialog):
     def __init__(self, master, parent):
         fileExts = (("JSON files", '*.json'), ('All files', '*'),)
         super().__init__(master, parent, fileExts, "Import from JSON files",
-            "Importing {} JSON files", self.convert)
-    
+                         "Importing {} JSON files", self.convert)
+
     async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
         j = {}
         with open(filepath, 'r', encoding='ascii') as f:
@@ -1489,9 +1505,10 @@ class MuseScoreImportDialog(ImportDialog):
         self.autoExpand: BooleanVar
         self.expandMult: IntVar
 
-        fileExts = (("MuseScore files", ('*.mscz', '*.mscx')), ('All files', '*'),)
+        fileExts = (("MuseScore files", ('*.mscz', '*.mscx')),
+                    ('All files', '*'),)
         super().__init__(master, parent, fileExts, None,
-            "Importing {} MIDI files", self.convert, "ui/musescoreimportdialog.ui")
+                         "Importing {} MIDI files", self.convert, "ui/musescoreimportdialog.ui")
 
         self.autoExpand.set(True)
 
@@ -1513,11 +1530,11 @@ class MidiImportDialog(ImportDialog):
         self.importVelocity: BooleanVar
         self.importPitch: BooleanVar
         self.importPanning: BooleanVar
-        
+
         fileExts = (("Musical Instrument Digital Interface (MIDI) files",
                     ('*.mid', '*.midi')), ('All files', '*'),)
         super().__init__(master, parent, fileExts, None,
-            "Importing {} MIDI files", self.convert, "ui/midiimportdialog.ui")
+                         "Importing {} MIDI files", self.convert, "ui/midiimportdialog.ui")
 
         self.autoExpand.set(True)
         self.importPitch.set(True)
@@ -1525,11 +1542,12 @@ class MidiImportDialog(ImportDialog):
         self.importVelocity.set(True)
 
     async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
-        expandMult = int(self.expandMult.get()) if not self.autoExpand.get() else 0
+        expandMult = int(self.expandMult.get()
+                         ) if not self.autoExpand.get() else 0
         return await midi2nbs(filepath, expandMult, self.importDuration.get(),
-                            self.durationSpacing.get(), self.importVelocity.get(),
-                            self.importPanning.get(), self.importPitch.get(),
-                            dialog)
+                              self.durationSpacing.get(), self.importVelocity.get(),
+                              self.importPanning.get(), self.importPitch.get(),
+                              dialog)
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[
@@ -1667,6 +1685,7 @@ def to_signed_32(n: int) -> int:
     n &= 0xffffffff
     return (n ^ 0x80000000) - 0x80000000
 
+
 def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, lyrics=None):
     def writejson(path, jsout):
         with open(path, 'w') as f:
@@ -1704,8 +1723,10 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, lyrics=None
 
     lyrics_inst = 0
     if lyrics:
-        lyrics_layer = next((i for i, x in enumerate(data.layers) if 'lyric' in x.name.lower()), -1)
-        lyrics_inst = next((x.inst for i, x in enumerate(data.notes) if x.layer == lyrics_layer), -1)
+        lyrics_layer = next((i for i, x in enumerate(
+            data.layers) if 'lyric' in x.name.lower()), -1)
+        lyrics_inst = next((x.inst for i, x in enumerate(
+            data.notes) if x.layer == lyrics_layer), -1)
 
     compactNotes(data, groupPerc=False)
     data.correctData()
@@ -1750,9 +1771,11 @@ def exportDatapack(data: NbsSong, path: str, _bname: str, mode=None, lyrics=None
         lyrics_uuid = uuid.uuid4()
         uuid_int = lyrics_uuid.int
         # Source: https://stackoverflow.com/a/32053256/12682038
-        uuid_array = ((uuid_int >> x) & 0xFFFFFFFF for x in reversed(range(0, 128, 32)))
+        uuid_array = ((uuid_int >> x) &
+                      0xFFFFFFFF for x in reversed(range(0, 128, 32)))
         uuid_arr_str = ', '.join(str(to_signed_32(num)) for num in uuid_array)
-        lyrics_layer = next((i for i, x in enumerate(layers) if 'lyric' in x.name.lower()), -1)
+        lyrics_layer = next((i for i, x in enumerate(
+            layers) if 'lyric' in x.name.lower()), -1)
 
     writejson(os.path.join(path, 'pack.mcmeta'), {"pack": {
         "description": "Note block song datapack made with NBSTool.", "pack_format": 8}})
@@ -1784,12 +1807,12 @@ data modify entity {1} CustomName set value ''""".format(scoreObj, lyrics_uuid))
                     """scoreboard objectives remove {0}
 scoreboard objectives remove {0}_t""".format(scoreObj))
 
-
     text = ''
     for k, v in instLayers.items():
         for i in range(len(v)):
             text += 'execute run give @s minecraft:armor_stand{{display: {{Name: "{{\\"text\\":\\"{}\\"}}" }}, EntityTag: {{Marker: 1b, NoGravity:1b, Invisible: 1b, Tags: ["{}_WNBS_Marker"], CustomName: "{{\\"text\\":\\"{}\\"}}" }} }}\n'.format(
-                    "{}-{}".format(instruments[k].sound_id, i), scoreObj, "{}-{}".format(k, i)
+                    "{}-{}".format(instruments[k].sound_id,
+                                   i), scoreObj, "{}-{}".format(k, i)
             )
     if lyrics:
         assert not uuid_arr_str is None
@@ -1832,7 +1855,6 @@ execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] 
                         ]
                         raw_text = json.dumps(component, ensure_ascii=False)
                         text += f"data modify entity {lyrics_uuid} CustomName set value '{raw_text}'\n"
-
 
         if tick < length-1:
             text += "scoreboard players set @s {}_t {}".format(
@@ -1897,10 +1919,59 @@ execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] 
                 break
 
 
-if __name__ == "__main__":
+class InterceptHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord) -> None:
+        # Get corresponding Loguru level if it exists.
+        level: Union[str, int]
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
+
+        # Find caller from where originated the logged message.
+        frame, depth = inspect.currentframe(), 0
+        while frame and (depth == 0 or frame.f_code.co_filename == logging.__file__):
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(
+            level, record.getMessage())
+
+
+logger.add(resource_path("logs", "latest.log"), retention=10, compression='bz2')
+logging.basicConfig(handlers=[InterceptHandler()], level=logging.INFO, force=True)
+
+showwarning_ = warnings.showwarning
+
+def _showwarning(message, *args, **kwargs):
+    logger.warning(message)
+    showwarning_(message, *args, **kwargs)
+
+warnings.showwarning = _showwarning
+
+@logger.catch
+def main() -> None:
+    logger.info("NBSTool v{}", __version__)
+    logger.info("Platform: {}", platform.platform())
+    if '__compiled__' in globals():
+        logger.info("Running in Nuitka-compiled mode")
+    logger.info("Resource path: {}", resource_path())
+    if _ffmpeg_path := which('ffmpeg'):
+        logger.info("ffmpeg path: {}", _ffmpeg_path)
+    else:
+        logger.warning("ffmpeg not found; audio and .it export will not work")
+    if _ffprobe_path := which('ffprobe'):
+        logger.info("ffprobe path: {}", _ffprobe_path)
+    else:
+        logger.warning("ffprobe not found; audio and .it export will not work")
+
     app = MainWindow()
 
     if len(sys.argv) == 2:
         app.addFiles(paths=[sys.argv[1], ])
 
     app.mainwin.mainloop()
+
+
+if __name__ == "__main__":
+    main()

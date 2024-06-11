@@ -343,6 +343,7 @@ Downloaded song/
 
 *build/
 dist/
+logs/
 main.dist/
 .mscbackup/
 

@@ -20,10 +20,6 @@
 import sys
 from collections import namedtuple
 from os.path import abspath, dirname, join, normpath
-from functools import lru_cache
-from typing import Optional
-
-from pydub import AudioSegment
 
 # from main import __file__ as __mainfile__
 
@@ -232,7 +228,7 @@ NBS_PITCH_IN_MIDI_PITCHBEND = 40.96
 SOUND_FOLDER = "sounds"
 
 BASE_RESOURCE_PATH = ''
-if getattr(sys, 'frozen', False): # PyInstaller
+if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'): # PyInstaller
     BASE_RESOURCE_PATH = sys._MEIPASS # type: ignore
 elif '__compiled__' in globals(): # Nuitka
     BASE_RESOURCE_PATH = dirname(__file__)
@@ -242,11 +238,3 @@ assert BASE_RESOURCE_PATH != ''
 
 def resource_path(*args: str):
     return normpath(join(BASE_RESOURCE_PATH, *args))
-
-@lru_cache(maxsize=32)
-def load_sound(path: str) -> AudioSegment:
-    """A patched version of nbswave.audio.load_song() which caches loaded sounds"""
-    if not path:
-        return AudioSegment.empty()
-    else:
-        return AudioSegment.from_file(path)

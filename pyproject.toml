@@ -16,6 +16,7 @@ lxml = ">=4.9.1"
 lark = ">=1.0.0"
 jsonschema = ">=4.17.3"
 nbswave = {git = "https://github.com/Bentroen/nbswave.git"}
+loguru = "^0.7.2"
 
 [tool.poetry.dev-dependencies]
 

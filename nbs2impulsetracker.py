@@ -28,6 +28,7 @@ from dataclasses import dataclass, asdict
 from functools import total_ordering
 from os import path
 from asyncio import sleep
+from warnings import warn
 
 from pydub import AudioSegment
 from pydub.effects import normalize
@@ -35,13 +36,17 @@ from pydub.effects import normalize
 from nbsio import Note as NbsNote
 from nbsio import NbsSong, Layer, Instrument, VANILLA_INSTS
 
-from common import load_sound, SOUND_FOLDER
+from common import SOUND_FOLDER
+from audio_common import load_sound
+
 
 DEFAULT_PATTERN_LENGTH = 64
 TRACKER_VERSION = 0xa00a
 SAMPLE_PITCH_SHIFT = -10
 LAST_SAMPLE_PITCH_SHIFT = 6  # The last need special treatment
 DEFAULT_SPEED = 6
+MAX_LENGTH = 40000
+MAX_CHANNEL = 127
 
 BYTE = Struct("<b")
 UBYTE = Struct("<B")
@@ -227,7 +232,7 @@ def delete_missing_instruments(song: NbsSong, insts: list):
     for i in reversed(range(len(insts))):
         inst = insts[i]
         if not inst.filePath or get_audio_segment(inst.filePath) is None:
-            print(f"Missing instrument: {inst.filePath}")
+            warn(f"Missing instrument: {inst.filePath}")
             missing_indexes.add(i)
             del insts[i]
 
@@ -248,10 +253,14 @@ def delete_missing_instruments(song: NbsSong, insts: list):
 async def nbs2it(song: NbsSong, fn: str, dialog=None) -> None:
     song.correctData()
     header = song.header
-    layers = song.layers
 
     if not fn.endswith('.it'):
         fn += '.it'
+
+    song.notes = list(
+        filter(lambda note: note.tick < MAX_LENGTH and note.layer < MAX_CHANNEL, song.notes))
+    song.correctData()
+    layers = song.layers
 
     all_instruments = VANILLA_INSTS[:header.vani_inst] + song.customInsts
     delete_missing_instruments(song, all_instruments)
@@ -269,19 +278,12 @@ async def nbs2it(song: NbsSong, fn: str, dialog=None) -> None:
 
     instrument_mapping = {index: i for i,
                           index in enumerate(instrument_indexes)}
-
     instrument_count = len(instruments)
+
     pattern_length = DEFAULT_PATTERN_LENGTH
     pattern_count = ceil(header.length / pattern_length)
     while pattern_count > 200 and pattern_length <= 200:
         pattern_length += 16
-        pattern_count = ceil(header.length / pattern_length)
-    if pattern_length > 200:
-        pattern_length = 200
-        max_length = 40000
-        song.notes = list(
-            filter(lambda note: note.tick < max_length, song.notes))
-        song.correctData()
         pattern_count = ceil(header.length / pattern_length)
 
     order_count = pattern_count + 1
@@ -456,7 +458,11 @@ async def nbs2it(song: NbsSong, fn: str, dialog=None) -> None:
             dialog.currentProgress.set(60)
             await sleep(0.001)
 
-        channels = tuple(map(Channel.from_instance, layers))
+        channels = list(map(Channel.from_instance, layers))
+        dummy_channel = Channel("")
+        if len(channels) < song.maxLayer + 1:
+            for _ in range(song.maxLayer + 1 - len(channels)):
+                channels.append(dummy_channel)
 
         def note_converter(note): return Note.from_instance(
             note, pattern_length)

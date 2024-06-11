@@ -25,8 +25,12 @@ try:
 except ImportError as e:
     from pygubu import BuilderObject, register_widget # type: ignore
 
-from wrapmessage import WrapMessage
-from checkablelabelframe import CheckableLabelFrame
+try:
+    from wrapmessage import WrapMessage
+    from checkablelabelframe import CheckableLabelFrame
+except ModuleNotFoundError:
+    from .wrapmessage import WrapMessage
+    from .checkablelabelframe import CheckableLabelFrame
 
 class WrapMessageBuilder(BuilderObject): # type: ignore
     class_ = WrapMessage

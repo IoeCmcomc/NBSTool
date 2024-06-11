@@ -25,13 +25,14 @@ from typing import Optional, Sequence
 from pydub import AudioSegment
 from pynbs import File, Header, Instrument, Layer, Note
 
-from common import load_sound
-
 from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
 
-from common import resource_path, SOUND_FOLDER
 from nbsio import VANILLA_INSTS, NbsSong
+
+from audio_common import load_sound
+from common import resource_path, SOUND_FOLDER
+
 
 audio.load_sound = load_sound
 
