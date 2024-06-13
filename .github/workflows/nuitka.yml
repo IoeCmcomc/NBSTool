@@ -51,7 +51,7 @@ jobs:
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
       with:
-        files: main.dist/
+        files: nbstool.dist/
         dest: NBSTool_${{ runner.os }}_${{ matrix.arch }}.zip
 
     - name: Upload artifacts
