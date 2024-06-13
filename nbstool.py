@@ -51,6 +51,7 @@ from ast import literal_eval
 from asyncio import CancelledError, sleep
 from copy import copy, deepcopy
 from datetime import timedelta
+from importlib.metadata import version
 from itertools import repeat
 from math import floor, log2
 from os import path as os_path
@@ -74,13 +75,18 @@ from pygubu import Builder
 from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
 from pygubu.widgets.dialog import Dialog
 
+# Explict import for Nuitka
 import customwidgets.builder
+
 from common import BASE_RESOURCE_PATH, resource_path
 
 # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-
 if os.name == 'nt':  # Windows
+    # Ensure pydub.utils.which can splits the added ffmpeg path properly
+    # Potential fix for the issue #10
+    if not os.environ["PATH"].endswith(os.pathsep):
+        os.environ["PATH"] += os.pathsep 
     # Add the path of the ffmpeg before the first pydub import statement
     os.environ["PATH"] += resource_path('ffmpeg', 'bin')
 
@@ -1958,8 +1964,11 @@ warnings.showwarning = _showwarning
 def main() -> None:
     logger.info("NBSTool v{}", __version__)
     logger.info("Platform: {}", platform.platform())
+    logger.info("Python: {}", sys.version)
+    logger.info("Architecture: {}", "64-bit" if sys.maxsize > 2**32 else "32-bit")
     if '__compiled__' in globals():
         logger.info("Running in Nuitka-compiled mode")
+        logger.info("Nuitka version: {}", version('nuitka'))
     logger.info("Resource path: {}", resource_path())
     if _ffmpeg_path := which('ffmpeg'):
         logger.info("ffmpeg path: {}", _ffmpeg_path)

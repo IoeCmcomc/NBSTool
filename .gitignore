@@ -342,6 +342,7 @@ Downloaded song/
 *.pyo
 
 *build/
+*dist/
 dist/
 logs/
 main.dist/

@@ -41,12 +41,12 @@ jobs:
     - name: Build standalone folder (Windows)
       if: matrix.os == 'windows-latest'
       run: |
-        poetry run nuitka main.py
+        poetry run nuitka nbstool.py
 
     - name: Build standalone folder (Linux)
       if: matrix.os == 'ubuntu-20.04'
       run: |
-        poetry run python3 -m nuitka main.py
+        poetry run python3 -m nuitka nbstool.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1
