@@ -3,7 +3,10 @@
 [![GitHub issues](https://img.shields.io/github/issues/IoeCmcomc/NBSTool)](https://github.com/IoeCmcomc/NBSTool/issues)
 ![GitHub all releases](https://img.shields.io/github/downloads/IoeCmcomc/NBSTool/total)
 ![GitHub repo size](https://img.shields.io/github/repo-size/IoeCmcomc/NBSTool)
-[![Code grade](https://api.codiga.io/project/35820/status/svg)](https://app.codiga.io/hub/project/35820/NBSTool)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/IoeCmcomc/NBSTool.svg)](http://isitmaintained.com/project/IoeCmcomc/NBSTool "Average time to resolve an issue")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/IoeCmcomc/NBSTool.svg)](http://isitmaintained.com/project/IoeCmcomc/NBSTool "Percentage of issues still open")
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FIoeCmcomc%2FNBSTool&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
+
 
 ------------
 
@@ -24,34 +27,25 @@
 - Open old formats (such as .mcsp2);
 - Modify header information and change between versions;
 - Arrange notes by instruments;
-- [**Deprecated**] Import from [MuseScore](https://github.com/musescore/MuseScore) files:
-  - Only files created by MuseScore 3 and 4 are supported;
-  - Support the following features:
-    - Song title, author, tempo and time signature (with some limits);
-    - Most of GM instruments to Minecraft instruments;
-    - Percussion instruments (drum set);
-    - Dotted, tied and normal notes and rests;
-    - Notes' tuning and velocity;
-    - Tuplets and notes whose duration less than 16th (by expanding the spaces between notes);
-    - Voices.
- - Import from MIDI files:
-   -   Only type 1MIDI files are tested;
+- Import from MIDI files:
+   -   Only type 1 MIDI files are tested;
    -   Support importing note velocity, note panning and note fine-pitch;
    -   Allow importing MIDI notes as multiple successive fading-out NBS notes;
    -   Can automatically expand distance between notes to fit as many note as possible.
 - Import from JSON files;
-- Export to JSON, MIDI or audio files:
+- Export to other formats:
   - MIDI conversion does not support custom instruments;
   - JSON export files are useful to understand how .nbs files are stored internally;
   - Export to audio:
     - Supported formats: MP3, WAV, OGG and FLAC.
-    - Require [ffmpeg](https://ffmpeg.org/ "ffmpeg") to render audio. On Windows, ffmpeg have already been shipped with the program. On Linux, you need to install `ffmpeg` to use this feature;
+  - Export to Impulse Tracker files (.it) with custom instruments;
+  - Exporting to audo and .it files requires [ffmpeg](https://ffmpeg.org/ "ffmpeg") to render audio. On Windows, ffmpeg have already been shipped with the program. On Linux, you need to install `ffmpeg` to use this feature;
   - Datapack export (this is for my personal use, currently not documented).
 
 ## Download
 Go to the [Releases](https://github.com/IoeCmcomc/NBSTool/releases/latest "Releases") page to download the latest version.
 
-After extracting the downloaded ZIP file to a folder, run the executable (NBSTool.exe on Windows, nbstool on Linux) to use the program.
+After extracting the downloaded ZIP file to a folder, run the executable (nbstool.exe on Windows, nbstool on Linux) to use the program.
 
 ## Issues
 To report issues, please go to [Issues](https://github.com/IoeCmcomc/NBSTool/issues "Issues") page. For questions and suggestions, the [Discussion](https://github.com/IoeCmcomc/NBSTool/discussions "Discussion") page is the right place.
