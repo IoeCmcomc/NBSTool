@@ -23,15 +23,14 @@
 # nuitka-project: --assume-yes-for-downloads
 # nuitka-project: --report=compilation-report.xml
 # nuitka-project: --user-package-configuration-file=custom-nuitka-package.config.yml
+# nuitka-project: --disable-console
 # nuitka-project-if: {OS} == "Windows":
 #    nuitka-project: --windows-icon-from-ico=icon.ico
 #    nuitka-project: --windows-product-name=NBSTool
 #    nuitka-project: --windows-company-name=IoeCmcomc
-#    nuitka-project: --windows-file-version=1.3.0.0
-#    nuitka-project: --windows-product-version=1.3.0.0
+#    nuitka-project: --windows-file-version=1.4.0.0
+#    nuitka-project: --windows-product-version=1.4.0.0
 #    nuitka-project: --windows-file-description=NBSTool
-# nuitka-project-else:
-#    nuitka-project: --disable-console
 
 
 import asyncio
@@ -101,7 +100,7 @@ from nbs2impulsetracker import nbs2it
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 
-__version__ = '1.3.0'
+__version__ = '1.4.0'
 
 NBS_JSON_SCHEMA = {
     "type": "object",
