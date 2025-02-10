@@ -37,13 +37,17 @@ MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 NOTE_POS_MULTIPLIER = 18
 """The value must be divisible by 2, 3 to handle triplets.
 It also limits the maximum expand multiplier."""
+TRAILING_NOTE_SUSTAIN_PAN = 50
+"""Maximum absolute panning value to be added to trailing notes"""
 
 MidiNoteMsgKey = namedtuple("MidiNoteMsgKey", ("note", "channel"))
+
 
 @dataclass
 class MidiNoteMsgValue:
     note: Note
     duration: int = 1
+
 
 def extractKeyAndInst(
     msg, trackInst: int, keyShift: int
@@ -61,11 +65,46 @@ def extractKeyAndInst(
     return key, inst
 
 
+def generate_trailing_notes(baseNote: Note, duration: int, endTick: int, durationSpacing: int,
+                            trailingVelocities=50,
+                            percentTrailingVelocities=True,
+                            fadeOutTrailingNotes=True,
+                            applySustain=True):
+    isOddIndex = True
+    for durationIndex, newTick in enumerate(range(endTick - duration, endTick, durationSpacing)):
+        if durationIndex == 0:
+            continue
+        vel = baseNote.vel
+        if fadeOutTrailingNotes:
+            vel = int(vel * (duration - durationIndex) / duration)
+        elif percentTrailingVelocities:
+            vel = int(vel * trailingVelocities / 100)
+        else:
+            vel = trailingVelocities
+        
+        pan = baseNote.pan
+        if applySustain:
+            if isOddIndex:
+                pan = int(pan - TRAILING_NOTE_SUSTAIN_PAN * (100 - abs(pan)) / 100)
+            else:
+                pan = int(pan + TRAILING_NOTE_SUSTAIN_PAN * (100 - abs(pan)) / 100)
+            pan = int(pan * (1 - (duration - durationIndex) / duration))
+
+        if vel > 1:
+            newNote = Note(newTick, baseNote.layer, baseNote.inst, baseNote.key, vel, pan, baseNote.pitch)
+            yield newNote
+        isOddIndex = not isOddIndex
+
+
 async def midi2nbs(
     filepath: str,
     expandMultiplier=1,
     importDurations=False,
     durationSpacing=1,
+    trailingVelocities=50,
+    percentTrailingVelocities=True,
+    fadeOutTrailingNotes=True,
+    applySustain=True,
     importVelocities=True,
     importPanning=True,
     importPitches=True,
@@ -158,7 +197,8 @@ async def midi2nbs(
         layer = baseLayer
         lastTick = -1
         isNoteEnd = False
-        playingNotes: dict[MidiNoteMsgKey, MidiNoteMsgValue] = {}  # Messages of playing notes
+        # Messages of playing notes
+        playingNotes: dict[MidiNoteMsgKey, MidiNoteMsgValue] = {}
         currentNotes: list[Note] = []  # Notes in the current tick
         innerBaseLayer = baseLayer
         for msg in track:
@@ -200,13 +240,14 @@ async def midi2nbs(
                         notes.append(note)
                         currentNotes.append(note)
                         if importDurations:
-                            playingNotes[MidiNoteMsgKey(msg.note, msg.channel)] = MidiNoteMsgValue(note)
+                            playingNotes[MidiNoteMsgKey(
+                                msg.note, msg.channel)] = MidiNoteMsgValue(note)
                         ceilingLayer = max(ceilingLayer, layer)
                         lastTick = tick
                     elif importDurations and msg.velocity == 0:
                         try:
                             playingNote = playingNotes[MidiNoteMsgKey(
-                            msg.note, msg.channel)]
+                                msg.note, msg.channel)]
                             playingNote.duration = tick - playingNote.note.tick
                             isNoteEnd = True
                         except KeyError:
@@ -251,19 +292,8 @@ async def midi2nbs(
                             note = playingNote.note
                             key, inst = extracted
                             if not note.isPerc:
-                                for durationIndex, newTick in enumerate(
-                                    range(tick - duration, tick)
-                                ):
-                                    if durationIndex == 0:
-                                        continue
-                                    vel = int(
-                                        note.vel * (duration - durationIndex) / duration)
-                                    if (vel > 1) and (durationIndex % durationSpacing == 0):
-                                        newNote = Note(newTick, note.layer,
-                                                    note.inst, note.key, vel,
-                                                    pan, pitch,
-                                                    )
-                                        notes.append(newNote)
+                                newNotes = generate_trailing_notes(note, duration, tick, durationSpacing, trailingVelocities, percentTrailingVelocities, fadeOutTrailingNotes, applySustain)
+                                notes.extend(newNotes)
                                 currentNotes.remove(note)
                         del playingNotes[midiMsgKey]
                         layer -= 1

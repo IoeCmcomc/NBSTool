@@ -79,7 +79,7 @@ import customwidgets.builder
 
 from common import BASE_RESOURCE_PATH, resource_path
 
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 if os.name == 'nt':  # Windows
     # Ensure pydub.utils.which can splits the added ffmpeg path properly
@@ -1532,9 +1532,13 @@ class MidiImportDialog(ImportDialog):
         self.expandMult: IntVar
         self.importDuration: BooleanVar
         self.durationSpacing: IntVar
+        self.trailingVelocity: IntVar
+        self.trailingVelAsPercent: BooleanVar
         self.importVelocity: BooleanVar
         self.importPitch: BooleanVar
         self.importPanning: BooleanVar
+        self.trailingNoteVelMode: StringVar
+        self.applySustain: BooleanVar
 
         fileExts = (("Musical Instrument Digital Interface (MIDI) files",
                     ('*.mid', '*.midi')), ('All files', '*'),)
@@ -1545,24 +1549,51 @@ class MidiImportDialog(ImportDialog):
         self.importPitch.set(True)
         self.importPanning.set(True)
         self.importVelocity.set(True)
+        self.applySustain.set(True)
+        self.trailingNoteVelMode.set('fadeOut')
+        self.trailingVelAsPercent.set(True)
 
     async def convert(self, filepath: str, dialog: ProgressDialog) -> NbsSong:
         expandMult = int(self.expandMult.get()
                          ) if not self.autoExpand.get() else 0
+        fadeOut = self.trailingNoteVelMode.get() == 'fadeOut'
         return await midi2nbs(filepath, expandMult, self.importDuration.get(),
-                              self.durationSpacing.get(), self.importVelocity.get(),
+                              self.durationSpacing.get(), self.trailingVelocity.get(), self.trailingVelAsPercent.get(), fadeOut, self.applySustain.get(), self.importVelocity.get(),
                               self.importPanning.get(), self.importPitch.get(),
                               dialog)
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[
             'state'] = 'disabled' if self.autoExpand.get() else 'normal'
+        
+    def trailingNoteVelModeChanged(self):
+            fixedVelocity = self.trailingNoteVelMode.get() == 'fixed'
+            self.builder.get_object('trailingVelocitySpin')[
+            'state'] = 'normal' if fixedVelocity else 'disabled'
+            self.builder.get_object('trailingVelPercentCheck')[
+            'state'] = 'normal' if fixedVelocity else 'disabled'
 
     def importDurationChanged(self):
         self.builder.get_object('durationSpacingLabel')[
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
         self.builder.get_object('durationSpacingSpin')[
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        self.builder.get_object('trailingVelocityLabel')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        self.builder.get_object('fixedTrailingVelRadio')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        self.builder.get_object('fadeOutTrailingVelRadio')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        self.builder.get_object('applySustainCheck')[
+            'state'] = 'normal' if self.importDuration.get() else 'disabled'
+        if self.importDuration.get():
+            self.trailingNoteVelModeChanged()
+        else:
+            self.builder.get_object('trailingVelocitySpin')['state'] = 'disabled'
+            self.builder.get_object('trailingVelPercentCheck')['state'] = 'disabled'
+
+    def applySustainChanged(self):
+        pass
 
 
 class AboutDialog:

@@ -1,5 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.2">
+<interface version="1.4" author="PygubuDesigner 0.39.3">
+  <project>
+    <settings />
+    <customwidgets />
+  </project>
   <object class="pygubu.builder.widgets.dialog" id="dialog">
     <property name="height">100</property>
     <property name="modal">false</property>
@@ -116,6 +120,7 @@
                 <property name="height">200</property>
                 <property name="width">200</property>
                 <layout manager="pack">
+                  <property name="anchor">ne</property>
                   <property name="fill">both</property>
                   <property name="pady">5</property>
                   <property name="side">top</property>
@@ -123,7 +128,7 @@
                 <child>
                   <object class="ttk.Checkbutton" id="checkbutton5">
                     <property name="command" type="command" cbtype="simple">importDurationChanged</property>
-                    <property name="text" translatable="yes">Import each long MIDI note as multiple notes</property>
+                    <property name="text" translatable="yes">Import each long MIDI note as multiple trailing notes</property>
                     <property name="variable">boolean:importDuration</property>
                     <layout manager="grid">
                       <property name="column">0</property>
@@ -141,21 +146,108 @@
                       <property name="column">0</property>
                       <property name="padx">20</property>
                       <property name="row">1</property>
+                      <property name="sticky">w</property>
                     </layout>
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Spinbox" id="durationSpacingSpin">
+                  <object class="ttk.Spinbox" id="durationSpacingSpin" named="True">
                     <property name="from_">0</property>
                     <property name="increment">1</property>
                     <property name="state">disabled</property>
                     <property name="text" translatable="yes">1</property>
                     <property name="textvariable">int:durationSpacing</property>
                     <property name="to">10</property>
+                    <property name="width">5</property>
                     <layout manager="grid">
                       <property name="column">1</property>
                       <property name="row">1</property>
                       <property name="sticky">e</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Label" id="trailingVelocityLabel" named="True">
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">Trailing notes' velocity:</property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="padx">20</property>
+                      <property name="row">2</property>
+                      <property name="sticky">w</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Radiobutton" id="fixedTrailingVelRadio" named="True">
+                    <property name="command" type="command" cbtype="simple">trailingNoteVelModeChanged</property>
+                    <property name="compound">top</property>
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">Fixed velocity:</property>
+                    <property name="value">fixed</property>
+                    <property name="variable">string:trailingNoteVelMode</property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="padx">40</property>
+                      <property name="row">3</property>
+                      <property name="sticky">w</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Radiobutton" id="fadeOutTrailingVelRadio" named="True">
+                    <property name="command" type="command" cbtype="simple">trailingNoteVelModeChanged</property>
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">Fade out</property>
+                    <property name="value">fadeOut</property>
+                    <property name="variable">string:trailingNoteVelMode</property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="padx">40</property>
+                      <property name="row">4</property>
+                      <property name="sticky">w</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Spinbox" id="trailingVelocitySpin" named="True">
+                    <property name="from_">0</property>
+                    <property name="increment">10</property>
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">50</property>
+                    <property name="textvariable">int:trailingVelocity</property>
+                    <property name="to">100</property>
+                    <property name="width">5</property>
+                    <layout manager="grid">
+                      <property name="column">1</property>
+                      <property name="row">3</property>
+                      <property name="sticky">e</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Checkbutton" id="trailingVelPercentCheck" named="True">
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">percent (%)</property>
+                    <property name="variable">boolean:trailingVelAsPercent</property>
+                    <layout manager="grid">
+                      <property name="column">2</property>
+                      <property name="row">3</property>
+                      <property name="sticky">w</property>
+                    </layout>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Checkbutton" id="applySustainCheck" named="True">
+                    <property name="command" type="command" cbtype="simple">applySustainChanged</property>
+                    <property name="state">disabled</property>
+                    <property name="text" translatable="yes">Apply sustain effect to trailing notes</property>
+                    <property name="variable">boolean:applySustain</property>
+                    <layout manager="grid">
+                      <property name="column">0</property>
+                      <property name="padx">20</property>
+                      <property name="row">5</property>
+                      <property name="sticky">w</property>
                     </layout>
                   </object>
                 </child>

@@ -20,6 +20,7 @@
 import sys
 from collections import namedtuple
 from os.path import abspath, dirname, join, normpath
+from typing import Tuple
 
 # from main import __file__ as __mainfile__
 
@@ -30,7 +31,7 @@ MidiDrum = namedtuple("MidiDrum", ("pitch", "name", "nbs_instrument", "nbs_pitch
 
 # MIDI mapping are adapted from @u3002 mapping table
 # https://gist.github.com/u3002/cf4daa83bc82b5917fc86fb23815578a
-MIDI_INSTRUMENTS = (
+MIDI_INSTRUMENTS: Tuple[MidiInstrument, ...] = (
     MidiInstrument("Acoustic Grand Piano", 0, 0, "Grand Piano"),
     MidiInstrument("Bright Acoustic Piano", 15, 0, "Acoustic Piano"),
     MidiInstrument("Electric Grand Piano", 15, 0, "E. Grand Piano"),
