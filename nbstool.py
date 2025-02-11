@@ -1538,7 +1538,7 @@ class MidiImportDialog(ImportDialog):
         self.importPitch: BooleanVar
         self.importPanning: BooleanVar
         self.trailingNoteVelMode: StringVar
-        self.applySustain: BooleanVar
+        self.applyStereo: BooleanVar
 
         fileExts = (("Musical Instrument Digital Interface (MIDI) files",
                     ('*.mid', '*.midi')), ('All files', '*'),)
@@ -1549,7 +1549,7 @@ class MidiImportDialog(ImportDialog):
         self.importPitch.set(True)
         self.importPanning.set(True)
         self.importVelocity.set(True)
-        self.applySustain.set(True)
+        self.applyStereo.set(True)
         self.trailingNoteVelMode.set('fadeOut')
         self.trailingVelAsPercent.set(True)
 
@@ -1558,7 +1558,7 @@ class MidiImportDialog(ImportDialog):
                          ) if not self.autoExpand.get() else 0
         fadeOut = self.trailingNoteVelMode.get() == 'fadeOut'
         return await midi2nbs(filepath, expandMult, self.importDuration.get(),
-                              self.durationSpacing.get(), self.trailingVelocity.get(), self.trailingVelAsPercent.get(), fadeOut, self.applySustain.get(), self.importVelocity.get(),
+                              self.durationSpacing.get(), self.trailingVelocity.get(), self.trailingVelAsPercent.get(), fadeOut, self.applyStereo.get(), self.importVelocity.get(),
                               self.importPanning.get(), self.importPitch.get(),
                               dialog)
 
@@ -1584,7 +1584,7 @@ class MidiImportDialog(ImportDialog):
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
         self.builder.get_object('fadeOutTrailingVelRadio')[
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
-        self.builder.get_object('applySustainCheck')[
+        self.builder.get_object('applyStereoCheck')[
             'state'] = 'normal' if self.importDuration.get() else 'disabled'
         if self.importDuration.get():
             self.trailingNoteVelModeChanged()
@@ -1592,7 +1592,7 @@ class MidiImportDialog(ImportDialog):
             self.builder.get_object('trailingVelocitySpin')['state'] = 'disabled'
             self.builder.get_object('trailingVelPercentCheck')['state'] = 'disabled'
 
-    def applySustainChanged(self):
+    def applyStereoChanged(self):
         pass
 
 

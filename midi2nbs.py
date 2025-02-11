@@ -19,11 +19,11 @@
 
 from asyncio import sleep
 from collections import namedtuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from math import gcd
 from os.path import basename
 from traceback import print_exc
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from mido import MidiFile, merge_tracks, tempo2bpm
 from numpy import interp
@@ -37,16 +37,22 @@ MIDI_DRUMS_BY_MIDI_PITCH = {obj.pitch: obj for obj in MIDI_DRUMS}
 NOTE_POS_MULTIPLIER = 18
 """The value must be divisible by 2, 3 to handle triplets.
 It also limits the maximum expand multiplier."""
-TRAILING_NOTE_SUSTAIN_PAN = 50
+TRAILING_NOTE_STEREO_PAN = 50
 """Maximum absolute panning value to be added to trailing notes"""
 
 MidiNoteMsgKey = namedtuple("MidiNoteMsgKey", ("note", "channel"))
 
+@dataclass(frozen=True)
+class MidNoteChange:
+    tick: int = -1
+    pan: Optional[int] = None
+    pitch: Optional[int] = None
 
 @dataclass
 class MidiNoteMsgValue:
     note: Note
     duration: int = 1
+    changes: List[MidNoteChange] = field(default_factory=list)
 
 
 def extractKeyAndInst(
@@ -64,16 +70,35 @@ def extractKeyAndInst(
         inst = trackInst
     return key, inst
 
+def find_mid_note_change(changes: List[MidNoteChange], tick: int) -> MidNoteChange:
+    default_value = MidNoteChange()
+    if not changes or (tick < changes[0].tick):
+        return default_value
+    for i in range(len(changes)-1):
+        change = changes[i]
+        next_change = changes[i+1]
+        if change.tick <= tick < next_change.tick:
+            return change
+    return default_value
 
-def generate_trailing_notes(baseNote: Note, duration: int, endTick: int, durationSpacing: int,
+def generate_trailing_notes(playingNote: MidiNoteMsgValue, endTick: int, durationSpacing: int,
                             trailingVelocities=50,
                             percentTrailingVelocities=True,
                             fadeOutTrailingNotes=True,
-                            applySustain=True):
+                            applyStereo=True):
     isOddIndex = True
-    for durationIndex, newTick in enumerate(range(endTick - duration, endTick, durationSpacing)):
+    baseNote = playingNote.note
+    duration = playingNote.duration
+
+    pan = baseNote.pan
+    pitch = baseNote.pitch
+    for durationIndex, newTick in enumerate(range(endTick - duration, endTick)):
         if durationIndex == 0:
             continue
+
+        if durationIndex % durationSpacing != 0:
+            continue
+
         vel = baseNote.vel
         if fadeOutTrailingNotes:
             vel = int(vel * (duration - durationIndex) / duration)
@@ -81,19 +106,32 @@ def generate_trailing_notes(baseNote: Note, duration: int, endTick: int, duratio
             vel = int(vel * trailingVelocities / 100)
         else:
             vel = trailingVelocities
+        vel = max(0, min(100, vel))
         
-        pan = baseNote.pan
-        if applySustain:
+        change = find_mid_note_change(playingNote.changes, newTick)
+
+        if applyStereo:
+            pan = baseNote.pan
             if isOddIndex:
-                pan = int(pan - TRAILING_NOTE_SUSTAIN_PAN * (100 - abs(pan)) / 100)
+                pan = int(pan - TRAILING_NOTE_STEREO_PAN * (100 - abs(pan)) / 100)
             else:
-                pan = int(pan + TRAILING_NOTE_SUSTAIN_PAN * (100 - abs(pan)) / 100)
-            pan = int(pan * (1 - (duration - durationIndex) / duration))
+                pan = int(pan + TRAILING_NOTE_STEREO_PAN * (100 - abs(pan)) / 100)
+
+            if baseNote.vel > 50:
+                pan = int(pan * (1 - (duration - durationIndex) / duration))
+        else:
+            if change.pan is not None:
+                pan = change.pan    
+        pan = max(-100, min(100, pan))
+        
+        if change.pitch is not None:
+            pitch = change.pitch
+
+        isOddIndex = not isOddIndex
 
         if vel > 1:
-            newNote = Note(newTick, baseNote.layer, baseNote.inst, baseNote.key, vel, pan, baseNote.pitch)
+            newNote = Note(newTick, baseNote.layer, baseNote.inst, baseNote.key, vel, pan, pitch)
             yield newNote
-        isOddIndex = not isOddIndex
 
 
 async def midi2nbs(
@@ -104,7 +142,7 @@ async def midi2nbs(
     trailingVelocities=50,
     percentTrailingVelocities=True,
     fadeOutTrailingNotes=True,
-    applySustain=True,
+    applyStereo=True,
     importVelocities=True,
     importPanning=True,
     importPitches=True,
@@ -277,10 +315,20 @@ async def midi2nbs(
                 elif msg.type == "control_change":
                     if importPanning and (msg.control == 10):  # Pan
                         pan = int(interp(msg.value, (0, 127), (-100, 100)))
+                        for playingNote in playingNotes.values():
+                            if playingNote.note.tick == tick:
+                                playingNote.note.pan = pan
+                            else:
+                                playingNote.changes.append(MidNoteChange(tick, pan=pan))
                     elif importVelocities and (msg.control == 7):  # Volume
                         trackVel = int(msg.value * 100 / 127)
                 elif importPitches and (msg.type == "pitchwheel"):
                     pitch = int(msg.pitch / NBS_PITCH_IN_MIDI_PITCHBEND)
+                    for playingNote in playingNotes.values():
+                        if playingNote.note.tick == tick:
+                            playingNote.note.pitch = pitch
+                        else:
+                            playingNote.changes.append(MidNoteChange(tick, pitch=pitch))
 
                 if isNoteEnd and currentNotes:
                     midiMsgKey = MidiNoteMsgKey(msg.note, msg.channel)
@@ -292,7 +340,7 @@ async def midi2nbs(
                             note = playingNote.note
                             key, inst = extracted
                             if not note.isPerc:
-                                newNotes = generate_trailing_notes(note, duration, tick, durationSpacing, trailingVelocities, percentTrailingVelocities, fadeOutTrailingNotes, applySustain)
+                                newNotes = generate_trailing_notes(playingNote, tick, durationSpacing, trailingVelocities, percentTrailingVelocities, fadeOutTrailingNotes, applyStereo)
                                 notes.extend(newNotes)
                                 currentNotes.remove(note)
                         del playingNotes[midiMsgKey]

@@ -238,11 +238,11 @@
                   </object>
                 </child>
                 <child>
-                  <object class="ttk.Checkbutton" id="applySustainCheck" named="True">
-                    <property name="command" type="command" cbtype="simple">applySustainChanged</property>
+                  <object class="ttk.Checkbutton" id="applyStereoCheck" named="True">
+                    <property name="command" type="command" cbtype="simple">applyStereoChanged</property>
                     <property name="state">disabled</property>
-                    <property name="text" translatable="yes">Apply sustain effect to trailing notes</property>
-                    <property name="variable">boolean:applySustain</property>
+                    <property name="text" translatable="yes">Apply stereo effect to trailing notes</property>
+                    <property name="variable">boolean:applyStereo</property>
                     <layout manager="grid">
                       <property name="column">0</property>
                       <property name="padx">20</property>
