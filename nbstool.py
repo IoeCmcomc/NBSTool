@@ -34,15 +34,19 @@
 
 
 import asyncio
+from calendar import c
 import inspect
 import json
 import logging
+from operator import index
 import os
 import platform
 import re
 import sys
 import tkinter as tk
+from tkinter import messagebox
 import tkinter.ttk as ttk
+from turtle import width
 import uuid
 import warnings
 import webbrowser
@@ -60,10 +64,12 @@ from time import time
 from tkinter import BooleanVar, IntVar, StringVar, Variable
 from tkinter.filedialog import (askdirectory, askopenfilename,
                                 askopenfilenames, asksaveasfilename)
-from tkinter.messagebox import showerror, showwarning
+from tkinter.messagebox import showerror, showinfo, showwarning
 from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
-                    Optional, Union)
+                    Optional, Union, Tuple)
+from math import sqrt
 
+import numpy as np
 import pygubu
 import pygubu.widgets.combobox
 from jsonschema import validate
@@ -73,6 +79,10 @@ from pygubu import Builder
 # from pygubu.builder import tkstdwidgets, ttkstdwidgets
 from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
 from pygubu.widgets.dialog import Dialog
+from pygubu.widgets.pathchooserinput import PathChooserInput
+from pygubu.widgets.combobox import Combobox as PygubuCombobox
+from PIL import Image
+from coloraide import Color
 
 # Explict import for Nuitka
 import customwidgets.builder
@@ -83,7 +93,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 if os.name == 'nt':  # Windows
     # Ensure pydub.utils.which can splits the added ffmpeg path properly
-    # Potential fix for the issue #10
+    # Fix for the issue #10
     if not os.environ["PATH"].endswith(os.pathsep):
         os.environ["PATH"] += os.pathsep 
     # Add the path of the ffmpeg before the first pydub import statement
@@ -348,9 +358,35 @@ NBS_JSON_SCHEMA = {
     ]
 }
 
+# Taken from Note Block World source code. This shouldn't violate AGPL, though.
+# https://github.com/OpenNBS/NoteBlockWorld/blob/main/shared/features/thumbnail/index.ts#L27
+NBS_INST_NOTE_COLORS_HEX = (
+  '#1964ac',
+  '#3c8e48',
+  '#be6b6b',
+  '#bebe19',
+  '#9d5a98',
+  '#572b21',
+  '#bec65c',
+  '#be19be',
+  '#52908d',
+  '#bebebe',
+  '#1991be',
+  '#be2328',
+  '#be5728',
+  '#19be19',
+  '#be1957',
+  '#575757',
+)
+NBS_INST_NOTE_COLORS = tuple(Color(color) for color in NBS_INST_NOTE_COLORS_HEX)
+NBS_NOTE_COLORS_TO_INST = {color.to_string(hex=True): index for index, color in enumerate(NBS_INST_NOTE_COLORS)}
+
 NBSTOOL_FIRST_COMMIT_TIMESTAMP = 1565100420
 CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJLKMNPQRSTVWXYZ"
 VOWELS = "ueoai"
+NBW_THUMBNAIL_ZOOM_PERCENT_VALUES = (400, 200, 100, 50, 25)
+NBW_WIDTH_DIVISOR = 4000
+NBW_HEIGHT_DIVISOR = 2400
 
 
 def genRandomFilename(prefix: str = '') -> str:
@@ -388,6 +424,7 @@ class MainWindow():
         self.initHeaderTab()
         self.initFlipTab()
         self.initArrangeTab()
+        self.intImportImageTab()
         self.windowBind()
 
         def on_fileTable_select(event):
@@ -454,6 +491,11 @@ class MainWindow():
         self.applyLayerVolCheckVar: BooleanVar
         self.applyLayerPanCheckVar: BooleanVar
         self.groupPerc: BooleanVar
+        self.pixelArtImagePathVar: StringVar
+        self.imgInsertPosVar: StringVar
+        self.imgInsertPosTickVar: IntVar
+        self.imgInsertPosLayerVar: IntVar
+        self.imgInsertSizePercentVar: IntVar
 
         builder.import_variables(self)
         builder.connect_callbacks(self)
@@ -718,6 +760,24 @@ class MainWindow():
         self.arrangeMode.set('none')
         # self.builder.get_object('arrangeGroupPrec').state(('!selected',))
 
+    def intImportImageTab(self):
+        self.pixelArtImagePathVar.set('')
+        self.imgInsertPosVar.set('lastLayer')
+        pathChooser: PathChooserInput = self.builder.get_object('pixelArtImagePathChooser')
+        filetypes = [('Image files', '*.png *.jpg *.jpeg *.gif *.bmp *.tiff *.webp'), ('All files', '*')] 
+        pathChooser.config(filetypes=filetypes, width=200)
+        sizeCombo: PygubuCombobox = self.builder.get_object('imgInsertSizeCombo')
+        options: List = []
+        for zoom in NBW_THUMBNAIL_ZOOM_PERCENT_VALUES:
+            # zoom = 400% => width = 10, height = 6
+            # zoom = 200% => width = 20, height = 12
+            # zoom = 100% => width = 40, height = 24
+            width = NBW_WIDTH_DIVISOR // zoom
+            height = NBW_HEIGHT_DIVISOR // zoom
+            options.append([zoom, f"{width}x{height} ({zoom}%)"])
+        sizeCombo.config(values=options)
+        sizeCombo.current(100)
+
     def callMidiImportDialog(self):
         dialogue = MidiImportDialog(self.toplevel, self)
         dialogue.run()
@@ -863,6 +923,13 @@ class MainWindow():
     def onArrangeModeChanged(self):
         self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (
             self.arrangeMode.get() == 'instruments') else 'disabled'
+        
+    def onImgInsertPosChanged(self):
+        state = 'normal' if (self.imgInsertPosVar.get() == 'custom') else 'disabled'
+        self.builder.get_object('imgInsertCustomLabel1')['state'] = state
+        self.builder.get_object('imgInsertCustomLabel2')['state'] = state
+        self.builder.get_object('imgInsertPosTickSpin')['state'] = state
+        self.builder.get_object('imgInsertPosLayerSpin')['state'] = state
 
     def applyTool(self):
         get_object = self.builder.get_object
@@ -942,6 +1009,26 @@ class MainWindow():
                                 layer.volume = 100
                             if applyPan:
                                 layer.pan = 0
+                    
+                    if (imgPath := self.pixelArtImagePathVar.get()) and imgPath != '':
+                        insertPos = self.imgInsertPosVar.get()
+                        insertTick: int = -1
+                        insertLayer: int = -1
+                        if insertPos == 'lastLayer':
+                            insertTick = 0
+                            insertLayer = songData.maxLayer
+                        elif insertPos == 'lastTick':
+                            insertTick = len(songData)
+                            insertLayer = 0
+                        elif insertPos == 'custom':
+                            insertTick = self.imgInsertPosTickVar.get()
+                            insertLayer = self.imgInsertPosLayerVar.get()
+                    
+                        zoomPercent = self.imgInsertSizePercentVar.get()
+                        insertWidth = NBW_WIDTH_DIVISOR // zoomPercent
+                        insertHeight = NBW_HEIGHT_DIVISOR // zoomPercent
+
+                        self.insertImage(imgPath, songData, insertTick, insertLayer, insertWidth, insertHeight)
 
                     dialog.setCurrentPercentage(randint(75, 85))
                     await sleep(0.001)
@@ -952,8 +1039,15 @@ class MainWindow():
                 for k, v in changedSongData.items():
                     self.songsData[k] = v
                 dialog.totalProgress.set(i+1)
+
+                showinfo("Applying tools", "All selected files have been processed.")
             except CancelledError:
                 raise
+            except Exception as e:
+                showerror("Applying tools error",
+                          f'An error occurred while applying tools to files.\n{e.__class__.__name__}: {e}')
+                logger.exception(e)
+                dialogue.onCancel()
             finally:
                 get_object('applyBtn')['state'] = 'normal'
 
@@ -973,6 +1067,24 @@ class MainWindow():
                 layer = 0
                 note.layer = layer
                 prevNote = note
+
+    def insertImage(self, imgPath: str, song: NbsSong, x: int, y: int, width: int, height: int):
+        img = Image.open(imgPath)
+        img.thumbnail((width, height), Image.Resampling.NEAREST)
+        width, height = img.size
+        img = img.convert('RGBA')
+
+        for i in range(width):
+            for j in range(height):
+                color = img.getpixel((i, j))
+                assert isinstance(color, tuple)
+                r, g, b, a = color
+                if a <= 25:
+                    continue
+                
+                nearestColor = Color('srgb', (r / 255, g / 255, b / 255)).closest(NBS_INST_NOTE_COLORS)
+                inst = NBS_NOTE_COLORS_TO_INST[nearestColor.to_string(hex=True)]
+                song.notes.append(Note(x + i, y + j, inst, 0, 0))
 
     def modifyHeaders(self, header):
         def setAttrFromStrVar(key: str, value: str):
@@ -1316,7 +1428,7 @@ class AudioExportDialog(ExportDialog):
 
         formatCombo = self.builder.get_object('formatCombo')
         formatCombo.current('wav')
-        self.formatVar.trace('w', self.formatChanged)  # type: ignore
+        self.formatVar.trace_add('write', self.formatChanged)
 
         samplingRateCombo = self.builder.get_object('samplingRateCombo')
         samplingRateCombo.set(44100)

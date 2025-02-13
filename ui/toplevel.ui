@@ -611,8 +611,7 @@
                         </child>
                         <child>
                           <object class="customwidgets.WrapMessage" id="wrapmessage_1">
-                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost 
-</property>
+                            <property name="text" translatable="yes">Changing files's format to a older version can cause data to be lost.</property>
                             <layout manager="pack">
                               <property name="fill">x</property>
                               <property name="side">top</property>
@@ -764,6 +763,187 @@
                             <property name="variable">boolean:applyLayerPanCheckVar</property>
                             <layout manager="pack">
                               <property name="side">top</property>
+                            </layout>
+                          </object>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="ttk.Notebook.Tab" id="pixelArtTab" named="True">
+                    <property name="text" translatable="yes">Insert pixel art</property>
+                    <child>
+                      <object class="ttk.Frame" id="frame3">
+                        <property name="height">200</property>
+                        <property name="padding">5</property>
+                        <property name="width">200</property>
+                        <layout manager="pack">
+                          <property name="side">top</property>
+                        </layout>
+                        <child>
+                          <object class="ttk.Label" id="label9">
+                            <property name="text" translatable="yes">Image path:</property>
+                            <layout manager="grid">
+                              <property name="column">0</property>
+                              <property name="row">0</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="pygubu.widgets.PathChooserInput" id="pixelArtImagePathChooser" named="True">
+                            <property name="mustexist">true</property>
+                            <property name="textvariable">string:pixelArtImagePathVar</property>
+                            <property name="title" translatable="yes">Select an image file</property>
+                            <layout manager="grid">
+                              <property name="column">1</property>
+                              <property name="ipadx">100</property>
+                              <property name="padx">5</property>
+                              <property name="row">0</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Label" id="label10">
+                            <property name="text" translatable="yes">Insert position:</property>
+                            <layout manager="grid">
+                              <property name="column">0</property>
+                              <property name="row">1</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Radiobutton" id="imgInsertLastLayerRadio" named="True">
+                            <property name="command" type="command" cbtype="simple">onImgInsertPosChanged</property>
+                            <property name="state">normal</property>
+                            <property name="takefocus">false</property>
+                            <property name="text" translatable="yes">After the last layer</property>
+                            <property name="value">lastLayer</property>
+                            <property name="variable">string:imgInsertPosVar</property>
+                            <layout manager="grid">
+                              <property name="column">1</property>
+                              <property name="padx">5</property>
+                              <property name="row">1</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Radiobutton" id="imgInsertLastTickRadio" named="True">
+                            <property name="command" type="command" cbtype="simple">onImgInsertPosChanged</property>
+                            <property name="state">normal</property>
+                            <property name="takefocus">false</property>
+                            <property name="text" translatable="yes">After the last tick (at the end of the song)</property>
+                            <property name="value">lastTick</property>
+                            <property name="variable">string:imgInsertPosVar</property>
+                            <layout manager="grid">
+                              <property name="column">1</property>
+                              <property name="padx">5</property>
+                              <property name="row">2</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Frame" id="frame5">
+                            <layout manager="grid">
+                              <property name="column">1</property>
+                              <property name="padx">5</property>
+                              <property name="row">3</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                            <child>
+                              <object class="ttk.Radiobutton" id="imgInsertCustomRadio" named="True">
+                                <property name="command" type="command" cbtype="simple">onImgInsertPosChanged</property>
+                                <property name="state">normal</property>
+                                <property name="takefocus">false</property>
+                                <property name="text" translatable="yes">Custom:</property>
+                                <property name="value">custom</property>
+                                <property name="variable">string:imgInsertPosVar</property>
+                                <layout manager="pack">
+                                  <property name="side">left</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="ttk.Label" id="imgInsertCustomLabel1" named="True">
+                                <property name="state">disabled</property>
+                                <property name="takefocus">false</property>
+                                <property name="text" translatable="yes">tick</property>
+                                <layout manager="pack">
+                                  <property name="padx">5</property>
+                                  <property name="side">left</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="ttk.Spinbox" id="imgInsertPosTickSpin" named="True">
+                                <property name="from_">0</property>
+                                <property name="state">disabled</property>
+                                <property name="textvariable">int:imgInsertPosTickVar</property>
+                                <property name="to">65536</property>
+                                <property name="width">6</property>
+                                <layout manager="pack">
+                                  <property name="side">left</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="ttk.Label" id="imgInsertCustomLabel2" named="True">
+                                <property name="state">disabled</property>
+                                <property name="text" translatable="yes">, layer</property>
+                                <layout manager="pack">
+                                  <property name="side">left</property>
+                                </layout>
+                              </object>
+                            </child>
+                            <child>
+                              <object class="ttk.Spinbox" id="imgInsertPosLayerSpin" named="True">
+                                <property name="from_">0</property>
+                                <property name="state">disabled</property>
+                                <property name="textvariable">int:imgInsertPosLayerVar</property>
+                                <property name="to">65536</property>
+                                <property name="width">6</property>
+                                <layout manager="pack">
+                                  <property name="side">left</property>
+                                </layout>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="ttk.Label" id="label13">
+                            <property name="text" translatable="yes">Target size:</property>
+                            <layout manager="grid">
+                              <property name="column">0</property>
+                              <property name="row">4</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="pygubu.builder.widgets.combobox" id="imgInsertSizeCombo" named="True">
+                            <property name="keyvariable">int:imgInsertSizePercentVar</property>
+                            <layout manager="grid">
+                              <property name="column">1</property>
+                              <property name="pady">3</property>
+                              <property name="row">4</property>
+                              <property name="sticky">w</property>
+                            </layout>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="customwidgets.WrapMessage" id="wrapmessage2">
+                            <property name="text" translatable="yes">Insert an image as slient notes to replicate pixel-art effect, especially for setting thumbnail when uploading songs to Note Block World. The image may be scaled down, but never be scaled up.</property>
+                            <property name="width">550</property>
+                            <layout manager="grid">
+                              <property name="column">0</property>
+                              <property name="columnspan">2</property>
+                              <property name="row">5</property>
+                              <property name="sticky">w</property>
                             </layout>
                           </object>
                         </child>

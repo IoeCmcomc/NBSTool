@@ -15,6 +15,7 @@ lark = ">=1.0.0"
 jsonschema = ">=4.17.3"
 nbswave = {rev = "5f879c726d344bbf9bc0b2dbb3ddbf8cc508d0f5", git = "https://github.com/Bentroen/nbswave.git"}
 loguru = "^0.7.2"
+coloraide = "^4.2.1"
 
 [tool.poetry.dev-dependencies]
 

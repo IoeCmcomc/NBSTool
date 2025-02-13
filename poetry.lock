@@ -125,6 +125,17 @@ files = [
 pycparser = "*"
 
 [[package]]
+name = "coloraide"
+version = "4.2.1"
+description = "A color library for Python."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "coloraide-4.2.1-py3-none-any.whl", hash = "sha256:0acc1f9abe499243438e40376c09a87ca7643ec6e87381ab7af670ee10ff3cbf"},
+    {file = "coloraide-4.2.1.tar.gz", hash = "sha256:277f6bc22000fdab8d6973051fd4df9441687bff4483051633e31e4c445e4492"},
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1203,4 +1214,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8, <3.9"
-content-hash = "516bd800d26fcc89b48bc6a1a2f5116d8d7664147e21b2c7db32fcc5328544af"
+content-hash = "2f8b8c4ce88a9dfa750d01a2ca9b26d7a361fa00225e406647f8e84f4c3ed19a"
