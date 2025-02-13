@@ -303,7 +303,7 @@
                                             <property name="state">disabled</property>
                                             <property name="textvariable">string:headerAutosaveInterval</property>
                                             <property name="to">255</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">4</property>
                                             <layout manager="grid">
@@ -390,7 +390,7 @@
                                             <property name="increment">1</property>
                                             <property name="textvariable">string:headerMinuteSpent</property>
                                             <property name="to">2147483647</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
@@ -408,7 +408,7 @@
 </property>
                                             <property name="textvariable">string:headerLeftClicks</property>
                                             <property name="to">2147483647</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
@@ -424,7 +424,7 @@
                                             <property name="increment">1</property>
                                             <property name="textvariable">string:headerRightClicks</property>
                                             <property name="to">2147483647</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
@@ -440,7 +440,7 @@
                                             <property name="increment">1</property>
                                             <property name="textvariable">string:headerBlockAdded</property>
                                             <property name="to">2147483647</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
@@ -456,7 +456,7 @@
                                             <property name="increment">1</property>
                                             <property name="textvariable">string:headerBlockRemoved</property>
                                             <property name="to">2147483647</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
@@ -523,7 +523,7 @@
                                             <property name="increment">1</property>
                                             <property name="textvariable">string:headerLoopCount</property>
                                             <property name="to">255</property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">4</property>
                                             <layout manager="grid">
@@ -540,7 +540,7 @@
                                             <property name="textvariable">string:headerLoopStart</property>
                                             <property name="to">32767
 </property>
-                                            <property name="validate">focusout</property>
+                                            <property name="validate">key</property>
                                             <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
                                             <property name="width">6</property>
                                             <layout manager="grid">
@@ -885,6 +885,8 @@
                                 <property name="state">disabled</property>
                                 <property name="textvariable">int:imgInsertPosTickVar</property>
                                 <property name="to">65536</property>
+                                <property name="validate">key</property>
+                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isRequiredInteger</property>
                                 <property name="width">6</property>
                                 <layout manager="pack">
                                   <property name="side">left</property>
@@ -906,6 +908,8 @@
                                 <property name="state">disabled</property>
                                 <property name="textvariable">int:imgInsertPosLayerVar</property>
                                 <property name="to">65536</property>
+                                <property name="validate">key</property>
+                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isRequiredInteger</property>
                                 <property name="width">6</property>
                                 <layout manager="pack">
                                   <property name="side">left</property>

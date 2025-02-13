@@ -500,8 +500,11 @@ class MainWindow():
         builder.import_variables(self)
         builder.connect_callbacks(self)
 
-    def isInteger(self, value) -> bool:
+    def isInteger(self, value: str) -> bool:
         return value == '' or value.isdigit()
+    
+    def isRequiredInteger(self, value: str) -> bool:
+        return value.isdigit()
 
     def getSelectedFilesVersion(self, selection: Iterable) -> int:
         fileVersion = -1
@@ -1068,7 +1071,7 @@ class MainWindow():
                 note.layer = layer
                 prevNote = note
 
-    def insertImage(self, imgPath: str, song: NbsSong, x: int, y: int, width: int, height: int):
+    def insertImage(self, imgPath: str, song: NbsSong, x: int, y: int, width: int, height: int) -> None:
         img = Image.open(imgPath)
         img.thumbnail((width, height), Image.Resampling.NEAREST)
         width, height = img.size
@@ -1081,7 +1084,6 @@ class MainWindow():
                 r, g, b, a = color
                 if a <= 25:
                     continue
-                
                 nearestColor = Color('srgb', (r / 255, g / 255, b / 255)).closest(NBS_INST_NOTE_COLORS)
                 inst = NBS_NOTE_COLORS_TO_INST[nearestColor.to_string(hex=True)]
                 song.notes.append(Note(x + i, y + j, inst, 0, 0))
