@@ -16,13 +16,13 @@ jobs:
 
     steps:
     - name: Check-out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install poetry
       run: pipx install poetry
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.8' # Version range or exact version of a Python version to use, using SemVer's version range syntax
         architecture: ${{ matrix.arch }} # optional x64 or x86. Defaults to x64 if not specified
@@ -49,13 +49,13 @@ jobs:
         poetry run python3 -m nuitka nbstool.py
 
     - name: Zip standalone folder
-      uses: vimtor/action-zip@v1
+      uses: vimtor/action-zip@v1.2
       with:
         files: nbstool.dist/
         dest: NBSTool_${{ runner.os }}_${{ matrix.arch }}.zip
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ runner.os }} ${{ matrix.arch }} Build
         path: NBSTool_${{ runner.os }}_${{ matrix.arch }}.zip
