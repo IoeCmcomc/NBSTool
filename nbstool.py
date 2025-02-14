@@ -22,8 +22,10 @@
 # nuitka-project: --show-anti-bloat-changes
 # nuitka-project: --assume-yes-for-downloads
 # nuitka-project: --report=compilation-report.xml
+# nuitka-project: --verbose
+# nuitka-project: --report=nbstool.dist/plugin-report.xml
 # nuitka-project: --user-package-configuration-file=custom-nuitka-package.config.yml
-# nuitka-project: --windows-console-mode=disable
+# nuitka-project: --windows-console-mode=attach
 # nuitka-project-if: {OS} == "Windows":
 #    nuitka-project: --windows-icon-from-ico=icon.ico
 #    nuitka-project: --windows-product-name=NBSTool
