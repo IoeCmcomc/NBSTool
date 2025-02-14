@@ -14,15 +14,17 @@ mido = ">=1.2.9"
 lxml = ">=4.9.1"
 lark = ">=1.0.0"
 jsonschema = ">=4.17.3"
+rpds-py = "0.18.1" # Fix crash on Windows 7
 nbswave = {rev = "5f879c726d344bbf9bc0b2dbb3ddbf8cc508d0f5", git = "https://github.com/Bentroen/nbswave.git"}
-loguru = "^0.7.2"
-coloraide = "^4.2.1"
+loguru = ">=0.7.2"
+coloraide = ">=4.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pygubu-designer = ">=0.28"
 # Latest version of Nuitka (2.3.1) produces a Linux executable which work fine
 # on WSL but crash on an Ubuntu 24.04 VM. Therefore, nuitka will be set to
 # version 1.8.5 for now. 
+# Update 15/02/2025: Nuitka 2.6.5 works fine on Linux Mint 22.
 Nuitka = ">=1.1.6"
 # Nuitka = "1.8.5"
 orderedset = "^2.0.3"

@@ -22,8 +22,6 @@
 # nuitka-project: --show-anti-bloat-changes
 # nuitka-project: --assume-yes-for-downloads
 # nuitka-project: --report=compilation-report.xml
-# nuitka-project: --verbose
-# nuitka-project: --report=nbstool.dist/plugin-report.xml
 # nuitka-project: --user-package-configuration-file=custom-nuitka-package.config.yml
 # nuitka-project: --windows-console-mode=attach
 # nuitka-project-if: {OS} == "Windows":
@@ -36,19 +34,15 @@
 
 
 import asyncio
-from calendar import c
 import inspect
 import json
 import logging
-from operator import index
 import os
 import platform
 import re
 import sys
 import tkinter as tk
-from tkinter import messagebox
 import tkinter.ttk as ttk
-from turtle import width
 import uuid
 import warnings
 import webbrowser
@@ -69,9 +63,7 @@ from tkinter.filedialog import (askdirectory, askopenfilename,
 from tkinter.messagebox import showerror, showinfo, showwarning
 from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
                     Optional, Union, Tuple)
-from math import sqrt
 
-import numpy as np
 import pygubu
 import pygubu.widgets.combobox
 from jsonschema import validate
