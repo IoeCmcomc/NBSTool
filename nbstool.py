@@ -23,7 +23,7 @@
 # nuitka-project: --assume-yes-for-downloads
 # nuitka-project: --report=compilation-report.xml
 # nuitka-project: --user-package-configuration-file=custom-nuitka-package.config.yml
-# nuitka-project: --disable-console
+# nuitka-project: --windows-console-mode=disable
 # nuitka-project-if: {OS} == "Windows":
 #    nuitka-project: --windows-icon-from-ico=icon.ico
 #    nuitka-project: --windows-product-name=NBSTool
@@ -77,7 +77,7 @@ from loguru import logger
 from pygubu import Builder
 # Explict imports for PyInstaller
 # from pygubu.builder import tkstdwidgets, ttkstdwidgets
-from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
+from pygubu.widgets import dialog, pathchooserinput
 from pygubu.widgets.dialog import Dialog
 from pygubu.widgets.pathchooserinput import PathChooserInput
 from pygubu.widgets.combobox import Combobox as PygubuCombobox
