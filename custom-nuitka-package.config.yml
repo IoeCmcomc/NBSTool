@@ -46,5 +46,13 @@
       - 'pygubu.plugins.pygubu.dialog'
       - 'pygubu.plugins.pygubu.pathchooserinput'
       - 'pygubu.plugins.pygubu.combobox'
-      when: 'version("pygubu") > (0, 24)'
-      
+      when: '(0, 36) > version("pygubu") >= (0, 24)'
+    - depends:
+      - 'pygubu.plugins.tk.tkstdwidgets'
+      - 'pygubu.plugins.ttk.ttkstdwidgets'
+      - 'pygubu.plugins.pygubu.scrollbarhelper_bo'
+      - 'pygubu.plugins.pygubu.dialog_bo'
+      - 'pygubu.plugins.pygubu.pathchooserinput_bo'
+      - 'pygubu.plugins.pygubu.combobox_bo'
+      when: 'version("pygubu") >= (0, 36)'
+    

@@ -73,7 +73,7 @@ from loguru import logger
 from pygubu import Builder
 # Explict imports for PyInstaller
 # from pygubu.builder import tkstdwidgets, ttkstdwidgets
-from pygubu.widgets import dialog, pathchooserinput
+from pygubu.widgets import dialog, pathchooserinput, tkscrollbarhelper
 from pygubu.widgets.dialog import Dialog
 from pygubu.widgets.pathchooserinput import PathChooserInput
 from pygubu.widgets.combobox import Combobox as PygubuCombobox
@@ -81,7 +81,7 @@ from PIL import Image
 from coloraide import Color
 
 # Explict import for Nuitka
-import customwidgets.builder
+import customwidgets_builder
 
 from common import BASE_RESOURCE_PATH, resource_path
 
@@ -91,7 +91,7 @@ if os.name == 'nt':  # Windows
     # Ensure pydub.utils.which can splits the added ffmpeg path properly
     # Fix for the issue #10
     if not os.environ["PATH"].endswith(os.pathsep):
-        os.environ["PATH"] += os.pathsep
+        os.environ["PATH"] += os.pathsep 
     # Add the path of the ffmpeg before the first pydub import statement
     os.environ["PATH"] += resource_path('ffmpeg', 'bin')
 
@@ -106,7 +106,7 @@ from nbs2impulsetracker import nbs2it
 from nbs2midi import nbs2midi
 from nbsio import NBS_VERSION, VANILLA_INSTS, Instrument, Layer, NbsSong, Note
 
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 
 NBS_JSON_SCHEMA = {
     "type": "object",
@@ -2111,6 +2111,8 @@ logger.add(resource_path("logs", "latest.log"),
            retention=10, compression='bz2')
 logging.basicConfig(handlers=[InterceptHandler()],
                     level=logging.INFO, force=True)
+# logging.basicConfig(handlers=[InterceptHandler()],
+#                     level=logging.DEBUG, force=True)
 
 showwarning_ = warnings.showwarning
 

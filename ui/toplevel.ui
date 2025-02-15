@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.4" author="PygubuDesigner 0.39.3">
+<interface version="1.4" author="PygubuDesigner 0.40.2">
   <project>
     <settings>
       <setting id="name">Main window</setting>
@@ -20,7 +20,7 @@
       <setting id="ttk_style_definition_file" />
     </settings>
     <customwidgets>
-      <customwidget path="../customwidgets/builder.py" />
+      <customwidget path="../customwidgets_builder.py" />
     </customwidgets>
   </project>
   <object class="tk.Toplevel" id="toplevel">
@@ -50,14 +50,11 @@
               <property name="side">top</property>
             </layout>
             <child>
-              <object class="pygubu.builder.widgets.tkscrollbarhelper" id="tkscrollbarhelper">
+              <object class="pygubu.widgets.ScrollbarHelper" id="scrollbarhelper1">
                 <property name="scrolltype">both</property>
-                <property name="usemousewheel">true</property>
+                <property name="usemousewheel">false</property>
                 <layout manager="pack">
                   <property name="expand">true</property>
-                  <property name="fill">both</property>
-                  <property name="padx">5</property>
-                  <property name="pady">5</property>
                   <property name="side">top</property>
                 </layout>
                 <child>
@@ -65,13 +62,16 @@
                     <property name="selectmode">extended</property>
                     <layout manager="pack">
                       <property name="expand">true</property>
+                      <property name="fill">both</property>
+                      <property name="padx">5</property>
+                      <property name="pady">5</property>
                       <property name="side">top</property>
                     </layout>
                     <child>
                       <object class="ttk.Treeview.Column" id="filePathColumn">
                         <property name="column_anchor">w</property>
                         <property name="heading_anchor">w</property>
-                        <property name="minwidth">20</property>
+                        <property name="minwidth">100</property>
                         <property name="stretch">true</property>
                         <property name="text" translatable="yes">File path</property>
                         <property name="tree_column">true</property>
@@ -95,7 +95,7 @@
                       <object class="ttk.Treeview.Column" id="songNameColumn">
                         <property name="column_anchor">w</property>
                         <property name="heading_anchor">w</property>
-                        <property name="minwidth">20</property>
+                        <property name="minwidth">40</property>
                         <property name="stretch">true</property>
                         <property name="text" translatable="yes">Name</property>
                         <property name="tree_column">false</property>
@@ -107,7 +107,7 @@
                       <object class="ttk.Treeview.Column" id="songAuthorColumn">
                         <property name="column_anchor">w</property>
                         <property name="heading_anchor">w</property>
-                        <property name="minwidth">20</property>
+                        <property name="minwidth">40</property>
                         <property name="stretch">true</property>
                         <property name="text" translatable="yes">Author</property>
                         <property name="tree_column">false</property>
@@ -119,7 +119,7 @@
                       <object class="ttk.Treeview.Column" id="songOrgiAuthorColumn">
                         <property name="column_anchor">w</property>
                         <property name="heading_anchor">w</property>
-                        <property name="minwidth">20</property>
+                        <property name="minwidth">40</property>
                         <property name="stretch">true</property>
                         <property name="text" translatable="yes">Original author</property>
                         <property name="tree_column">false</property>

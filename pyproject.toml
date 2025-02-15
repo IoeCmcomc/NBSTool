@@ -9,6 +9,8 @@ package-mode = false
 python = ">=3.8, <3.9"
 Pillow = ">=9.0.0"
 pygubu = ">=0.23"
+# pygubu = "0.35.6"
+# pygubu = "0.36"
 mido = ">=1.2.9"
 lxml = ">=4.9.1"
 lark = ">=1.0.0"
