@@ -832,17 +832,17 @@ files = [
 
 [[package]]
 name = "pygubu"
-version = "0.35.6"
+version = "0.36.3"
 description = "A simple GUI builder for the python tkinter module"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pygubu-0.35.6-py3-none-any.whl", hash = "sha256:dba34d61684321c67f8cdcb98bf8e3624a2e602aef19ba0c3ec0b1cedfde3b7c"},
-    {file = "pygubu-0.35.6.tar.gz", hash = "sha256:637f1567b2b89cb2c09bee64b0547e9267031327a65c17d20fa668e97f2891d0"},
+    {file = "pygubu-0.36.3-py3-none-any.whl", hash = "sha256:8cc5df7f68b03acb0762c3cdf2ad3130b4759620e670326988e14551c7ee8767"},
+    {file = "pygubu-0.36.3.tar.gz", hash = "sha256:5ca9ad59a47b5e5528d4efe121ce46c1f925bac7ced228904795c25155f6e4a9"},
 ]
 
 [package.dependencies]
-importlib-resources = {version = "*", markers = "python_version < \"3.9\""}
+importlib_resources = {version = "*", markers = "python_version < \"3.9\""}
 
 [package.extras]
 all = ["AwesomeTkinter", "customtkinter (>=5.2.2)", "packaging", "pillow", "tkcalendar", "tkintermapview", "tkintertable", "tkinterweb", "tksheet", "ttkwidgets"]
@@ -857,20 +857,20 @@ ttkwidgets = ["ttkwidgets"]
 
 [[package]]
 name = "pygubu-designer"
-version = "0.39.3"
+version = "0.40.2"
 description = "A simple GUI designer for the python tkinter module"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pygubu_designer-0.39.3-py3-none-any.whl", hash = "sha256:7e95ab5818ad4f65767cf7739bb950253941b33943b622530ad05eeb3651dc6d"},
-    {file = "pygubu_designer-0.39.3.tar.gz", hash = "sha256:ad3a6950307ec07684f165545748ebad1c61164ade67b3e74971098af09187df"},
+    {file = "pygubu_designer-0.40.2-py3-none-any.whl", hash = "sha256:a98b7d2dd98e5d7a51104be1337dc34ef78c2dd8bd9058bad5ed3de08b7f4da0"},
+    {file = "pygubu_designer-0.40.2.tar.gz", hash = "sha256:86d51563201bfcb5b26674cd74ca4702c270c09d84708f4cae3778015cf06865"},
 ]
 
 [package.dependencies]
 appdirs = ">=1.4.3"
 autopep8 = ">=1.7"
 Mako = ">=1.1.4"
-pygubu = ">=0.35.2"
+pygubu = ">=0.36.3"
 screeninfo = ">=0.8"
 
 [package.extras]
@@ -1206,4 +1206,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8, <3.9"
-content-hash = "8c8738d05099e880606952a5cace06352fb48439456a1c2e4b51919a1f759588"
+content-hash = "6812900974460139027e213531aa43ff56d282946465a2e854a67d08c02a2123"

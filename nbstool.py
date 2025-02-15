@@ -33,6 +33,8 @@
 #    nuitka-project: --windows-file-description=NBSTool
 
 
+from __future__ import annotations
+
 import asyncio
 import inspect
 import json
@@ -61,8 +63,8 @@ from tkinter import BooleanVar, IntVar, StringVar, Variable
 from tkinter.filedialog import (askdirectory, askopenfilename,
                                 askopenfilenames, asksaveasfilename)
 from tkinter.messagebox import showerror, showinfo, showwarning
-from typing import (Any, Callable, Coroutine, Deque, Iterable, List, Literal,
-                    Optional, Union, Tuple)
+from typing import (Any, Callable, Coroutine, Deque, Iterable, Literal,
+                    Optional, Union)
 
 import pygubu
 import pygubu.widgets.combobox
@@ -89,7 +91,7 @@ if os.name == 'nt':  # Windows
     # Ensure pydub.utils.which can splits the added ffmpeg path properly
     # Fix for the issue #10
     if not os.environ["PATH"].endswith(os.pathsep):
-        os.environ["PATH"] += os.pathsep 
+        os.environ["PATH"] += os.pathsep
     # Add the path of the ffmpeg before the first pydub import statement
     os.environ["PATH"] += resource_path('ffmpeg', 'bin')
 
@@ -355,25 +357,27 @@ NBS_JSON_SCHEMA = {
 # Taken from Note Block World source code. This shouldn't violate AGPL, though.
 # https://github.com/OpenNBS/NoteBlockWorld/blob/main/shared/features/thumbnail/index.ts#L27
 NBS_INST_NOTE_COLORS_HEX = (
-  '#1964ac',
-  '#3c8e48',
-  '#be6b6b',
-  '#bebe19',
-  '#9d5a98',
-  '#572b21',
-  '#bec65c',
-  '#be19be',
-  '#52908d',
-  '#bebebe',
-  '#1991be',
-  '#be2328',
-  '#be5728',
-  '#19be19',
-  '#be1957',
-  '#575757',
+    '#1964ac',
+    '#3c8e48',
+    '#be6b6b',
+    '#bebe19',
+    '#9d5a98',
+    '#572b21',
+    '#bec65c',
+    '#be19be',
+    '#52908d',
+    '#bebebe',
+    '#1991be',
+    '#be2328',
+    '#be5728',
+    '#19be19',
+    '#be1957',
+    '#575757',
 )
-NBS_INST_NOTE_COLORS = tuple(Color(color) for color in NBS_INST_NOTE_COLORS_HEX)
-NBS_NOTE_COLORS_TO_INST = {color.to_string(hex=True): index for index, color in enumerate(NBS_INST_NOTE_COLORS)}
+NBS_INST_NOTE_COLORS = tuple(Color(color)
+                             for color in NBS_INST_NOTE_COLORS_HEX)
+NBS_NOTE_COLORS_TO_INST = {color.to_string(
+    hex=True): index for index, color in enumerate(NBS_INST_NOTE_COLORS)}
 
 NBSTOOL_FIRST_COMMIT_TIMESTAMP = 1565100420
 CONSONANTS = "bcdfghjklmnpqrstvwxyzBCDFGHJLKMNPQRSTVWXYZ"
@@ -496,7 +500,7 @@ class MainWindow():
 
     def isInteger(self, value: str) -> bool:
         return value == '' or value.isdigit()
-    
+
     def isRequiredInteger(self, value: str) -> bool:
         return value.isdigit()
 
@@ -760,11 +764,14 @@ class MainWindow():
     def intImportImageTab(self):
         self.pixelArtImagePathVar.set('')
         self.imgInsertPosVar.set('lastLayer')
-        pathChooser: PathChooserInput = self.builder.get_object('pixelArtImagePathChooser')
-        filetypes = [('Image files', '*.png *.jpg *.jpeg *.gif *.bmp *.tiff *.webp'), ('All files', '*')] 
+        pathChooser: PathChooserInput = self.builder.get_object(
+            'pixelArtImagePathChooser')
+        filetypes = [
+            ('Image files', '*.png *.jpg *.jpeg *.gif *.bmp *.tiff *.webp'), ('All files', '*')]
         pathChooser.config(filetypes=filetypes, width=200)
-        sizeCombo: PygubuCombobox = self.builder.get_object('imgInsertSizeCombo')
-        options: List = []
+        sizeCombo: PygubuCombobox = self.builder.get_object(
+            'imgInsertSizeCombo')
+        options: list = []
         for zoom in NBW_THUMBNAIL_ZOOM_PERCENT_VALUES:
             # zoom = 400% => width = 10, height = 6
             # zoom = 200% => width = 20, height = 12
@@ -920,9 +927,10 @@ class MainWindow():
     def onArrangeModeChanged(self):
         self.builder.get_object('arrangeGroupPrec')['state'] = 'normal' if (
             self.arrangeMode.get() == 'instruments') else 'disabled'
-        
+
     def onImgInsertPosChanged(self):
-        state = 'normal' if (self.imgInsertPosVar.get() == 'custom') else 'disabled'
+        state = 'normal' if (self.imgInsertPosVar.get()
+                             == 'custom') else 'disabled'
         self.builder.get_object('imgInsertCustomLabel1')['state'] = state
         self.builder.get_object('imgInsertCustomLabel2')['state'] = state
         self.builder.get_object('imgInsertPosTickSpin')['state'] = state
@@ -945,6 +953,12 @@ class MainWindow():
             try:
                 notebook: ttk.Notebook = get_object('headerNotebook')
                 headerModifiable = notebook.index(notebook.select()) == 1
+                insertImageNotes: list[Note] = []
+                if (imgPath := self.pixelArtImagePathVar.get()) and imgPath.strip() != '':
+                    zoomPercent = self.imgInsertSizePercentVar.get()
+                    insertWidth = NBW_WIDTH_DIVISOR // zoomPercent
+                    insertHeight = NBW_HEIGHT_DIVISOR // zoomPercent
+                    insertImageNotes = self.imageToNotes(imgPath, insertWidth, insertHeight)
                 i = 0
                 for i, index in enumerate(selectedIndexes):
                     dialog.totalProgress.set(i)
@@ -1006,8 +1020,8 @@ class MainWindow():
                                 layer.volume = 100
                             if applyPan:
                                 layer.pan = 0
-                    
-                    if (imgPath := self.pixelArtImagePathVar.get()) and imgPath != '':
+
+                    if insertImageNotes:
                         insertPos = self.imgInsertPosVar.get()
                         insertTick: int = -1
                         insertLayer: int = -1
@@ -1020,12 +1034,9 @@ class MainWindow():
                         elif insertPos == 'custom':
                             insertTick = self.imgInsertPosTickVar.get()
                             insertLayer = self.imgInsertPosLayerVar.get()
-                    
-                        zoomPercent = self.imgInsertSizePercentVar.get()
-                        insertWidth = NBW_WIDTH_DIVISOR // zoomPercent
-                        insertHeight = NBW_HEIGHT_DIVISOR // zoomPercent
 
-                        self.insertImage(imgPath, songData, insertTick, insertLayer, insertWidth, insertHeight)
+                        self.shiftNotes(insertImageNotes, insertTick, insertLayer)
+                        songData.notes.extend(insertImageNotes)     
 
                     dialog.setCurrentPercentage(randint(75, 85))
                     await sleep(0.001)
@@ -1037,7 +1048,8 @@ class MainWindow():
                     self.songsData[k] = v
                 dialog.totalProgress.set(i+1)
 
-                showinfo("Applying tools", "All selected files have been processed.")
+                showinfo("Applying tools",
+                         "All selected files have been processed.")
             except CancelledError:
                 raise
             except Exception as e:
@@ -1065,11 +1077,12 @@ class MainWindow():
                 note.layer = layer
                 prevNote = note
 
-    def insertImage(self, imgPath: str, song: NbsSong, x: int, y: int, width: int, height: int) -> None:
+    def imageToNotes(self, imgPath: str, width: int, height: int) -> list[Note]:
         img = Image.open(imgPath)
         img.thumbnail((width, height), Image.Resampling.NEAREST)
         width, height = img.size
         img = img.convert('RGBA')
+        notes = []
 
         for i in range(width):
             for j in range(height):
@@ -1078,9 +1091,18 @@ class MainWindow():
                 r, g, b, a = color
                 if a <= 25:
                     continue
-                nearestColor = Color('srgb', (r / 255, g / 255, b / 255)).closest(NBS_INST_NOTE_COLORS)
-                inst = NBS_NOTE_COLORS_TO_INST[nearestColor.to_string(hex=True)]
-                song.notes.append(Note(x + i, y + j, inst, 0, 0))
+                nearestColor = Color(
+                    'srgb', (r / 255, g / 255, b / 255)).closest(NBS_INST_NOTE_COLORS)
+                inst = NBS_NOTE_COLORS_TO_INST[nearestColor.to_string(
+                    hex=True)]
+                notes.append(Note(i, j, inst, 0, 0))
+        
+        return notes
+    
+    def shiftNotes(self, notes: list[Note], x: int, y: int) -> None:
+        for note in notes:
+            note.tick += x
+            note.layer += y
 
     def modifyHeaders(self, header):
         def setAttrFromStrVar(key: str, value: str):
@@ -1463,7 +1485,7 @@ class ImpulseExportDialog(ExportDialog):
 
 def parseFilePaths(string: str) -> tuple:
     strLen = len(string)
-    ret: List[str] = []
+    ret: list[str] = []
     filePath = ''
     isQuoted = False
     for i, char in enumerate(string):
@@ -1666,19 +1688,20 @@ class MidiImportDialog(ImportDialog):
                          ) if not self.autoExpand.get() else 0
         fadeOut = self.trailingNoteVelMode.get() == 'fadeOut'
         return await midi2nbs(filepath, expandMult, self.importDuration.get(),
-                              self.durationSpacing.get(), self.trailingVelocity.get(), self.trailingVelAsPercent.get(), fadeOut, self.applyStereo.get(), self.importVelocity.get(),
-                              self.importPanning.get(), self.importPitch.get(),
-                              dialog)
+                              self.durationSpacing.get(), self.trailingVelocity.get(), self.trailingVelAsPercent.get(
+        ), fadeOut, self.applyStereo.get(), self.importVelocity.get(),
+            self.importPanning.get(), self.importPitch.get(),
+            dialog)
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[
             'state'] = 'disabled' if self.autoExpand.get() else 'normal'
-        
+
     def trailingNoteVelModeChanged(self):
-            fixedVelocity = self.trailingNoteVelMode.get() == 'fixed'
-            self.builder.get_object('trailingVelocitySpin')[
+        fixedVelocity = self.trailingNoteVelMode.get() == 'fixed'
+        self.builder.get_object('trailingVelocitySpin')[
             'state'] = 'normal' if fixedVelocity else 'disabled'
-            self.builder.get_object('trailingVelPercentCheck')[
+        self.builder.get_object('trailingVelPercentCheck')[
             'state'] = 'normal' if fixedVelocity else 'disabled'
 
     def importDurationChanged(self):
@@ -1697,8 +1720,10 @@ class MidiImportDialog(ImportDialog):
         if self.importDuration.get():
             self.trailingNoteVelModeChanged()
         else:
-            self.builder.get_object('trailingVelocitySpin')['state'] = 'disabled'
-            self.builder.get_object('trailingVelPercentCheck')['state'] = 'disabled'
+            self.builder.get_object('trailingVelocitySpin')[
+                'state'] = 'disabled'
+            self.builder.get_object('trailingVelPercentCheck')[
+                'state'] = 'disabled'
 
     def applyStereoChanged(self):
         pass
@@ -2103,7 +2128,8 @@ def main() -> None:
     logger.info("NBSTool v{}", __version__)
     logger.info("Platform: {}", platform.platform())
     logger.info("Python: {}", sys.version)
-    logger.info("Architecture: {}", "64-bit" if sys.maxsize > 2**32 else "32-bit")
+    logger.info("Architecture: {}", "64-bit" if sys.maxsize >
+                2**32 else "32-bit")
     if '__compiled__' in globals():
         logger.info("Running in Nuitka-compiled mode")
         logger.info("Nuitka version: {}", version('nuitka'))
