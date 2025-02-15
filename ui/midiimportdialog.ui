@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<interface version="1.4" author="PygubuDesigner 0.39.3">
+<interface version="1.4" author="PygubuDesigner 0.40.2">
   <project>
     <settings />
     <customwidgets />
@@ -158,6 +158,8 @@
                     <property name="text" translatable="yes">1</property>
                     <property name="textvariable">int:durationSpacing</property>
                     <property name="to">10</property>
+                    <property name="validate">key</property>
+                    <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isRequiredInteger</property>
                     <property name="width">5</property>
                     <layout manager="grid">
                       <property name="column">1</property>
@@ -217,6 +219,8 @@
                     <property name="text" translatable="yes">50</property>
                     <property name="textvariable">int:trailingVelocity</property>
                     <property name="to">100</property>
+                    <property name="validate">key</property>
+                    <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isRequiredInteger</property>
                     <property name="width">5</property>
                     <layout manager="grid">
                       <property name="column">1</property>

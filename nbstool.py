@@ -498,11 +498,16 @@ class MainWindow():
         builder.import_variables(self)
         builder.connect_callbacks(self)
 
-    def isInteger(self, value: str) -> bool:
-        return value == '' or value.isdigit()
+    def isRequiredInteger(self, value: str, widget_name: str) -> bool:
+        if not value.isdigit():
+            return False
+        widget = self.toplevel.nametowidget(widget_name)
+        if widget:
+            return widget['from'] <= int(value) <= widget['to']
+        return True
 
-    def isRequiredInteger(self, value: str) -> bool:
-        return value.isdigit()
+    def isInteger(self, value: str, widget_name: str) -> bool:
+        return value == '' or self.isRequiredInteger(value, widget_name)
 
     def getSelectedFilesVersion(self, selection: Iterable) -> int:
         fileVersion = -1
@@ -1513,7 +1518,7 @@ ImportDialogFunc = Callable[[str, ProgressDialog],
 
 
 class ImportDialog:
-    def __init__(self, master, parent, fileExts: tuple, title: Optional[str], progressTitle: str,
+    def __init__(self, master: tk.Toplevel, parent, fileExts: tuple, title: Optional[str], progressTitle: str,
                  func: ImportDialogFunc, ui_file='ui/importdialog.ui'):
         self.master = master
         self.parent = parent
@@ -1692,6 +1697,14 @@ class MidiImportDialog(ImportDialog):
         ), fadeOut, self.applyStereo.get(), self.importVelocity.get(),
             self.importPanning.get(), self.importPitch.get(),
             dialog)
+
+    def isRequiredInteger(self, value: str, widget_name: str) -> bool:
+        if not value.isdigit():
+            return False
+        widget = self.master.nametowidget(widget_name)
+        if widget:
+            return widget['from'] <= int(value) <= widget['to']
+        return True
 
     def autoExpandChanged(self):
         self.builder.get_object('expandScale')[

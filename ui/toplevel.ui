@@ -55,6 +55,7 @@
                 <property name="usemousewheel">false</property>
                 <layout manager="pack">
                   <property name="expand">true</property>
+                  <property name="fill">both</property>
                   <property name="side">top</property>
                 </layout>
                 <child>
@@ -304,7 +305,7 @@
                                             <property name="textvariable">string:headerAutosaveInterval</property>
                                             <property name="to">255</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">4</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -391,7 +392,7 @@
                                             <property name="textvariable">string:headerMinuteSpent</property>
                                             <property name="to">2147483647</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -409,7 +410,7 @@
                                             <property name="textvariable">string:headerLeftClicks</property>
                                             <property name="to">2147483647</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -425,7 +426,7 @@
                                             <property name="textvariable">string:headerRightClicks</property>
                                             <property name="to">2147483647</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -441,7 +442,7 @@
                                             <property name="textvariable">string:headerBlockAdded</property>
                                             <property name="to">2147483647</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -457,7 +458,7 @@
                                             <property name="textvariable">string:headerBlockRemoved</property>
                                             <property name="to">2147483647</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">11</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -524,7 +525,7 @@
                                             <property name="textvariable">string:headerLoopCount</property>
                                             <property name="to">255</property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">4</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -541,7 +542,7 @@
                                             <property name="to">32767
 </property>
                                             <property name="validate">key</property>
-                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isInteger</property>
+                                            <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isInteger</property>
                                             <property name="width">6</property>
                                             <layout manager="grid">
                                               <property name="column">1</property>
@@ -798,7 +799,7 @@
                             <property name="title" translatable="yes">Select an image file</property>
                             <layout manager="grid">
                               <property name="column">1</property>
-                              <property name="ipadx">100</property>
+                              <property name="ipadx">200</property>
                               <property name="padx">5</property>
                               <property name="row">0</property>
                               <property name="sticky">w</property>
@@ -886,7 +887,7 @@
                                 <property name="textvariable">int:imgInsertPosTickVar</property>
                                 <property name="to">65536</property>
                                 <property name="validate">key</property>
-                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isRequiredInteger</property>
+                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isRequiredInteger</property>
                                 <property name="width">6</property>
                                 <layout manager="pack">
                                   <property name="side">left</property>
@@ -909,7 +910,7 @@
                                 <property name="textvariable">int:imgInsertPosLayerVar</property>
                                 <property name="to">65536</property>
                                 <property name="validate">key</property>
-                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P">isRequiredInteger</property>
+                                <property name="validatecommand" type="command" cbtype="entry_validate" args="%P %W">isRequiredInteger</property>
                                 <property name="width">6</property>
                                 <layout manager="pack">
                                   <property name="side">left</property>
@@ -942,12 +943,11 @@
                         <child>
                           <object class="customwidgets.WrapMessage" id="wrapmessage2">
                             <property name="text" translatable="yes">Insert an image as slient notes to replicate pixel-art effect, especially for setting thumbnail when uploading songs to Note Block World. The image may be scaled down, but never be scaled up.</property>
-                            <property name="width">550</property>
                             <layout manager="grid">
                               <property name="column">0</property>
                               <property name="columnspan">2</property>
                               <property name="row">5</property>
-                              <property name="sticky">w</property>
+                              <property name="sticky">nsew</property>
                             </layout>
                           </object>
                         </child>
