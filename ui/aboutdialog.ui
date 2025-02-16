@@ -32,7 +32,7 @@
           <object class="ttk.Label" id="label2">
             <property name="justify">center</property>
             <property name="text" translatable="yes">A tool to work with Open Note Block Studio files.
-Version: 1.4.0
+Version: 1.5.0
 Author: IoeCmcomc</property>
             <layout manager="pack">
               <property name="pady">10</property>

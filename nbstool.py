@@ -28,8 +28,8 @@
 #    nuitka-project: --windows-icon-from-ico=icon.ico
 #    nuitka-project: --windows-product-name=NBSTool
 #    nuitka-project: --windows-company-name=IoeCmcomc
-#    nuitka-project: --windows-file-version=1.4.0.0
-#    nuitka-project: --windows-product-version=1.4.0.0
+#    nuitka-project: --windows-file-version=1.5.0.0
+#    nuitka-project: --windows-product-version=1.5.0.0
 #    nuitka-project: --windows-file-description=NBSTool
 
 
