@@ -25,12 +25,17 @@
 ## Features
 - Work with multiple files;
 - Open old formats (such as .mcsp2);
-- Modify header information and change between versions;
-- Arrange notes by instruments;
+- Available tools/operations:
+   - Modify header information and change between versions;
+   - Arrange notes by instruments;
+   - Hard-apply layer volumes and/or panning to notes;
+   - Insert image as silent notes for decoration purpose.
 - Import from MIDI files:
    -   Only type 1 MIDI files are tested;
    -   Support importing note velocity, note panning and note fine-pitch;
-   -   Allow importing MIDI notes as multiple successive fading-out NBS notes;
+   -   Allow importing MIDI notes as multiple successive NBS notes;
+     -   These trailing note' velocity can be fading out of having a specified value;
+     -   Allow applying stereo effect to trailing notes;
    -   Can automatically expand distance between notes to fit as many note as possible.
 - Import from JSON files;
 - Export to other formats:
@@ -45,7 +50,7 @@
 ## Download
 Go to the [Releases](https://github.com/IoeCmcomc/NBSTool/releases/latest "Releases") page to download the latest version.
 
-After extracting the downloaded ZIP file to a folder, run the executable (nbstool.exe on Windows, nbstool on Linux) to use the program.
+After extracting the downloaded ZIP file to a folder, run the executable (nbstool.exe on Windows, nbstool or nbstool.bin on Linux) to use the program.
 
 ## Issues
 To report issues, please go to [Issues](https://github.com/IoeCmcomc/NBSTool/issues "Issues") page. For questions and suggestions, the [Discussion](https://github.com/IoeCmcomc/NBSTool/discussions "Discussion") page is the right place.
