@@ -152,7 +152,7 @@ async def midi2nbs(
     if autoExpand:
         expandMultiplier = 1
 
-    mid = MidiFile(filepath)
+    mid = MidiFile(filepath, clip=True)
     tpb = mid.ticks_per_beat
     # The time signature upper number in ONBS
     # doesn't affect the overall tempo at all.
