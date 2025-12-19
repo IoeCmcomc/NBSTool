@@ -52,5 +52,9 @@ Go to the [Releases](https://github.com/IoeCmcomc/NBSTool/releases/latest "Relea
 
 After extracting the downloaded ZIP file to a folder, run the executable (nbstool.exe on Windows, nbstool or nbstool.bin on Linux) to use the program.
 
+> [!NOTE]
+> On Linux, remember to set the nbstool.bin permission as executable.
+> If the program crashes with "aborted (dumped to core)", make sure the path of the NBSTool folder doesn't contain any non-ACSII characters.
+
 ## Issues
 To report issues, please go to [Issues](https://github.com/IoeCmcomc/NBSTool/issues "Issues") page. For questions and suggestions, the [Discussion](https://github.com/IoeCmcomc/NBSTool/discussions "Discussion") page is the right place.
