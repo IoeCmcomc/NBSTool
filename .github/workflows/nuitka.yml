@@ -22,7 +22,7 @@ jobs:
       run: pipx install poetry
 
     - name: Setup Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.8' # Version range or exact version of a Python version to use, using SemVer's version range syntax
         architecture: ${{ matrix.arch }} # optional x64 or x86. Defaults to x64 if not specified
@@ -30,7 +30,7 @@ jobs:
 
     - name: Install external dependencies (Linux)
       if: matrix.os == 'ubuntu-22.04'
-      run: sudo apt install build-essential python3.8-dev python3.8-tk
+      run: sudo apt install -y build-essential python3-tk
 
     - name: Install dependencies
       run: |
@@ -46,7 +46,7 @@ jobs:
     - name: Build standalone folder (Linux)
       if: matrix.os == 'ubuntu-22.04'
       run: |
-        poetry run python3 -m nuitka nbstool.py
+        poetry run python -m nuitka nbstool.py
 
     - name: Zip standalone folder
       uses: vimtor/action-zip@v1.2
