@@ -50,9 +50,15 @@ def read_string(f: BinaryIO) -> str:
     '''Read the following bytes from file and return a ASCII string.'''
 
     length = read_numeric(f, INT)
+    result = ""
+    if length > 65535:
+        result += f.read(10).decode('unicode_escape')
+        warn(f"The string length are unusually too long ({length} bytes). First 10 bytes are '{result}'")
+        length -= 10
     raw = f.read(length)
     # print("{0:<20}{1}".format(length, raw))
-    return raw.decode('unicode_escape')  # ONBS doesn't support UTF-8
+    result += raw.decode('unicode_escape')  # ONBS doesn't support UTF-8
+    return result
 
 
 def write_numeric(f: BinaryIO, fmt: Struct, v) -> None:
