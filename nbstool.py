@@ -1398,6 +1398,8 @@ class JsonExportDialog(ExportDialog):
     def __init__(self, master, parent):
         super().__init__(master, parent, '.json', "JSON exporting",
                          "Exporting {} files to JSON...", self.nbs2json)
+        
+        self.shouldCompactNotes = False
 
     async def nbs2json(self, data: NbsSong, filepath: str, dialog: ProgressDialog):
         if not filepath.endswith('.json'):

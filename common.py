@@ -230,7 +230,7 @@ MIDI_DRUMS = (
     MidiDrum(87, "Open Surdo", 2, 7),
 )
 
-NBS_PITCH_IN_MIDI_PITCHBEND = 40.96
+NBS_PITCH_IN_MIDI_PITCHBEND = 40.96 # TODO: Override this value if a MIDI file contains the value
 SOUND_FOLDER = "sounds"
 
 BASE_RESOURCE_PATH = ''
