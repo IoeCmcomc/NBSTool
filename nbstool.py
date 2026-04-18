@@ -373,6 +373,11 @@ NBS_INST_NOTE_COLORS_HEX = (
     '#19be19',
     '#be1957',
     '#575757',
+    # 26.1+ instrument colors are unavailible for now
+    '#000000',
+    '#000001',
+    '#000002',
+    '#000003',
 )
 NBS_INST_NOTE_COLORS = tuple(Color(color)
                              for color in NBS_INST_NOTE_COLORS_HEX)

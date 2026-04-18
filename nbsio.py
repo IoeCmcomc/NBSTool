@@ -31,7 +31,7 @@ SHORT = Struct('<H')
 SHORT_SIGNED = Struct('<h')
 INT = Struct('<I')
 
-NBS_VERSION = 5
+NBS_VERSION = 6
 PERC_INSTS = {2, 3, 4}
 
 warnings.filterwarnings(action='once')
@@ -106,7 +106,7 @@ class Note:
 @dataclass
 class Header:
     file_version = NBS_VERSION
-    vani_inst = 16
+    vani_inst = 20
     length = 0
     height = 0
     name = ''
@@ -162,6 +162,10 @@ VANILLA_INSTS = [
     Instrument("Bit", 'bit.ogg', 0, False, 'bit'),
     Instrument("Banjo", 'banjo.ogg', 0, False, 'banjo'),
     Instrument("Pling", 'pling.ogg', 0, False, 'pling'),
+    Instrument("Trumpet", 'trumpet.ogg', 0, False, 'pling'), # Minecraft 26.1+
+    Instrument("Exposed Trumpet", 'trumpet_exposed.ogg', 0, False, 'trumpet_exposed'), # Minecraft 26.1+
+    Instrument("Weathered Trumpet", 'trumpet_weathered.ogg', 0, False, 'trumpet_weathered'), # Minecraft 26.1+
+    Instrument("Oxidized Trumpet", 'trumpet_oxidized.ogg', 0, False, 'trumpet_oxidized'), # Minecraft 26.1+
 ]
 
 
@@ -359,7 +363,12 @@ class NbsSong:
 
         header.length = tick + 1
         header.height = len(self.layers)
-        header.vani_inst = 16 if header.file_version > 0 else 10
+        vani_inst = 10
+        if header.file_version > 5:
+            vani_inst = 20
+        elif header.file_version > 0:
+            vani_inst = 16
+        header.vani_inst = vani_inst
         self.maxLayer = maxLayer
         self.usedInsts = (tuple(usedInsts[0]), tuple(usedInsts[1]))
         # self['indexByTick'] = tuple([ (tk, set([notes.index(nt) for nt in notes if nt['tick'] == tk]) ) for tk in range(header['length']+1) ])

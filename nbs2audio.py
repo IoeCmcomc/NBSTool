@@ -18,7 +18,8 @@
 
 
 from asyncio import sleep
-from typing import Sequence
+import os
+from typing import Dict, Sequence
 
 from nbswave import SongRenderer, audio, nbs
 from nbswave.main import MissingInstrumentException
@@ -27,7 +28,7 @@ from pynbs import File, Header, Instrument, Layer, Note
 
 from audio_common import load_sound
 from common import SOUND_FOLDER
-from nbsio import NbsSong
+from nbsio import VANILLA_INSTS, NbsSong
 
 audio.load_sound = load_sound
 
@@ -70,9 +71,21 @@ def convert(data: NbsSong) -> File:
 
     return File(header, notes, layers, instruments)
 
+def load_default_instruments(path: str, vani_inst_num: int) -> Dict[int, AudioSegment]:
+    segments = {}
+    vani_inst_num = max(10, min(20, vani_inst_num))
+    for index, ins in {(i, inst.filePath) for i, inst in enumerate(VANILLA_INSTS[:vani_inst_num])}:
+        filename = os.path.join(os.getcwd(), path, ins)
+        sound = audio.load_sound(filename)
+        segments[index] = sound
+    return segments
+
 class Renderer(SongRenderer):
-    def __init__(self, song, dialog):
+    def __init__(self, song, vani_inst_num, dialog):
         super().__init__(song, SOUND_FOLDER)
+        
+        self._instruments = load_default_instruments(SOUND_FOLDER, vani_inst_num)
+
         self.dialog = dialog
 
     async def mix_song(
@@ -194,7 +207,7 @@ async def nbs2audio(data: NbsSong, filepath: str, dialog=None,
     exclude_locked_layers: bool = False,
 ) -> None:
 
-    renderer = Renderer(convert(data), dialog)
+    renderer = Renderer(convert(data), data.header.vani_inst, dialog)
 
     if (not ignore_missing_instruments) and (missingInsts := renderer.missing_instruments()):
         instFiles = '\n'.join(inst.file for inst in missingInsts)

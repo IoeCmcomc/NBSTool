@@ -1,5 +1,12 @@
 {
     "python.analysis.typeCheckingMode": "basic",
     "python.formatting.provider": "black",
-    "python.analysis.autoImportCompletions": true
+    "python.analysis.autoImportCompletions": true,
+    "python-envs.pythonProjects": [
+        {
+            "path": ".",
+            "envManager": "ms-python.python:poetry",
+            "packageManager": "ms-python.python:poetry"
+        }
+    ]
 }

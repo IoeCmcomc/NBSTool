@@ -43,6 +43,10 @@ INST_PROGRAMS = {
     13: 80, # Bit: Lead 1 (square)
     14: 105, # Banjo: Banjo
     15: 16, # Pling: Drawbar organ
+    16: 56, # Trumpet: Trumpet
+    17: 58, # Exposed Trumpet: Tuba
+    18: 57, # Weathered Trumpet: Trombone
+    19: 64, # Oxidized Trumpet: Soprano Sax
 }
 
 INST2PITCH = {
@@ -94,6 +98,8 @@ def absTrack2DeltaTrack(track) -> MidiTrack:
         ret.append(msg.copy(time=msg.time - track[i-1].time))
     return ret
 
+def actualInstPrograms(vani_inst_num: int):
+    return {nbs_inst: gm_inst for nbs_inst, gm_inst in INST_PROGRAMS.items() if nbs_inst < vani_inst_num}
 
 async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     '''It converts a NBS song to a MIDI file
@@ -112,6 +118,7 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
     default_layer = Layer("")
     if (data.maxLayer >= headers.height):
         layers.extend(repeat(default_layer, data.maxLayer+1 - headers.height))
+    inst_programs = actualInstPrograms(headers.vani_inst)
 
     # The time signature upper number in ONBS
     # doesn't affect the overall tempo at all.
@@ -126,7 +133,7 @@ async def nbs2midi(data: NbsSong, filepath: str, dialog = None):
 
     for i in range(data.maxLayer+1):
         layer = layers[i]
-        programCode = INST_PROGRAMS.get(firstInstInLayer(data, i), 1) - 1
+        programCode = inst_programs.get(firstInstInLayer(data, i), 1) - 1
 
         track = MidiTrack()
         track.append(MetaMessage(
