@@ -232,6 +232,7 @@ MIDI_DRUMS = (
 
 NBS_PITCH_IN_MIDI_PITCHBEND = 40.96 # TODO: Override this value if a MIDI file contains the value
 SOUND_FOLDER = "sounds"
+NBS_C4_KEY_NUMBER = 33
 
 BASE_RESOURCE_PATH = ''
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'): # PyInstaller

@@ -83,7 +83,7 @@ from coloraide import Color
 # Explict import for Nuitka
 import customwidgets_builder
 
-from common import BASE_RESOURCE_PATH, resource_path
+from common import BASE_RESOURCE_PATH, NBS_C4_KEY_NUMBER, resource_path
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
@@ -355,7 +355,8 @@ NBS_JSON_SCHEMA = {
 }
 
 # Taken from Note Block World source code. This shouldn't violate AGPL, though.
-# https://github.com/OpenNBS/NoteBlockWorld/blob/main/shared/features/thumbnail/index.ts#L27
+# https://github.com/OpenNBS/NoteBlockWorld/blob/develop/packages/thumbnail/src/shared/utils.ts#L8
+# https://github.com/OpenNBS/NoteBlockWorld/blob/6e7e740bff85367bbeddf0308bacf5bff3480900/packages/thumbnail/src/shared/utils.ts#L8
 NBS_INST_NOTE_COLORS_HEX = (
     '#1964ac',
     '#3c8e48',
@@ -373,11 +374,10 @@ NBS_INST_NOTE_COLORS_HEX = (
     '#19be19',
     '#be1957',
     '#575757',
-    # 26.1+ instrument colors are unavailible for now
-    '#000000',
-    '#000001',
-    '#000002',
-    '#000003',
+    '#d26b50',
+    '#c38969',
+    '#78a07a',
+    '#5ca087',
 )
 NBS_INST_NOTE_COLORS = tuple(Color(color)
                              for color in NBS_INST_NOTE_COLORS_HEX)
@@ -652,7 +652,8 @@ class MainWindow():
                 self.mainwin.update()
         self.filePaths.extend(addedPaths)
         self.enableFileTable()
-        self.builder.get_object('applyBtn')['state'] = 'normal'
+        if self.fileTable.selection():
+            self.builder.get_object('applyBtn')['state'] = 'normal'
         self.builder.get_object('fileMenu').entryconfig(2, state="normal" if len(
             self.filePaths) > 0 else "disabled")
 
@@ -1037,7 +1038,7 @@ class MainWindow():
                         insertLayer: int = -1
                         if insertPos == 'lastLayer':
                             insertTick = 0
-                            insertLayer = songData.maxLayer
+                            insertLayer = songData.maxLayer + 1
                         elif insertPos == 'lastTick':
                             insertTick = len(songData)
                             insertLayer = 0
@@ -1105,7 +1106,7 @@ class MainWindow():
                     'srgb', (r / 255, g / 255, b / 255)).closest(NBS_INST_NOTE_COLORS)
                 inst = NBS_NOTE_COLORS_TO_INST[nearestColor.to_string(
                     hex=True)]
-                notes.append(Note(i, j, inst, 0, 0))
+                notes.append(Note(i, j, inst, NBS_C4_KEY_NUMBER, 0))
         
         return notes
     
