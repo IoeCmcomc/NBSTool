@@ -5,7 +5,7 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/IoeCmcomc/NBSTool)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/IoeCmcomc/NBSTool.svg)](http://isitmaintained.com/project/IoeCmcomc/NBSTool "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/IoeCmcomc/NBSTool.svg)](http://isitmaintained.com/project/IoeCmcomc/NBSTool "Percentage of issues still open")
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FIoeCmcomc%2FNBSTool&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
+![Badge](https://hitscounter.dev/api/hit?url=https%3A%2F%2Fgithub.com%2FIoeCmcomc%2FNBSTool&label=Views&icon=github&color=%23198754&message=&style=flat&tz=UTC)
 
 
 ------------

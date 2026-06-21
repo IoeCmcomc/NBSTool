@@ -1,5 +1,6 @@
 from re import finditer
 
+from common import NBS_C4_KEY_NUMBER
 from nbsio import NbsSong, Note
 
 NOTE_REGEX = r'(\d+)?>(.)'
@@ -60,7 +61,7 @@ def mcsp2nbs(filename: str) -> NbsSong:
                 note_data = match[2]
                 for keys, inst in NOTE_MAPPING.items():
                     if note_data in keys:
-                        key = keys.index(note_data) + 33
+                        key = keys.index(note_data) + NBS_C4_KEY_NUMBER
                         notes.append(Note(int(tick), layer, inst, key))
                         break
                 else:

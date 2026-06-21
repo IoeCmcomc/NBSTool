@@ -2028,7 +2028,7 @@ scoreboard objectives remove {0}_t""".format(scoreObj))
                         """execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run setblock ~ ~ ~ minecraft:note_block[instrument={instname},note={key}] replace
 execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:redstone_block replace minecraft:air
 execute as @e[type=armor_stand, tag={obj}_WNBS_Marker, name=\"{inst}-{order}\"] at @s positioned ~ ~-1 ~ if block ~ ~ ~ minecraft:note_block[instrument={instname}] run fill ^ ^ ^-1 ^ ^ ^-1 minecraft:air replace minecraft:redstone_block
-""".format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note.inst].index(note.layer), instname=instruments[note.inst].sound_id, key=max(33, min(57, note.key)) - 33)
+""".format(obj=scoreObj, tick=tick, inst=note.inst, order=instLayers[note.inst].index(note.layer), instname=instruments[note.inst].sound_id, key=max(NBS_C4_KEY_NUMBER, min(57, note.key)) - NBS_C4_KEY_NUMBER)
                 else:
                     if captions:
                         caption = captions.popleft()
